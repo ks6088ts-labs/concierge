@@ -2,8 +2,8 @@ from logging import DEBUG
 
 from dotenv import load_dotenv
 
-from template_python.loggers import get_logger
-from template_python.settings import Settings
+from concierge.loggers import get_logger
+from concierge.settings import Settings
 
 logger = get_logger(__name__)
 

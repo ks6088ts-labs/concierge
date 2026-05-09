@@ -1,6 +1,6 @@
 import logging
 
-from template_python.loggers import get_logger
+from concierge.loggers import get_logger
 
 logger = get_logger(__name__)
 

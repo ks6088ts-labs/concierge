@@ -2,8 +2,8 @@ from logging import DEBUG
 
 from dotenv import load_dotenv
 
-from template_python.loggers import get_logger
-from template_python.settings import Settings
+from concierge.loggers import get_logger
+from concierge.settings import Settings
 
 logger = get_logger(__name__)
 
@@ -19,5 +19,5 @@ def test_settings(caplog):
             verbose=True,
         ), "Failed to load environment variables from .env.template"
         settings = Settings()
-        assert settings.project_name == "template-python", "Default project name should be 'template-python'"
+        assert settings.project_name == "concierge", "Default project name should be 'concierge'"
         logger.debug(f"Settings initialized: {settings}")

@@ -1,6 +1,6 @@
 import logging
 
-from template_python.settings import get_project_settings
+from concierge.settings import get_project_settings
 
 
 def get_logger(

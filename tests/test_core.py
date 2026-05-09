@@ -2,8 +2,8 @@ import logging
 
 import pytest
 
-from template_python.core import hello_world
-from template_python.loggers import get_logger
+from concierge.core import hello_world
+from concierge.loggers import get_logger
 
 logger = get_logger(__name__)
 
@@ -27,7 +27,7 @@ def test_hello_world_verbose(caplog):
     This test checks if the function logs the expected message.
     """
     logger.info("[TEST] Running test_hello_world_verbose")
-    with caplog.at_level(logging.DEBUG, logger="template_python.core"):
+    with caplog.at_level(logging.DEBUG, logger="concierge.core"):
         hello_world(verbose=True)
     assert "Hello World" in caplog.text
 
@@ -58,6 +58,6 @@ def test_hello_world_parametrized(caplog, verbose, log_level):
     when capturing at the appropriate level.
     """
     logger.info(f"[TEST] Running test_hello_world_parametrized with verbose={verbose}")
-    with caplog.at_level(log_level, logger="template_python.core"):
+    with caplog.at_level(log_level, logger="concierge.core"):
         hello_world(verbose=verbose)
     assert "Hello World" in caplog.text

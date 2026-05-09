@@ -60,7 +60,7 @@ jupyterlab: ## run Jupyter Lab
 # Docker
 # ---
 DOCKER_REPO_NAME ?= ks6088ts
-DOCKER_IMAGE_NAME ?= template-python
+DOCKER_IMAGE_NAME ?= concierge
 DOCKER_COMMAND ?=
 
 # Tools

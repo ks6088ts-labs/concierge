@@ -1,3 +1,3 @@
-# template-python
+# concierge
 
 このリポジトリは、Python プロジェクトのためのテンプレートリポジトリです。

@@ -1,6 +1,6 @@
 services:
-  template-python:
-    container_name: template-python
+  concierge:
+    container_name: concierge
     build:
       context: .
       dockerfile: Dockerfile

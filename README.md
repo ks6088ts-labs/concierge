@@ -4,7 +4,7 @@
 [![ghcr-release](https://github.com/ks6088ts-labs/concierge/actions/workflows/ghcr-release.yaml/badge.svg)](https://github.com/ks6088ts-labs/concierge/actions/workflows/ghcr-release.yaml)
 [![docs](https://github.com/ks6088ts-labs/concierge/actions/workflows/github-pages.yaml/badge.svg)](https://github.com/ks6088ts-labs/concierge/actions/workflows/github-pages.yaml)
 
-# template-python
+# concierge
 
 This is a template repository for Python
 

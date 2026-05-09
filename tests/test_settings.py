@@ -19,5 +19,5 @@ def test_settings(caplog):
             verbose=True,
         ), "Failed to load environment variables from .env.template"
         settings = Settings()
-        assert settings.project_name == "template-python", "Default project name should be 'template-python'"
+        assert settings.project_name == "concierge", "Default project name should be 'concierge'"
         logger.debug(f"Settings initialized: {settings}")

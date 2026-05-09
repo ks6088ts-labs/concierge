@@ -7,7 +7,7 @@ permissions:
   packages: write
   contents: read
 env:
-  IMAGE_NAME: template-python
+  IMAGE_NAME: concierge
 jobs:
   ghcr:
     runs-on: ubuntu-latest

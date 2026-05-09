@@ -2273,7 +2273,7 @@ wheels = [
 ]
 
 [[package]]
-name = "template-python"
+name = "concierge"
 version = "0.0.1"
 source = { editable = "." }
 dependencies = [

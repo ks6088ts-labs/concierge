@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import os
 from functools import lru_cache
 from typing import Annotated, Any
 
@@ -12,6 +11,10 @@ from langchain_azure_ai.chat_models import AzureAIOpenAIApiChatModel
 from langchain_core.runnables import RunnableConfig
 
 from concierge.loggers import get_logger
+from concierge.settings import (
+    get_microsoft_foundry_settings,
+    get_observability_settings,
+)
 
 DEFAULT_SETTINGS = {
     "query": "Hello, how are you doing today?",
@@ -33,10 +36,9 @@ app = typer.Typer(
 
 logger = get_logger(__name__)
 
-# Module-level state for the global ``--tracing`` / ``--mlflow`` flags,
+# Module-level state for the global ``--tracing`` flag,
 # set by the Typer callback below and consumed by ``_trace_config``.
 _tracing_enabled: bool = False
-_mlflow_enabled: bool = False
 
 
 @app.callback()
@@ -73,9 +75,8 @@ def _global_options(
     ] = False,
 ):
     """Microsoft Foundry CLI - global options applied to every subcommand."""
-    global _tracing_enabled, _mlflow_enabled
+    global _tracing_enabled
     _tracing_enabled = tracing
-    _mlflow_enabled = mlflow
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
         logger.setLevel(logging.DEBUG)
@@ -96,9 +97,10 @@ def _enable_mlflow() -> None:
 
     # Default to the local server started by ``make mlflow`` so traces are
     # visible in the UI out of the box. Override with ``MLFLOW_TRACKING_URI``.
-    tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000")
+    observability_settings = get_observability_settings()
+    tracking_uri = observability_settings.mlflow_tracking_uri
     mlflow.set_tracking_uri(tracking_uri)
-    mlflow.set_experiment(os.environ.get("MLFLOW_EXPERIMENT_NAME", "microsoft-foundry-vanilla"))
+    mlflow.set_experiment(observability_settings.mlflow_experiment_name)
     mlflow.langchain.autolog()
     logger.info("MLflow autologging enabled (tracking_uri=%s)", tracking_uri)
 
@@ -114,7 +116,7 @@ def _get_tracer():
     from langchain_azure_ai.callbacks.tracers import AzureAIOpenTelemetryTracer
 
     return AzureAIOpenTelemetryTracer(
-        project_endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
+        project_endpoint=get_microsoft_foundry_settings().azure_ai_project_endpoint,
         credential=DefaultAzureCredential(),
         name="microsoft-foundry-vanilla",
     )
@@ -231,7 +233,7 @@ def direct_client(
     ] = DEFAULT_SETTINGS["model"],
 ):
     chat_model = AzureAIOpenAIApiChatModel(
-        project_endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
+        project_endpoint=get_microsoft_foundry_settings().azure_ai_project_endpoint,
         credential=DefaultAzureCredential(),
         model=model,
     )
@@ -265,7 +267,7 @@ def async_call(
         credential = DefaultAzureCredentialAsync()
         try:
             chat_model = AzureAIOpenAIApiChatModel(
-                project_endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
+                project_endpoint=get_microsoft_foundry_settings().azure_ai_project_endpoint,
                 credential=credential,
                 model=model,
             )
@@ -397,7 +399,7 @@ def _resource_openai_v1_endpoint() -> str:
     resource-level path (``/openai/v1/embeddings``), so we strip the
     ``/api/projects/...`` segment from ``AZURE_AI_PROJECT_ENDPOINT``.
     """
-    project_endpoint = os.environ["AZURE_AI_PROJECT_ENDPOINT"]
+    project_endpoint = get_microsoft_foundry_settings().azure_ai_project_endpoint
     resource = project_endpoint.split("/api/projects/", 1)[0]
     return f"{resource}/openai/v1"
 

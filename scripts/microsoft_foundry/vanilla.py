@@ -1,7 +1,9 @@
 import asyncio
 import logging
 import os
-from typing import Annotated
+from enum import Enum
+from functools import lru_cache
+from typing import Annotated, Any
 
 import typer
 from azure.identity import DefaultAzureCredential
@@ -30,6 +32,67 @@ app = typer.Typer(
 )
 
 logger = get_logger(__name__)
+
+# Module-level state for the global ``--tracing on/off`` option, set by the
+# Typer callback below and consumed by ``_trace_config``.
+_tracing_enabled: bool = False
+
+
+class TracingMode(str, Enum):
+    """Allowed values for the ``--tracing`` global option."""
+
+    on = "on"
+    off = "off"
+
+
+@app.callback()
+def _global_options(
+    tracing: Annotated[
+        TracingMode,
+        typer.Option(
+            "--tracing",
+            help=(
+                "Enable Azure AI Foundry / Azure Monitor tracing for LangChain runs. "
+                "See https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/langchain-traces"
+            ),
+            case_sensitive=False,
+        ),
+    ] = TracingMode.off,
+):
+    """Microsoft Foundry CLI - global options applied to every subcommand."""
+    global _tracing_enabled
+    _tracing_enabled = tracing == TracingMode.on
+
+
+@lru_cache(maxsize=1)
+def _get_tracer():
+    """Build (and cache) the ``AzureAIOpenTelemetryTracer`` instance.
+
+    Imported lazily so commands that don't need tracing don't pay the import
+    cost. The docs recommend creating a single tracer instance and reusing it
+    across the workflow.
+    """
+    from langchain_azure_ai.callbacks.tracers import AzureAIOpenTelemetryTracer
+
+    return AzureAIOpenTelemetryTracer(
+        project_endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
+        credential=DefaultAzureCredential(),
+        name="microsoft-foundry-vanilla",
+    )
+
+
+def _trace_config(extra: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Return a runnable ``config`` dict, attaching the tracer when enabled.
+
+    Use this helper for every ``invoke`` / ``ainvoke`` / ``stream`` call so
+    that toggling ``--tracing on/off`` flows through uniformly.
+    """
+    config: dict[str, Any] = dict(extra or {})
+    if _tracing_enabled:
+        callbacks = list(config.get("callbacks", []))
+        callbacks.append(_get_tracer())
+        config["callbacks"] = callbacks
+    return config
 
 
 def set_verbose_logging(
@@ -67,7 +130,7 @@ def hello_world(
 ):
     set_verbose_logging(verbose)
     chat_model = init_chat_model(model_string)
-    response = chat_model.invoke(query)
+    response = chat_model.invoke(query, config=_trace_config())
     response.pretty_print()
 
 
@@ -120,11 +183,7 @@ def configurable(
     )
     response = configurable_model.invoke(
         input=query,
-        config={
-            "configurable": {
-                "model": model,
-            }
-        },
+        config=_trace_config({"configurable": {"model": model}}),
     )
     response.pretty_print()
 
@@ -161,7 +220,7 @@ def direct_client(
         credential=DefaultAzureCredential(),
         model=model,
     )
-    chat_model.invoke(query).pretty_print()
+    chat_model.invoke(query, config=_trace_config()).pretty_print()
 
 
 @app.command(
@@ -201,7 +260,7 @@ def async_call(
                 credential=credential,
                 model=model,
             )
-            response = await chat_model.ainvoke(query)
+            response = await chat_model.ainvoke(query, config=_trace_config())
             response.pretty_print()
         finally:
             await credential.close()
@@ -237,7 +296,7 @@ def reasoning(
     set_verbose_logging(verbose)
     chat_model = init_chat_model(model_string)
 
-    for chunk in chat_model.stream(query):
+    for chunk in chat_model.stream(query, config=_trace_config()):
         reasoning_steps = [r for r in chunk.content_blocks if r["type"] == "reasoning"]
         print(reasoning_steps if reasoning_steps else chunk.text, end="")
 
@@ -282,7 +341,7 @@ def server_side_tools(
         ]
     )
 
-    result = model_with_web_search.invoke(query)
+    result = model_with_web_search.invoke(query, config=_trace_config())
     last_block = result.content[-1] if isinstance(result.content, list) else result.content
     if isinstance(last_block, dict):
         print(last_block.get("text", ""))
@@ -331,7 +390,7 @@ def use_in_agents(
         system_prompt=system_prompt,
     )
 
-    response = agent.invoke({"messages": query})
+    response = agent.invoke({"messages": query}, config=_trace_config())
     response["messages"][-1].pretty_print()
 
 

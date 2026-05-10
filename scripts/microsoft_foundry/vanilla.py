@@ -1,13 +1,16 @@
 import asyncio
 import logging
 import os
-from typing import Annotated
+from enum import Enum
+from functools import lru_cache
+from typing import Annotated, Any
 
 import typer
 from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv
 from langchain.chat_models import init_chat_model
 from langchain_azure_ai.chat_models import AzureAIOpenAIApiChatModel
+from langchain_core.runnables import RunnableConfig
 
 from concierge.loggers import get_logger
 
@@ -31,13 +34,73 @@ app = typer.Typer(
 
 logger = get_logger(__name__)
 
+# Module-level state for the global ``--tracing on/off`` option, set by the
+# Typer callback below and consumed by ``_trace_config``.
+_tracing_enabled: bool = False
 
-def set_verbose_logging(
-    verbose: bool,
+
+class TracingMode(str, Enum):
+    """Allowed values for the ``--tracing`` global option."""
+
+    on = "on"
+    off = "off"
+
+
+@app.callback()
+def _global_options(
+    tracing: Annotated[
+        TracingMode,
+        typer.Option(
+            "--tracing",
+            help=(
+                "Enable Azure AI Foundry / Azure Monitor tracing for LangChain runs. "
+                "See https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/langchain-traces"
+            ),
+            case_sensitive=False,
+        ),
+    ] = TracingMode.off,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", "-v", help="Enable verbose (DEBUG) logging"),
+    ] = False,
 ):
+    """Microsoft Foundry CLI - global options applied to every subcommand."""
+    global _tracing_enabled
+    _tracing_enabled = tracing == TracingMode.on
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
         logger.setLevel(logging.DEBUG)
+
+
+@lru_cache(maxsize=1)
+def _get_tracer():
+    """Build (and cache) the ``AzureAIOpenTelemetryTracer`` instance.
+
+    Imported lazily so commands that don't need tracing don't pay the import
+    cost. The docs recommend creating a single tracer instance and reusing it
+    across the workflow.
+    """
+    from langchain_azure_ai.callbacks.tracers import AzureAIOpenTelemetryTracer
+
+    return AzureAIOpenTelemetryTracer(
+        project_endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
+        credential=DefaultAzureCredential(),
+        name="microsoft-foundry-vanilla",
+    )
+
+
+def _trace_config(extra: dict[str, Any] | None = None) -> RunnableConfig:
+    """Return a runnable ``config`` dict, attaching the tracer when enabled.
+
+    Use this helper for every ``invoke`` / ``ainvoke`` / ``stream`` call so
+    that toggling ``--tracing on/off`` flows through uniformly.
+    """
+    config: dict[str, Any] = dict(extra or {})
+    if _tracing_enabled:
+        callbacks = list(config.get("callbacks", []))
+        callbacks.append(_get_tracer())
+        config["callbacks"] = callbacks
+    return RunnableConfig(**config)
 
 
 @app.command(
@@ -60,14 +123,9 @@ def hello_world(
             help="Model to use (e.g., 'azure_ai:gpt-5')",
         ),
     ] = DEFAULT_MODEL_STRING,
-    verbose: Annotated[
-        bool,
-        typer.Option("--verbose", "-v", help="Enable verbose output"),
-    ] = False,
 ):
-    set_verbose_logging(verbose)
     chat_model = init_chat_model(model_string)
-    response = chat_model.invoke(query)
+    response = chat_model.invoke(query, config=_trace_config())
     response.pretty_print()
 
 
@@ -107,12 +165,7 @@ def configurable(
             help="Temperature for response generation (0-1)",
         ),
     ] = 0,
-    verbose: Annotated[
-        bool,
-        typer.Option("--verbose", "-v", help="Enable verbose output"),
-    ] = False,
 ):
-    set_verbose_logging(verbose)
     configurable_model = init_chat_model(
         model_provider=model_provider,
         temperature=temperature,
@@ -120,11 +173,7 @@ def configurable(
     )
     response = configurable_model.invoke(
         input=query,
-        config={
-            "configurable": {
-                "model": model,
-            }
-        },
+        config=_trace_config({"configurable": {"model": model}}),
     )
     response.pretty_print()
 
@@ -149,19 +198,13 @@ def direct_client(
             help="Model to use (e.g., 'gpt-5')",
         ),
     ] = DEFAULT_SETTINGS["model"],
-    verbose: Annotated[
-        bool,
-        typer.Option("--verbose", "-v", help="Enable verbose output"),
-    ] = False,
 ):
-    set_verbose_logging(verbose)
-
     chat_model = AzureAIOpenAIApiChatModel(
         project_endpoint=os.environ["AZURE_AI_PROJECT_ENDPOINT"],
         credential=DefaultAzureCredential(),
         model=model,
     )
-    chat_model.invoke(query).pretty_print()
+    chat_model.invoke(query, config=_trace_config()).pretty_print()
 
 
 @app.command(
@@ -184,13 +227,7 @@ def async_call(
             help="Model to use (e.g., 'gpt-5')",
         ),
     ] = DEFAULT_SETTINGS["model"],
-    verbose: Annotated[
-        bool,
-        typer.Option("--verbose", "-v", help="Enable verbose output"),
-    ] = False,
 ):
-    set_verbose_logging(verbose)
-
     async def main():
         from azure.identity.aio import DefaultAzureCredential as DefaultAzureCredentialAsync
 
@@ -201,7 +238,7 @@ def async_call(
                 credential=credential,
                 model=model,
             )
-            response = await chat_model.ainvoke(query)
+            response = await chat_model.ainvoke(query, config=_trace_config())
             response.pretty_print()
         finally:
             await credential.close()
@@ -229,15 +266,10 @@ def reasoning(
             help="Model to use (e.g., 'azure_ai:DeepSeek-R1-0528')",
         ),
     ] = DEFAULT_MODEL_STRING,
-    verbose: Annotated[
-        bool,
-        typer.Option("--verbose", "-v", help="Enable verbose output"),
-    ] = False,
 ):
-    set_verbose_logging(verbose)
     chat_model = init_chat_model(model_string)
 
-    for chunk in chat_model.stream(query):
+    for chunk in chat_model.stream(query, config=_trace_config()):
         reasoning_steps = [r for r in chunk.content_blocks if r["type"] == "reasoning"]
         print(reasoning_steps if reasoning_steps else chunk.text, end="")
 
@@ -264,14 +296,9 @@ def server_side_tools(
             help="Model to use (e.g., 'azure_ai:gpt-5')",
         ),
     ] = DEFAULT_MODEL_STRING,
-    verbose: Annotated[
-        bool,
-        typer.Option("--verbose", "-v", help="Enable verbose output"),
-    ] = False,
 ):
     from langchain_azure_ai.tools.builtin import WebSearchTool
 
-    set_verbose_logging(verbose)
     model = init_chat_model(
         model_string,
         credential=DefaultAzureCredential(),
@@ -282,7 +309,7 @@ def server_side_tools(
         ]
     )
 
-    result = model_with_web_search.invoke(query)
+    result = model_with_web_search.invoke(query, config=_trace_config())
     last_block = result.content[-1] if isinstance(result.content, list) else result.content
     if isinstance(last_block, dict):
         print(last_block.get("text", ""))
@@ -318,20 +345,15 @@ def use_in_agents(
             help="System prompt for the agent",
         ),
     ] = "You're an informational agent. Answer questions cheerfully.",
-    verbose: Annotated[
-        bool,
-        typer.Option("--verbose", "-v", help="Enable verbose output"),
-    ] = False,
 ):
     from langchain.agents import create_agent
 
-    set_verbose_logging(verbose)
     agent = create_agent(
         model=model_string,
         system_prompt=system_prompt,
     )
 
-    response = agent.invoke({"messages": query})
+    response = agent.invoke({"messages": query}, config=_trace_config())
     response["messages"][-1].pretty_print()
 
 
@@ -369,14 +391,9 @@ def embeddings(
             help="Embedding model to use (e.g., 'azure_ai:text-embedding-3-small')",
         ),
     ] = DEFAULT_EMBEDDING_MODEL_STRING,
-    verbose: Annotated[
-        bool,
-        typer.Option("--verbose", "-v", help="Enable verbose output"),
-    ] = False,
 ):
     from langchain.embeddings import init_embeddings
 
-    set_verbose_logging(verbose)
     # Override the project endpoint with the resource-level OpenAI v1 endpoint
     # because the project-scoped path does not currently serve embeddings.
     embed_model = init_embeddings(
@@ -410,14 +427,9 @@ def embeddings_direct(
             help="Embedding model to use (e.g., 'text-embedding-3-small')",
         ),
     ] = DEFAULT_SETTINGS["embedding_model"],
-    verbose: Annotated[
-        bool,
-        typer.Option("--verbose", "-v", help="Enable verbose output"),
-    ] = False,
 ):
     from langchain_azure_ai.embeddings import AzureAIOpenAIApiEmbeddingsModel
 
-    set_verbose_logging(verbose)
     # Use the resource-level OpenAI v1 endpoint instead of project_endpoint
     # because the project-scoped path does not currently serve embeddings.
     embed_model = AzureAIOpenAIApiEmbeddingsModel(
@@ -459,16 +471,11 @@ def vector_store_search(
             help="Embedding model to use (e.g., 'azure_ai:text-embedding-3-small')",
         ),
     ] = DEFAULT_EMBEDDING_MODEL_STRING,
-    verbose: Annotated[
-        bool,
-        typer.Option("--verbose", "-v", help="Enable verbose output"),
-    ] = False,
 ):
     from langchain.embeddings import init_embeddings
     from langchain_core.documents import Document
     from langchain_core.vectorstores import InMemoryVectorStore
 
-    set_verbose_logging(verbose)
     # Override the project endpoint with the resource-level OpenAI v1 endpoint
     # because the project-scoped path does not currently serve embeddings.
     embed_model = init_embeddings(

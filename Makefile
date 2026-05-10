@@ -110,3 +110,15 @@ docs-serve: ## serve documentation
 
 .PHONY: ci-test-docs
 ci-test-docs: install-deps-docs docs ## run CI test for documentation
+
+# ---
+# Project
+# ---
+
+.PHONY: mlflow
+mlflow: ## run MLflow server
+	uv run mlflow server \
+		--host 0.0.0.0 \
+		--port 5000 \
+		--allowed-hosts "*" \
+		--cors-allowed-origins "*"

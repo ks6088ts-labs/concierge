@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import os
-from enum import Enum
 from functools import lru_cache
 from typing import Annotated, Any
 
@@ -34,42 +33,74 @@ app = typer.Typer(
 
 logger = get_logger(__name__)
 
-# Module-level state for the global ``--tracing on/off`` option, set by the
-# Typer callback below and consumed by ``_trace_config``.
+# Module-level state for the global ``--tracing`` / ``--mlflow`` flags,
+# set by the Typer callback below and consumed by ``_trace_config``.
 _tracing_enabled: bool = False
-
-
-class TracingMode(str, Enum):
-    """Allowed values for the ``--tracing`` global option."""
-
-    on = "on"
-    off = "off"
+_mlflow_enabled: bool = False
 
 
 @app.callback()
 def _global_options(
     tracing: Annotated[
-        TracingMode,
+        bool,
         typer.Option(
             "--tracing",
+            "-t",
             help=(
                 "Enable Azure AI Foundry / Azure Monitor tracing for LangChain runs. "
                 "See https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/langchain-traces"
             ),
-            case_sensitive=False,
         ),
-    ] = TracingMode.off,
+    ] = False,
     verbose: Annotated[
         bool,
-        typer.Option("--verbose", "-v", help="Enable verbose (DEBUG) logging"),
+        typer.Option(
+            "--verbose",
+            "-v",
+            help="Enable verbose (DEBUG) logging",
+        ),
+    ] = False,
+    mlflow: Annotated[
+        bool,
+        typer.Option(
+            "--mlflow",
+            "-m",
+            help=(
+                "Enable MLflow autologging for LangChain / LangGraph runs. "
+                "See https://mlflow.org/docs/latest/genai/tracing/integrations/listing/langgraph/"
+            ),
+        ),
     ] = False,
 ):
     """Microsoft Foundry CLI - global options applied to every subcommand."""
-    global _tracing_enabled
-    _tracing_enabled = tracing == TracingMode.on
+    global _tracing_enabled, _mlflow_enabled
+    _tracing_enabled = tracing
+    _mlflow_enabled = mlflow
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
         logger.setLevel(logging.DEBUG)
+    if mlflow:
+        _enable_mlflow()
+
+
+@lru_cache(maxsize=1)
+def _enable_mlflow() -> None:
+    """Enable MLflow autologging for LangChain / LangGraph.
+
+    Follows the integration guide at
+    https://mlflow.org/docs/latest/genai/tracing/integrations/listing/langgraph/
+    Tracking URI and experiment name can be customised via the standard
+    ``MLFLOW_TRACKING_URI`` and ``MLFLOW_EXPERIMENT_NAME`` env vars.
+    """
+    import mlflow
+
+    # Default to the local server started by ``make mlflow`` so traces are
+    # visible in the UI out of the box. Override with ``MLFLOW_TRACKING_URI``.
+    tracking_uri = os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:5000")
+    mlflow.set_tracking_uri(tracking_uri)
+    mlflow.set_experiment(os.environ.get("MLFLOW_EXPERIMENT_NAME", "microsoft-foundry-vanilla"))
+    mlflow.langchain.autolog()
+    logger.info("MLflow autologging enabled (tracking_uri=%s)", tracking_uri)
 
 
 @lru_cache(maxsize=1)

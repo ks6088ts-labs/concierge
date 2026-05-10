@@ -3,7 +3,7 @@ from functools import lru_cache
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Settings(BaseSettings):
+class ProjectSettings(BaseSettings):
     project_name: str = "default-project"
     project_log_level: str = "INFO"
 
@@ -16,5 +16,5 @@ class Settings(BaseSettings):
 
 
 @lru_cache
-def get_project_settings() -> Settings:
-    return Settings()
+def get_project_settings() -> ProjectSettings:
+    return ProjectSettings()

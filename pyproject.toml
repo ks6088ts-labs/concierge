@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "azure-identity>=1.25.3",
+    "fastapi>=0.136.1",
     "langchain>=1.2.18",
     "langchain-azure-ai[opentelemetry]>=1.2.3",
     "langgraph>=1.1.10",
@@ -13,7 +14,12 @@ dependencies = [
     "pydantic-settings>=2.9.1",
     "python-dotenv>=1.1.0",
     "typer>=0.16.0",
+    "uvicorn[standard]>=0.46.0",
 ]
+
+[project.scripts]
+todo-cli = "concierge.todo.cli_main:main"
+todo-web = "concierge.todo.web_main:main"
 
 [dependency-groups]
 docs = [
@@ -22,6 +28,7 @@ docs = [
 ]
 dev = [
     "coverage>=7.8.0",
+    "httpx>=0.28.1",
     "jupyterlab>=4.4.2",
     "pre-commit>=4.2.0",
     "pyrefly>=0.44.1",

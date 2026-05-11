@@ -13,6 +13,13 @@ description: Microsoft Foundry, LangChain, and LangGraph hands-on examples with 
 
 `concierge` は、Microsoft Foundry 上のモデルを LangChain / LangGraph から扱うための Python ハンズオンリポジトリです。Foundry の chat、agent、embedding、vector store、observability を Typer CLI と MkDocs チュートリアルで試せます。
 
+FastAPI + Typer で構成したクリーンアーキテクチャの Todo アプリも同梱しています。
+
+```bash
+uv run python -m concierge.todo.web_main
+uv run python -m concierge.todo.cli_main task create --title "buy milk"
+```
+
 ## 前提条件
 
 ローカル開発には次のツールを使います。

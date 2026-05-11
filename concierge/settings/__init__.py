@@ -7,12 +7,15 @@ from concierge.settings.observability import (
     get_observability_settings,
 )
 from concierge.settings.project import ProjectSettings, get_project_settings
+from concierge.settings.todo import TodoSettings, get_todo_settings
 
 __all__ = [
     "MicrosoftFoundrySettings",
     "ObservabilitySettings",
     "ProjectSettings",
+    "TodoSettings",
     "get_microsoft_foundry_settings",
     "get_observability_settings",
     "get_project_settings",
+    "get_todo_settings",
 ]

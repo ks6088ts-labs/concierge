@@ -26,4 +26,4 @@ RUN pip install --no-cache-dir --upgrade -r /app/requirements.txt
 # Copy application code after dependencies are installed
 COPY . .
 
-CMD ["python", "-m", "concierge.core"]
+CMD ["uvicorn", "concierge.todo.web_main:app", "--host", "0.0.0.0", "--port", "8000"]

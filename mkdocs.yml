@@ -6,6 +6,10 @@ repo_name: ks6088ts-labs/concierge
 nav:
   - Home: index.md
   - Development Guide: development.md
+  - Todo App:
+      - Overview: todo/index.md
+      - REST API: todo/api.md
+      - CLI: todo/cli.md
   - Hands-on Tutorial:
       - Overview: tutorial/index.md
       - 1. Microsoft Foundry + LangChain: tutorial/01-foundry-langchain.md

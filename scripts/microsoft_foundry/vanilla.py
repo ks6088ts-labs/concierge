@@ -49,7 +49,7 @@ def _global_options(
             "--tracing",
             "-t",
             help=(
-                "Enable Azure AI Foundry / Azure Monitor tracing for LangChain runs. "
+                "Enable Microsoft Foundry / Azure Monitor tracing for LangChain runs. "
                 "See https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/langchain-traces"
             ),
         ),
@@ -393,7 +393,7 @@ def use_in_agents(
 def _resource_openai_v1_endpoint() -> str:
     """Return the resource-level OpenAI-compatible endpoint.
 
-    Azure AI Foundry's project-scoped path
+    Microsoft Foundry's project-scoped path
     (``/api/projects/<project>/openai/v1/embeddings``) currently does not
     serve the embeddings API. Embeddings are only available on the
     resource-level path (``/openai/v1/embeddings``), so we strip the

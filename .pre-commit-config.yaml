@@ -3,6 +3,12 @@ repos:
     rev: v6.0.0
     hooks:
       - id: check-yaml
+        exclude: ^mkdocs\.yml$
+      - id: check-yaml
+        name: check yaml (mkdocs)
+        files: ^mkdocs\.yml$
+        args: [--unsafe]
+        additional_dependencies: [pymdown-extensions]
       - id: end-of-file-fixer
       - id: trailing-whitespace
   - repo: https://github.com/astral-sh/ruff-pre-commit

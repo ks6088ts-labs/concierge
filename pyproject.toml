@@ -1,7 +1,7 @@
 [project]
 name = "concierge"
 version = "0.0.1"
-description = "A GitHub template repository for Python"
+description = "Microsoft Foundry and LangChain/LangGraph hands-on examples with observability"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

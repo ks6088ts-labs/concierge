@@ -5,6 +5,34 @@ repo_url: https://github.com/ks6088ts-labs/concierge
 repo_name: ks6088ts-labs/concierge
 nav:
   - Home: index.md
+  - Development Guide: development.md
+  - Hands-on Tutorial:
+      - Overview: tutorial/index.md
+      - 1. Microsoft Foundry + LangChain: tutorial/01-foundry-langchain.md
+      - 2. Observability (Tracing & MLflow): tutorial/02-observability.md
+      - 3. Next steps (Clean Architecture & IaC): tutorial/03-next-steps.md
+      - Appendix - References: tutorial/appendix.md
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - footnotes
+  - toc:
+      permalink: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify {kwds: {case: lower}}
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
 theme:
   name: material
   # https://squidfunk.github.io/mkdocs-material/setup/changing-the-colors/#automatic-light-dark-mode
@@ -43,6 +71,7 @@ extra:
     provider: google
     property: G-0ZTKFXVQ5K
 plugins:
+  - search
   - i18n:
       docs_structure: suffix
       languages:

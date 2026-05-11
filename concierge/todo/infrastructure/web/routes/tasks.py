@@ -62,10 +62,10 @@ def update_task(
     if "description" in payload.model_fields_set:
         description = payload.description
     title = UNSET
-    if "title" in payload.model_fields_set:
+    if "title" in payload.model_fields_set and payload.title is not None:
         title = payload.title
     status_value = UNSET
-    if "status" in payload.model_fields_set:
+    if "status" in payload.model_fields_set and payload.status is not None:
         status_value = payload.status
     task = controller.update(
         task_id,

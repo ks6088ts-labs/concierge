@@ -18,7 +18,7 @@ def test_web_api_supports_crud_flow():
     assert created["status"] == "TODO"
 
     assert client.get(f"/tasks/{task_id}").json()["title"] == "Buy milk"
-    assert client.get("/tasks", params={"status_filter": "TODO"}).json()["tasks"][0]["id"] == task_id
+    assert client.get("/tasks", params={"status": "TODO"}).json()["tasks"][0]["id"] == task_id
 
     updated = client.patch(f"/tasks/{task_id}", json={"status": "IN_PROGRESS"}).json()
     assert updated["status"] == "IN_PROGRESS"

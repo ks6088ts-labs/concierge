@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from concierge.todo.application.dtos.task_dtos import TaskResponse
 from concierge.todo.domain.exceptions import DomainError
 from concierge.todo.interfaces.presenters.base import BaseTaskPresenter, Presentation
@@ -19,7 +21,7 @@ class CliTaskPresenter(BaseTaskPresenter):
             status_code=status_code,
         )
 
-    def present_tasks(self, tasks: list[TaskResponse]) -> Presentation:
+    def present_tasks(self, tasks: Sequence[TaskResponse]) -> Presentation:
         if not tasks:
             return Presentation(body="No tasks found.")
         return Presentation(body="\n\n".join(self.present_task(task).body for task in tasks))

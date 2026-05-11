@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Protocol
 from uuid import UUID
 
@@ -12,7 +13,7 @@ class TaskRepository(Protocol):
 
     def get(self, task_id: UUID) -> Task | None: ...
 
-    def list(self, status: TaskStatus | None = None) -> list[Task]: ...
+    def list(self, status: TaskStatus | None = None) -> Sequence[Task]: ...
 
     def update(self, task: Task) -> Task: ...
 

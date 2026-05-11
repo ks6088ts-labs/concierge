@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from typing import TypeVar
+from collections.abc import Sequence
+from typing import TypeVar, cast
 from uuid import UUID
 
 from concierge.todo.application.dtos.task_dtos import (
@@ -48,7 +49,7 @@ class TaskController:
         result = self._get_task.execute(task_id)
         return _unwrap(result.value, result.error)
 
-    def list(self, request: ListTasksRequest) -> list[TaskResponse]:
+    def list(self, request: ListTasksRequest) -> Sequence[TaskResponse]:
         result = self._list_tasks.execute(request)
         return _unwrap(result.value, result.error)
 
@@ -68,4 +69,4 @@ class TaskController:
 def _unwrap(value: T | None, error: DomainError | None) -> T:
     if error is not None:
         raise error
-    return value
+    return cast(T, value)

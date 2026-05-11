@@ -49,18 +49,23 @@ def test_use_cases_support_crud_flow():
 
     created = create.execute(CreateTaskRequest(title="Buy milk", description="2 bottles"))
     assert created.is_ok
+    assert created.value is not None
     task_id = created.value.id
 
     fetched = get.execute(task_id)
+    assert fetched.value is not None
     assert fetched.value.title == "Buy milk"
 
     updated = update.execute(task_id, UpdateTaskRequest(status=TaskStatus.IN_PROGRESS))
+    assert updated.value is not None
     assert updated.value.status == TaskStatus.IN_PROGRESS
 
     completed = complete.execute(task_id)
+    assert completed.value is not None
     assert completed.value.status == TaskStatus.DONE
 
     listed = list_tasks.execute(ListTasksRequest(status=TaskStatus.DONE))
+    assert listed.value is not None
     assert [task.id for task in listed.value] == [task_id]
 
     deleted = delete.execute(task_id)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from threading import RLock
 from uuid import UUID
 
@@ -21,7 +22,7 @@ class InMemoryTaskRepository:
         with self._lock:
             return self._tasks.get(task_id)
 
-    def list(self, status: TaskStatus | None = None) -> list[Task]:
+    def list(self, status: TaskStatus | None = None) -> Sequence[Task]:
         with self._lock:
             tasks = list(self._tasks.values())
         if status is not None:

@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -14,7 +14,7 @@ def test_create_task_defaults_to_todo_status():
     assert task.description == "2 bottles"
     assert task.status == TaskStatus.TODO
     assert task.created_at == task.updated_at
-    assert task.created_at.tzinfo == UTC
+    assert task.created_at.tzinfo == timezone.utc
 
 
 @pytest.mark.parametrize("title", ["", "   ", "x" * 201])
@@ -32,7 +32,7 @@ def test_update_task_normalizes_optional_fields():
 
 
 def test_complete_task_updates_timestamp():
-    initial = datetime(2026, 1, 1, tzinfo=UTC)
+    initial = datetime(2026, 1, 1, tzinfo=timezone.utc)
     completed = Task.create(title="Ship feature", now=initial).complete(now=initial + timedelta(minutes=1))
 
     assert completed.status == TaskStatus.DONE

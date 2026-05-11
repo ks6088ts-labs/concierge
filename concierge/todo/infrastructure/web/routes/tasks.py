@@ -15,7 +15,7 @@ from concierge.todo.infrastructure.web.schemas.task_schemas import (
     TaskUpdateSchema,
 )
 from concierge.todo.interfaces.controllers.task_controller import TaskController
-from concierge.todo.interfaces.presenters.api import ApiTaskPresenter
+from concierge.todo.interfaces.presenters.base import BaseTaskPresenter
 
 router = APIRouter(tags=["tasks"])
 
@@ -24,7 +24,7 @@ router = APIRouter(tags=["tasks"])
 def create_task(
     payload: TaskCreateSchema,
     controller: TaskController = Depends(get_task_controller),
-    presenter: ApiTaskPresenter = Depends(get_api_presenter),
+    presenter: BaseTaskPresenter = Depends(get_api_presenter),
 ):
     task = controller.create(CreateTaskRequest(title=payload.title, description=payload.description))
     presentation = presenter.present_task(task, status_code=status.HTTP_201_CREATED)
@@ -35,7 +35,7 @@ def create_task(
 def list_tasks(
     status: TaskStatus | None = None,
     controller: TaskController = Depends(get_task_controller),
-    presenter: ApiTaskPresenter = Depends(get_api_presenter),
+    presenter: BaseTaskPresenter = Depends(get_api_presenter),
 ):
     tasks = controller.list(ListTasksRequest(status=status))
     return presenter.present_tasks(tasks).body
@@ -45,7 +45,7 @@ def list_tasks(
 def get_task(
     task_id: UUID,
     controller: TaskController = Depends(get_task_controller),
-    presenter: ApiTaskPresenter = Depends(get_api_presenter),
+    presenter: BaseTaskPresenter = Depends(get_api_presenter),
 ):
     task = controller.get(task_id)
     return presenter.present_task(task).body
@@ -56,7 +56,7 @@ def update_task(
     task_id: UUID,
     payload: TaskUpdateSchema,
     controller: TaskController = Depends(get_task_controller),
-    presenter: ApiTaskPresenter = Depends(get_api_presenter),
+    presenter: BaseTaskPresenter = Depends(get_api_presenter),
 ):
     description = UNSET
     if "description" in payload.model_fields_set:
@@ -78,7 +78,7 @@ def update_task(
 def complete_task(
     task_id: UUID,
     controller: TaskController = Depends(get_task_controller),
-    presenter: ApiTaskPresenter = Depends(get_api_presenter),
+    presenter: BaseTaskPresenter = Depends(get_api_presenter),
 ):
     task = controller.complete(task_id)
     return presenter.present_task(task).body

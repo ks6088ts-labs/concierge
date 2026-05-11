@@ -79,7 +79,7 @@ Both sit on top of `langchain` + `langchain-core` + `langsmith`.
 | `langchain-huggingface` | Hugging Face Hub |
 | `langchain-ollama` | Ollama (local models) |
 | `langchain-aws` | AWS Bedrock |
-| `langchain-azure-ai` | Azure AI Foundry |
+| `langchain-azure-ai` | Microsoft Foundry |
 
 ### Python — common tool & retrieval packages
 

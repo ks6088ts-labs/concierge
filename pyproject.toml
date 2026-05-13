@@ -8,6 +8,7 @@ dependencies = [
     "azure-identity>=1.25.3",
     "langchain>=1.2.18",
     "langchain-azure-ai[opentelemetry]>=1.2.3",
+    "langchain-postgres>=0.0.17",
     "langgraph>=1.1.10",
     "mlflow>=3.12.0",
     "pydantic-settings>=2.9.1",

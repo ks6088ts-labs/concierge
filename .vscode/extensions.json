@@ -1,3 +1,7 @@
 {
-  "recommendations": ["ms-python.python", "meta.pyrefly"]
+  "recommendations": [
+    "ms-python.python",
+    "meta.pyrefly",
+    "ms-ossdata.vscode-pgsql",
+  ]
 }

@@ -13,6 +13,7 @@ grouped by topic, so you have a single place to bookmark.
 | 6 | apply clean architecture               | Open   | <https://github.com/ks6088ts-labs/concierge/issues/6> |
 | 8 | support MLflow locally for evaluation  | Closed | <https://github.com/ks6088ts-labs/concierge/issues/8> |
 | 10 | set up infra via IaC                  | Open   | <https://github.com/ks6088ts-labs/concierge/issues/10> |
+| 14 | run CRUD against Azure PostgreSQL     | Open   | <https://github.com/ks6088ts-labs/concierge/issues/14> |
 
 ## Tooling
 
@@ -55,14 +56,35 @@ grouped by topic, so you have a single place to bookmark.
 - [microsoft/CAIRA](https://github.com/microsoft/CAIRA)
 - [microsoft-foundry/foundry-samples - infrastructure](https://github.com/microsoft-foundry/foundry-samples/tree/main/infrastructure)
 
+## PostgreSQL (pgvector) vector store
+
+- [pgvector / pgvector](https://github.com/pgvector/pgvector)
+- [pgvector/pgvector Docker image](https://hub.docker.com/r/pgvector/pgvector)
+- [`langchain-postgres` package](https://pypi.org/project/langchain-postgres/)
+- [`langchain-postgres` source](https://github.com/langchain-ai/langchain-postgres)
+- [PGVector quickstart (LangChain docs)](https://docs.langchain.com/oss/python/langchain/rag#pgvector)
+
+## Azure Database for PostgreSQL (pgvector)
+
+- [Azure Database for PostgreSQL Flexible Server overview](https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/overview)
+- [Quickstart - create a Flexible Server (portal)](https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/quickstart-create-server-portal)
+- [Use the pgvector extension](https://learn.microsoft.com/en-us/azure/postgresql/extensions/how-to-use-pgvector)
+- [Configure Microsoft Entra authentication](https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/how-to-configure-sign-in-azure-ad-authentication)
+- [Use LangChain with Azure Database for PostgreSQL](https://learn.microsoft.com/en-us/azure/postgresql/azure-ai/generative-ai-develop-with-langchain)
+
 ## Repository entry points
 
 - [`README.md`](https://github.com/ks6088ts-labs/concierge/blob/main/README.md)
 - [`Makefile`](https://github.com/ks6088ts-labs/concierge/blob/main/Makefile)
 - [`pyproject.toml`](https://github.com/ks6088ts-labs/concierge/blob/main/pyproject.toml)
+- [`compose.yml`](https://github.com/ks6088ts-labs/concierge/blob/main/compose.yml)
 - [`.env.template`](https://github.com/ks6088ts-labs/concierge/blob/main/.env.template)
 - [`scripts/microsoft_foundry/vanilla.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/microsoft_foundry/vanilla.py)
+- [`scripts/postgresql/crud.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/postgresql/crud.py)
+- [`scripts/postgresql/crud_azure.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/postgresql/crud_azure.py)
 - [`concierge/settings/microsoft_foundry.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/microsoft_foundry.py)
 - [`concierge/settings/observability.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/observability.py)
+- [`concierge/settings/postgres.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/postgres.py)
+- [`concierge/settings/azure_postgres.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/azure_postgres.py)
 - [`concierge/settings/project.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/project.py)
 - [`concierge/loggers.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/loggers.py)

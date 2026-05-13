@@ -13,6 +13,7 @@
 | 6 | apply clean architecture              | Open   | <https://github.com/ks6088ts-labs/concierge/issues/6> |
 | 8 | support MLflow locally for evaluation | Closed | <https://github.com/ks6088ts-labs/concierge/issues/8> |
 | 10 | set up infra via IaC                 | Open   | <https://github.com/ks6088ts-labs/concierge/issues/10> |
+| 14 | run CRUD against Azure PostgreSQL    | Open   | <https://github.com/ks6088ts-labs/concierge/issues/14> |
 
 ## ツール
 
@@ -63,6 +64,14 @@
 - [`langchain-postgres` ソース](https://github.com/langchain-ai/langchain-postgres)
 - [PGVector クイックスタート (LangChain ドキュメント)](https://docs.langchain.com/oss/python/langchain/rag#pgvector)
 
+## Azure Database for PostgreSQL (pgvector)
+
+- [Azure Database for PostgreSQL Flexible Server の概要](https://learn.microsoft.com/ja-jp/azure/postgresql/flexible-server/overview)
+- [Flexible Server 作成クイックスタート (ポータル)](https://learn.microsoft.com/ja-jp/azure/postgresql/flexible-server/quickstart-create-server-portal)
+- [pgvector 拡張を使う](https://learn.microsoft.com/ja-jp/azure/postgresql/extensions/how-to-use-pgvector)
+- [Microsoft Entra 認証を構成する](https://learn.microsoft.com/ja-jp/azure/postgresql/flexible-server/how-to-configure-sign-in-azure-ad-authentication)
+- [Azure Database for PostgreSQL で LangChain を使う](https://learn.microsoft.com/ja-jp/azure/postgresql/azure-ai/generative-ai-develop-with-langchain)
+
 ## リポジトリ内エントリポイント
 
 - [`README.md`](https://github.com/ks6088ts-labs/concierge/blob/main/README.md)
@@ -72,8 +81,10 @@
 - [`.env.template`](https://github.com/ks6088ts-labs/concierge/blob/main/.env.template)
 - [`scripts/microsoft_foundry/vanilla.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/microsoft_foundry/vanilla.py)
 - [`scripts/postgresql/crud.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/postgresql/crud.py)
+- [`scripts/postgresql/crud_azure.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/postgresql/crud_azure.py)
 - [`concierge/settings/microsoft_foundry.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/microsoft_foundry.py)
 - [`concierge/settings/observability.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/observability.py)
 - [`concierge/settings/postgres.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/postgres.py)
+- [`concierge/settings/azure_postgres.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/azure_postgres.py)
 - [`concierge/settings/project.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/project.py)
 - [`concierge/loggers.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/loggers.py)

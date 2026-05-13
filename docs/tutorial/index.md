@@ -26,10 +26,12 @@ so the design decisions stay visible.
 | 3a   | Apply Clean Architecture             | [#6](https://github.com/ks6088ts-labs/concierge/issues/6) | Open   |
 | 3b   | Provision infrastructure via IaC     | [#10](https://github.com/ks6088ts-labs/concierge/issues/10) | Open  |
 | 4    | PostgreSQL (pgvector) CRUD via Docker Compose | -    | -      |
+| 5    | Azure Database for PostgreSQL (pgvector) CRUD | [#14](https://github.com/ks6088ts-labs/concierge/issues/14) | Open |
 
 Steps 1 and 2 mirror code that is already merged. Step 3 is forward-looking and
 points to the open issues you can pick up next. Step 4 adds a persistent vector
-store option backed by Docker-hosted PostgreSQL.
+store option backed by Docker-hosted PostgreSQL, and Step 5 reuses the same
+CRUD flow against a managed Azure Database for PostgreSQL Flexible Server.
 
 ## High-level architecture
 

@@ -267,8 +267,9 @@ Key lines you should see for each step:
 
 ## What's next
 
-You now have a persistent vector store that survives restarts. Continue with
+You now have a persistent vector store that survives restarts. Move on to
+[Step 5 - Azure Database for PostgreSQL (pgvector) CRUD](05-azure-postgres-vector-store.md)
+to run the exact same CRUD flow against a managed Azure Flexible Server, or
+continue with
 [Step 3 - Next steps (Clean Architecture & IaC)](03-next-steps.md) for the
-forward-looking architectural plans, or revisit
-[Step 2 - Observability](02-observability.md) to add tracing to the new CRUD
-flows.
+forward-looking architectural plans.

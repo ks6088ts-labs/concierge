@@ -23,5 +23,6 @@ documentation commands, and Docker commands.
 * [Step 2 - Observability with tracing and MLflow](tutorial/02-observability.md)
 * [Step 3 - Next steps for Clean Architecture and IaC](tutorial/03-next-steps.md)
 * [Step 4 - PostgreSQL (pgvector) CRUD](tutorial/04-postgres-vector-store.md)
+* [Step 5 - Azure Database for PostgreSQL (pgvector) CRUD](tutorial/05-azure-postgres-vector-store.md)
 * [Development Guide](development.md)
 * [Appendix - References](tutorial/appendix.md)

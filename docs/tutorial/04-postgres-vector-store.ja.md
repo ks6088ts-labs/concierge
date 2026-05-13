@@ -268,7 +268,8 @@ uv run python scripts/postgresql/crud.py --fake-embeddings drop-table
 
 ## 次のステップ
 
-これでベクトルストアが再起動後も残るようになりました。
-[ステップ 3 - 次の一歩 (クリーンアーキテクチャ & IaC)](03-next-steps.md)
-の設計メモに進むか、[ステップ 2 - 可観測性](02-observability.md) に戻って
-新しい CRUD フローにトレースを足してみてください。
+これでベクトルストアが再起動後も残るようになりました。同じ CRUD フローをマネージドな
+Azure Flexible Server に対して試す
+[ステップ 5 - Azure Database for PostgreSQL (pgvector) で CRUD](05-azure-postgres-vector-store.md)
+に進むか、[ステップ 3 - 次の一歩 (クリーンアーキテクチャ & IaC)](03-next-steps.md)
+の設計メモに進みましょう。

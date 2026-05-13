@@ -157,6 +157,71 @@ docker compose stop postgres
 docker compose rm -f postgres
 ```
 
+## Azure Database for PostgreSQL (pgvector) CRUD
+
+A managed-database companion to the local Compose flow above lives at
+[`scripts/postgresql/crud_azure.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/postgresql/crud_azure.py).
+It targets an
+[Azure Database for PostgreSQL Flexible Server](https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/overview)
+with the `pgvector` extension enabled and authenticates by default through
+Microsoft Entra (an access token from `DefaultAzureCredential` is used as the
+database password). See
+[Step 5 - Azure Database for PostgreSQL (pgvector) CRUD](tutorial/05-azure-postgres-vector-store.md)
+for the full walkthrough including server provisioning and Entra setup.
+
+Fill the Azure block of [`.env.template`](https://github.com/ks6088ts-labs/concierge/blob/main/.env.template)
+in your `.env`:
+
+```dotenv
+AZURE_DBHOST=<server-name>.postgres.database.azure.com
+AZURE_DBNAME=postgres
+AZURE_DBPORT=5432
+AZURE_SSLMODE=require
+# Use Microsoft Entra ID (recommended) - AZURE_DBUSER must be the principal name.
+AZURE_USE_ENTRA_AUTH=true
+AZURE_DBUSER=<entra-principal-or-db-user>
+# Only required when AZURE_USE_ENTRA_AUTH=false.
+AZURE_DBPASSWORD=
+```
+
+Sign in once so `DefaultAzureCredential` can pick up your identity.
+
+```bash
+az login
+```
+
+Then run the Azure CRUD CLI - the subcommand surface is identical to the
+local CRUD CLI:
+
+```bash
+# List available Typer subcommands.
+uv run python scripts/postgresql/crud_azure.py --help
+
+# Create the pgvector table, bulk-insert sample documents, and search.
+uv run python scripts/postgresql/crud_azure.py create-table
+uv run python scripts/postgresql/crud_azure.py bulk-create
+uv run python scripts/postgresql/crud_azure.py search --query "fruit"
+
+# Read, update, delete by id.
+uv run python scripts/postgresql/crud_azure.py read --id apple
+uv run python scripts/postgresql/crud_azure.py update --id apple \
+    --text "Apples, oranges, and bananas are fruits."
+uv run python scripts/postgresql/crud_azure.py delete --id apple
+
+# Drop the table when you are done.
+uv run python scripts/postgresql/crud_azure.py drop-table
+```
+
+Use `--fake-embeddings` to exercise the Azure connection path without
+calling out to a Foundry embedding deployment.
+
+```bash
+uv run python scripts/postgresql/crud_azure.py --fake-embeddings create-table --overwrite
+uv run python scripts/postgresql/crud_azure.py --fake-embeddings bulk-create
+uv run python scripts/postgresql/crud_azure.py --fake-embeddings search \
+    --query "fruit"
+```
+
 ## GitHub Pages
 
 The [github-pages workflow](https://github.com/ks6088ts-labs/concierge/actions/workflows/github-pages.yaml) deploys the MkDocs site from `main` with `mkdocs gh-deploy --force`.

@@ -6,13 +6,16 @@ from concierge.settings.observability import (
     ObservabilitySettings,
     get_observability_settings,
 )
+from concierge.settings.postgres import PostgresSettings, get_postgres_settings
 from concierge.settings.project import ProjectSettings, get_project_settings
 
 __all__ = [
     "MicrosoftFoundrySettings",
     "ObservabilitySettings",
+    "PostgresSettings",
     "ProjectSettings",
     "get_microsoft_foundry_settings",
     "get_observability_settings",
+    "get_postgres_settings",
     "get_project_settings",
 ]

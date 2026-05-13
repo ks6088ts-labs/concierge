@@ -55,14 +55,25 @@
 - [microsoft/CAIRA](https://github.com/microsoft/CAIRA)
 - [microsoft-foundry/foundry-samples - infrastructure](https://github.com/microsoft-foundry/foundry-samples/tree/main/infrastructure)
 
+## PostgreSQL (pgvector) ベクトルストア
+
+- [pgvector / pgvector](https://github.com/pgvector/pgvector)
+- [pgvector/pgvector Docker image](https://hub.docker.com/r/pgvector/pgvector)
+- [`langchain-postgres` パッケージ](https://pypi.org/project/langchain-postgres/)
+- [`langchain-postgres` ソース](https://github.com/langchain-ai/langchain-postgres)
+- [PGVector クイックスタート (LangChain ドキュメント)](https://docs.langchain.com/oss/python/langchain/rag#pgvector)
+
 ## リポジトリ内エントリポイント
 
 - [`README.md`](https://github.com/ks6088ts-labs/concierge/blob/main/README.md)
 - [`Makefile`](https://github.com/ks6088ts-labs/concierge/blob/main/Makefile)
 - [`pyproject.toml`](https://github.com/ks6088ts-labs/concierge/blob/main/pyproject.toml)
+- [`compose.yml`](https://github.com/ks6088ts-labs/concierge/blob/main/compose.yml)
 - [`.env.template`](https://github.com/ks6088ts-labs/concierge/blob/main/.env.template)
 - [`scripts/microsoft_foundry/vanilla.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/microsoft_foundry/vanilla.py)
+- [`scripts/postgresql/crud.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/postgresql/crud.py)
 - [`concierge/settings/microsoft_foundry.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/microsoft_foundry.py)
 - [`concierge/settings/observability.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/observability.py)
+- [`concierge/settings/postgres.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/postgres.py)
 - [`concierge/settings/project.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/project.py)
 - [`concierge/loggers.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/loggers.py)

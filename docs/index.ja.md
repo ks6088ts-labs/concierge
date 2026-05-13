@@ -16,5 +16,6 @@ description: Microsoft Foundry、LangChain、LangGraph のハンズオンドキ�
 * [Step 1 - Microsoft Foundry + LangChain](tutorial/01-foundry-langchain.md)
 * [Step 2 - tracing と MLflow による observability](tutorial/02-observability.md)
 * [Step 3 - Clean Architecture と IaC の次のステップ](tutorial/03-next-steps.md)
+* [Step 4 - PostgreSQL (pgvector) CRUD](tutorial/04-postgres-vector-store.md)
 * [開発ガイド](development.md)
 * [Appendix - References](tutorial/appendix.md)

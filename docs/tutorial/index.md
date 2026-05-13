@@ -25,9 +25,11 @@ so the design decisions stay visible.
 | 2b   | Local evaluation with MLflow         | [#8](https://github.com/ks6088ts-labs/concierge/issues/8) | Closed |
 | 3a   | Apply Clean Architecture             | [#6](https://github.com/ks6088ts-labs/concierge/issues/6) | Open   |
 | 3b   | Provision infrastructure via IaC     | [#10](https://github.com/ks6088ts-labs/concierge/issues/10) | Open  |
+| 4    | PostgreSQL (pgvector) CRUD via Docker Compose | -    | -      |
 
 Steps 1 and 2 mirror code that is already merged. Step 3 is forward-looking and
-points to the open issues you can pick up next.
+points to the open issues you can pick up next. Step 4 adds a persistent vector
+store option backed by Docker-hosted PostgreSQL.
 
 ## High-level architecture
 

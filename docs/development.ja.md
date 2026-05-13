@@ -89,6 +89,76 @@ make docker-build
 make docker-run
 ```
 
+## PostgreSQL (pgvector) CRUD
+
+[`compose.yml`](https://github.com/ks6088ts-labs/concierge/blob/main/compose.yml)
+には LangChain の `PGVectorStore` を載せるための
+[pgvector](https://github.com/pgvector/pgvector) 入り PostgreSQL サービスを
+同梱しています。Docker Compose で起動してください。
+
+```bash
+docker compose up -d postgres
+```
+
+[`.env.template`](https://github.com/ks6088ts-labs/concierge/blob/main/.env.template)
+のデフォルト値は次の通りです。
+
+```dotenv
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_USER=concierge
+POSTGRES_PASSWORD=concierge
+POSTGRES_DB=concierge
+POSTGRES_COLLECTION=concierge_docs
+```
+
+[`scripts/postgresql/crud.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/postgresql/crud.py)
+の CRUD CLI を実行します。
+
+```bash
+# 利用可能な Typer サブコマンドを確認します。
+uv run python scripts/postgresql/crud.py --help
+
+# テーブル作成 → サンプル一括投入 → 類似検索の順に試します。
+uv run python scripts/postgresql/crud.py create-table
+uv run python scripts/postgresql/crud.py bulk-create
+uv run python scripts/postgresql/crud.py search --query "fruit"
+
+# id 指定で取得・更新・削除します。
+uv run python scripts/postgresql/crud.py read --id apple
+uv run python scripts/postgresql/crud.py update --id apple \
+    --text "Apples, oranges, and bananas are fruits."
+uv run python scripts/postgresql/crud.py delete --id apple
+
+# 検証が終わったらテーブルを削除します。
+uv run python scripts/postgresql/crud.py drop-table
+```
+
+Microsoft Foundry を使わずローカルだけで完結させたい場合は
+`--fake-embeddings` を付けると `DeterministicFakeEmbedding` に切り替わり、
+Azure 認証なしで CRUD を試せます。
+
+```bash
+uv run python scripts/postgresql/crud.py --fake-embeddings create-table
+uv run python scripts/postgresql/crud.py --fake-embeddings bulk-create
+uv run python scripts/postgresql/crud.py --fake-embeddings search \
+    --query "fruit"
+```
+
+データベースの停止や調査は `docker compose` を直接使います。
+
+```bash
+# PostgreSQL のログを tail します。
+docker compose logs -f postgres
+
+# コンテナ内で psql を起動します。
+docker compose exec postgres psql -U concierge -d concierge
+
+# サービスを停止します (ボリュームは保持されます)。
+docker compose stop postgres
+docker compose rm -f postgres
+```
+
 ## GitHub Pages
 
 [github-pages workflow](https://github.com/ks6088ts-labs/concierge/actions/workflows/github-pages.yaml) は、`main` ブランチから `mkdocs gh-deploy --force` で MkDocs site をデプロイします。

@@ -11,7 +11,7 @@ description: Microsoft Foundry, LangChain, and LangGraph hands-on examples with 
 
 ## 概要
 
-`concierge` は、Microsoft Foundry 上のモデルを LangChain / LangGraph から扱うための Python ハンズオンリポジトリです。Foundry の chat、agent、embedding、vector store、observability を Typer CLI と MkDocs チュートリアルで試せます。
+`concierge` は、Microsoft Foundry 上のモデルを LangChain / LangGraph から扱うための Python ハンズオンリポジトリです。Foundry の chat、agent、embedding、vector store、observability を Typer CLI と MkDocs チュートリアルで試せます。Docker Compose 上の PostgreSQL (pgvector) を使った永続的なベクトルストア向け CRUD CLI も同梱しています。
 
 ## 前提条件
 

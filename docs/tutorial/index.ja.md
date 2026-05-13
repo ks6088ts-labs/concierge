@@ -22,9 +22,11 @@
 | 2b       | MLflow によるローカル評価                   | [#8](https://github.com/ks6088ts-labs/concierge/issues/8) | Closed |
 | 3a       | クリーンアーキテクチャの適用                | [#6](https://github.com/ks6088ts-labs/concierge/issues/6) | Open   |
 | 3b       | IaC によるインフラ構築                      | [#10](https://github.com/ks6088ts-labs/concierge/issues/10) | Open   |
+| 4        | Docker Compose 上の PostgreSQL (pgvector) で CRUD | -    | -      |
 
 ステップ 1〜2 はすでにマージ済みのコードに対応します。ステップ 3 は今後の
-作業として Open Issue を起点に進める内容です。
+作業として Open Issue を起点に進める内容です。ステップ 4 では Docker で動く
+PostgreSQL を永続的なベクトルストアとして使う構成を追加しました。
 
 ## 全体アーキテクチャ
 

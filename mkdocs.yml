@@ -11,6 +11,7 @@ nav:
       - 1. Microsoft Foundry + LangChain: tutorial/01-foundry-langchain.md
       - 2. Observability (Tracing & MLflow): tutorial/02-observability.md
       - 3. Next steps (Clean Architecture & IaC): tutorial/03-next-steps.md
+      - 4. PostgreSQL (pgvector) CRUD: tutorial/04-postgres-vector-store.md
       - Appendix - References: tutorial/appendix.md
 markdown_extensions:
   - admonition

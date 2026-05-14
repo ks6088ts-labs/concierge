@@ -12,25 +12,27 @@
 を単に読むよりも、ステップごとに組み上げていくことで設計意図が見えるよう
 にしています。
 
-## チュートリアル全体マップ
+## 推奨される読み進め方
 
-| ステップ | テーマ                                  |
-| :------- | :-------------------------------------- |
-| 1        | Microsoft Foundry + LangChain のセットアップ |
-| 2a       | Azure Monitor / Foundry によるトレーシング    |
-| 2b       | MLflow によるローカル評価                   |
-| 3        | PostgreSQL (pgvector) で CRUD - Docker Compose または Azure Flexible Server |
-| 4        | LangGraph Todo Agent CLI                 |
+このチュートリアルは **上から順番に** 読むのが最短経路です。各ステップは
+直前のステップだけに依存し、単独で動作確認できます。
 
-ステップ 1～2 で Foundry + LangChain の CLI を組み上げ、観測性を追加します。
-ステップ 3 では pgvector を使った永続ベクトルストアを追加します。ローカル
-Docker Compose と マネージドな Azure Database for PostgreSQL Flexible Server
-という 2 つのターゲットを 1 本の CLI
-(`scripts/postgresql/vanilla.py --target docker|azure`) で切り替えて全ての
-CRUD フローを試せる構成です。
-ステップ 4 では LangGraph ベースの Todo エージェント CLI
-(`scripts/langgraph/vanilla.py`) を追加し、単発 (`run`) と対話 (`chat`) の
-両モードで Todo Web API をツール越しに操作できるようにします。
+| ステップ | テーマ | 何を足すか | Azure が必要？ |
+| :--- | :--- | :--- | :---: |
+| [1](01-foundry-langchain.md) | Microsoft Foundry + LangChain | Foundry モデルを呼ぶ Typer CLI | 必要 |
+| [2](02-observability.md) | 観測性 (トレース & MLflow) | LangChain 実行を Azure Monitor とローカル MLflow UI に流す | 必要 / 一部のみ[^1] |
+| [3](03-postgres-vector-store.md) | PostgreSQL (pgvector) CRUD | 永続ベクトルストア（ローカル / Azure 両対応） | 任意[^2] |
+| [4](04-langgraph-todo-agent.md) | LangGraph Todo Agent CLI | Todo Web API をツール経由で操作する ReAct エージェント | 必要 |
+
+[^1]: MLflow はローカル完結で、Azure Monitor 側のみ Foundry のトレーシング
+      機能を有効化する必要があります。
+[^2]: ステップ 3 には Foundry を呼ばない `--fake-embeddings` フラグがあり、
+      既定の `--target docker` はローカル Docker Compose pgvector を使います。
+
+!!! tip "まずローカルで動かしてみたい場合"
+    [Todo アプリ (クリーンアーキテクチャ)](../todo/index.md) のセクション
+    は Azure 認証なしで起動でき、FastAPI / Typer / リポジトリ層の関係を
+    すぐ確認できます。
 
 ## 全体アーキテクチャ
 

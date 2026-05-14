@@ -15,25 +15,27 @@ The repository is a template for building LLM applications on top of
 than reading the finished code in isolation, you will build it up step by step
 so the design decisions stay visible.
 
-## Tutorial map
+## Recommended reading order
 
-| Step | Topic                                |
-| :--- | :----------------------------------- |
-| 1    | Microsoft Foundry + LangChain setup  |
-| 2a   | Tracing with Azure Monitor / Foundry |
-| 2b   | Local evaluation with MLflow         |
-| 3    | PostgreSQL (pgvector) CRUD - Docker Compose or Azure Flexible Server |
-| 4    | LangGraph Todo Agent CLI             |
+The fastest path through the tutorial is **top to bottom**. Each step depends
+only on what comes before it, and each one is independently verifiable.
 
-Steps 1 and 2 build the Foundry + LangChain CLI and add observability.
-Step 3 adds a persistent vector store backed by PostgreSQL with pgvector and
-walks through the same CRUD workflow against two interchangeable targets - a
-local Docker Compose service or a managed Azure Database for PostgreSQL
-Flexible Server - using a single CLI
-(`scripts/postgresql/vanilla.py --target docker|azure`).
-Step 4 adds a LangGraph-based Todo agent CLI (`scripts/langgraph/vanilla.py`)
-that operates the existing Todo Web API through tools in one-shot (`run`) or
-interactive (`chat`) mode.
+| Step | Topic | What it adds | Needs Azure? |
+| :--- | :--- | :--- | :---: |
+| [1](01-foundry-langchain.md) | Microsoft Foundry + LangChain | A Typer CLI that calls a Foundry-hosted model | yes |
+| [2](02-observability.md) | Observability (Tracing & MLflow) | Trace LangChain runs to Azure Monitor and to a local MLflow UI | yes / partly[^1] |
+| [3](03-postgres-vector-store.md) | PostgreSQL (pgvector) CRUD | A persistent vector store, locally or on Azure | optional[^2] |
+| [4](04-langgraph-todo-agent.md) | LangGraph Todo Agent CLI | A ReAct agent that operates the Todo Web API through tools | yes |
+
+[^1]: MLflow runs entirely on your laptop; only the Azure Monitor side
+      requires Foundry tracing to be enabled.
+[^2]: Step 3 has a `--fake-embeddings` flag that bypasses Foundry entirely,
+      and the `--target docker` default uses local Docker Compose pgvector.
+
+!!! tip "Already exploring locally?"
+    The [Todo App (Clean Architecture)](../todo/index.md) section runs
+    without any Azure credentials and is the best entry point if you just
+    want to see the FastAPI / Typer / repository layout in action.
 
 ## High-level architecture
 

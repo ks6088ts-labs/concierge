@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import uuid
 from enum import Enum
 from functools import lru_cache
+from uuid import UUID
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -19,6 +21,13 @@ class ChatSettings(BaseSettings):
     conversations_table_name: str = "chat_conversations"
     participants_table_name: str = "chat_participants"
     messages_table_name: str = "chat_messages"
+
+    bot_enabled: bool = False
+    bot_participant_id: uuid.UUID = UUID("00000000-0000-0000-0000-000000000001")
+    bot_display_name: str = "Concierge AI"
+    bot_history_limit: int = 20
+    bot_system_prompt: str = "あなたは Concierge Chat のアシスタントです。日本語で簡潔に応答してください。"
+    bot_model: str = "azure_ai:gpt-5"
 
     model_config = SettingsConfigDict(
         env_file=".env",

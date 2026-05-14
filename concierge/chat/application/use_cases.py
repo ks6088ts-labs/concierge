@@ -5,9 +5,10 @@ import uuid
 from datetime import datetime
 
 from concierge.chat.application.repositories import ConversationRepository, MessageRepository
+from concierge.chat.application.responders import ChatbotResponder
 from concierge.chat.domain.entities import Conversation, Message
 from concierge.chat.domain.exceptions import ConversationNotFoundError, MessageValidationError
-from concierge.chat.domain.value_objects import Participant
+from concierge.chat.domain.value_objects import MessageRole, Participant
 
 logger = logging.getLogger(__name__)
 
@@ -101,3 +102,37 @@ class DeleteConversationUseCase:
         deleted_messages = self.message_repository.delete_by_conversation(conversation_id)
         self.conversation_repository.delete(conversation_id)
         logger.info("Deleted conversation id=%s messages=%s", conversation_id, deleted_messages)
+
+
+class GenerateBotReplyUseCase:
+    def __init__(
+        self,
+        conversation_repository: ConversationRepository,
+        message_repository: MessageRepository,
+        responder: ChatbotResponder,
+        bot_participant: Participant,
+        history_limit: int = 20,
+    ):
+        self.conversation_repository = conversation_repository
+        self.message_repository = message_repository
+        self.responder = responder
+        self.bot_participant = bot_participant
+        self.history_limit = history_limit
+
+    def execute(self, conversation_id: uuid.UUID) -> Message:
+        conversation = self.conversation_repository.find_by_id(conversation_id)
+        if conversation is None:
+            raise ConversationNotFoundError(conversation_id)
+        history = self.message_repository.find_by_conversation(conversation_id, limit=self.history_limit)
+        reply_content = self.responder.generate_reply(conversation, history)
+        conversation.add_participant(self.bot_participant)
+        self.conversation_repository.save(conversation)
+        message = Message(
+            conversation_id=conversation_id,
+            sender=self.bot_participant,
+            content=reply_content,
+            role=MessageRole.AGENT,
+        )
+        saved = self.message_repository.save(message)
+        logger.info("Bot replied message id=%s in conversation=%s", saved.id, conversation_id)
+        return saved

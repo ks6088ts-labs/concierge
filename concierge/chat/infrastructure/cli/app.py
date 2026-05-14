@@ -11,6 +11,7 @@ import typer
 from concierge.chat.application.use_cases import (
     CreateConversationUseCase,
     DeleteConversationUseCase,
+    GenerateBotReplyUseCase,
     GetConversationUseCase,
     JoinConversationUseCase,
     ListConversationsUseCase,
@@ -24,6 +25,8 @@ from concierge.chat.domain.exceptions import (
     ParticipantValidationError,
 )
 from concierge.chat.domain.value_objects import Participant, ParticipantKind
+from concierge.chat.infrastructure.ai.factory import create_chatbot_responder
+from concierge.chat.infrastructure.ai.null_responder import ChatbotDisabledError
 from concierge.chat.infrastructure.persistence.factory import get_conversation_repository, get_message_repository
 from concierge.chat.infrastructure.persistence.postgres import (
     SqlAlchemyConversationRepository,
@@ -235,6 +238,30 @@ def db_ping() -> None:
         raise typer.Exit(code=1)
     conversation_repository.ping()
     typer.echo("Connection OK.")
+
+
+@message_app.command("reply")
+def message_reply(conversation_id: uuid.UUID) -> None:
+    settings = get_chat_settings()
+    responder = create_chatbot_responder()
+    bot_participant = Participant(
+        id=settings.bot_participant_id,
+        kind=ParticipantKind.AGENT,
+        display_name=settings.bot_display_name,
+    )
+    try:
+        message = GenerateBotReplyUseCase(
+            get_conversation_repository(),
+            get_message_repository(),
+            responder,
+            bot_participant,
+            settings.bot_history_limit,
+        ).execute(conversation_id)
+        _print_json(_message_to_dict(message))
+    except ChatbotDisabledError as exc:
+        _handle_error(exc)
+    except ConversationNotFoundError as exc:
+        _handle_error(exc)
 
 
 if __name__ == "__main__":

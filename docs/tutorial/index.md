@@ -23,6 +23,7 @@ so the design decisions stay visible.
 | 2a   | Tracing with Azure Monitor / Foundry |
 | 2b   | Local evaluation with MLflow         |
 | 3    | PostgreSQL (pgvector) CRUD - Docker Compose or Azure Flexible Server |
+| 4    | LangGraph Todo Agent CLI             |
 
 Steps 1 and 2 build the Foundry + LangChain CLI and add observability.
 Step 3 adds a persistent vector store backed by PostgreSQL with pgvector and
@@ -30,6 +31,9 @@ walks through the same CRUD workflow against two interchangeable targets - a
 local Docker Compose service or a managed Azure Database for PostgreSQL
 Flexible Server - using a single CLI
 (`scripts/postgresql/vanilla.py --target docker|azure`).
+Step 4 adds a LangGraph-based Todo agent CLI (`scripts/langgraph/vanilla.py`)
+that operates the existing Todo Web API through tools in one-shot (`run`) or
+interactive (`chat`) mode.
 
 ## High-level architecture
 

@@ -18,13 +18,20 @@ from concierge.todo.application.use_cases import (
 from concierge.todo.domain.entities import Task
 from concierge.todo.domain.exceptions import TaskNotFoundError, TaskValidationError
 from concierge.todo.domain.value_objects import TaskStatus
-from concierge.todo.infrastructure.persistence.memory import InMemoryTaskRepository
+from concierge.todo.infrastructure.persistence.factory import (
+    BACKEND_AZURE_POSTGRES,
+    BACKEND_MEMORY,
+    BACKEND_POSTGRES,
+    get_task_repository,
+)
 
 app = typer.Typer(add_completion=False, help="Todo CLI")
 task_app = typer.Typer(help="Task commands")
+db_app = typer.Typer(help="Database management commands")
 app.add_typer(task_app, name="task")
+app.add_typer(db_app, name="db")
 logger = get_logger("concierge.todo")
-repository = InMemoryTaskRepository()
+repository = get_task_repository()
 
 
 def _task_to_dict(task: Task) -> dict[str, object]:
@@ -111,6 +118,66 @@ def delete_task(task_id: uuid.UUID) -> None:
         typer.echo("deleted")
     except TaskNotFoundError as exc:
         _handle_error(exc)
+
+
+def _require_sql_backend() -> None:
+    """Exit with an error message when the backend is ``memory``."""
+    import os
+
+    backend = os.environ.get("TODO_REPOSITORY_BACKEND", BACKEND_MEMORY).strip().lower()
+    if backend == BACKEND_MEMORY:
+        typer.echo(
+            "The 'db' commands are not applicable for the 'memory' backend. "
+            f"Set TODO_REPOSITORY_BACKEND to '{BACKEND_POSTGRES}' or '{BACKEND_AZURE_POSTGRES}'.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+
+
+@db_app.command("init")
+def db_init() -> None:
+    """Create the todo_tasks table (CREATE TABLE IF NOT EXISTS) in the current backend."""
+    _require_sql_backend()
+    from concierge.todo.infrastructure.persistence.postgres import SqlAlchemyTaskRepository
+
+    repo = repository
+    if not isinstance(repo, SqlAlchemyTaskRepository):
+        typer.echo("Backend does not support schema initialisation.", err=True)
+        raise typer.Exit(code=1)
+    repo.init_schema()
+    typer.echo("Database schema initialised successfully.")
+
+
+@db_app.command("drop")
+def db_drop(
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Skip confirmation prompt")] = False,
+) -> None:
+    """Drop the todo_tasks table from the current backend."""
+    _require_sql_backend()
+    from concierge.todo.infrastructure.persistence.postgres import SqlAlchemyTaskRepository
+
+    repo = repository
+    if not isinstance(repo, SqlAlchemyTaskRepository):
+        typer.echo("Backend does not support schema management.", err=True)
+        raise typer.Exit(code=1)
+    if not yes:
+        typer.confirm("This will drop the todo_tasks table. Continue?", abort=True)
+    repo.drop_schema()
+    typer.echo("Table dropped.")
+
+
+@db_app.command("ping")
+def db_ping() -> None:
+    """Check connectivity to the current backend (SELECT 1)."""
+    _require_sql_backend()
+    from concierge.todo.infrastructure.persistence.postgres import SqlAlchemyTaskRepository
+
+    repo = repository
+    if not isinstance(repo, SqlAlchemyTaskRepository):
+        typer.echo("Backend does not support ping.", err=True)
+        raise typer.Exit(code=1)
+    repo.ping()
+    typer.echo("Connection OK.")
 
 
 if __name__ == "__main__":

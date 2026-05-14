@@ -13,8 +13,10 @@ dependencies = [
     "langchain-postgres>=0.0.17",
     "langgraph>=1.1.10",
     "mlflow>=3.12.0",
+    "psycopg[binary]>=3.2",
     "pydantic-settings>=2.9.1",
     "python-dotenv>=1.1.0",
+    "sqlalchemy>=2.0",
     "typer>=0.16.0",
     "uvicorn[standard]>=0.34.0",
 ]
@@ -32,6 +34,7 @@ dev = [
     "pytest>=8.3.5",
     "pytest-cov>=6.1.1",
     "ruff>=0.11.7",
+    "testcontainers[postgres]>=4.0",
     "ty>=0.0.1a6",
 ]
 
@@ -59,6 +62,9 @@ log_cli = true
 log_cli_level = "INFO"
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"
 log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+markers = [
+    "integration: marks tests as integration tests that require Docker (deselect with '-m not integration')",
+]
 filterwarnings = [
     # langgraph 1.1.10 constructs `langchain_core.load.load.Reviver()` without
     # `allowed_objects`, which triggers a pending-deprecation warning from

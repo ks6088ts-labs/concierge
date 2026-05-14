@@ -41,6 +41,15 @@ services:
       - .env
     ports:
       - "8001:8000"
+    # Uncomment the lines below to use the local PostgreSQL backend instead of
+    # the default in-memory backend.  Run `todo-cli db init` first to create
+    # the schema, or set the entrypoint to initialise it automatically.
+    # environment:
+    #   TODO_REPOSITORY_BACKEND: postgres
+    #   POSTGRES_HOST: postgres
+    # depends_on:
+    #   postgres:
+    #     condition: service_healthy
 
 volumes:
   postgres-data:

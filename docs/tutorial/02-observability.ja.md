@@ -1,9 +1,5 @@
 # ステップ 2 - 観測性 (トレース & MLflow)
 
-!!! info "参照 Issue"
-    - [#5 - add tracing feature](https://github.com/ks6088ts-labs/concierge/issues/5) (Closed)
-    - [#8 - support MLflow locally for evaluation](https://github.com/ks6088ts-labs/concierge/issues/8) (Closed)
-
 ## ゴール
 
 同じ Typer CLI に対して、補完的な 2 つの観測バックエンドを有効化します。
@@ -25,10 +21,10 @@ LLM アプリのデバッグが難しい理由は、興味のある状態がプ�
 - 各ステップでどれくらい時間がかかったのか?
 - 各呼び出しで何トークン消費したのか?
 
-Issue [#5](https://github.com/ks6088ts-labs/concierge/issues/5) は LangChain
-を [`AzureAIOpenTelemetryTracer`](https://learn.microsoft.com/ja-jp/azure/foundry/how-to/develop/langchain-traces)
-経由で Azure Monitor に接続します。Issue [#8](https://github.com/ks6088ts-labs/concierge/issues/8)
-は MLflow autologging を追加し、ローカルだけで反復開発できるようにします。
+このステップでは LangChain を
+[`AzureAIOpenTelemetryTracer`](https://learn.microsoft.com/ja-jp/azure/foundry/how-to/develop/langchain-traces)
+経由で Azure Monitor に接続し、さらに MLflow autologging を追加してローカル
+だけで反復開発できるようにします。
 
 ```mermaid
 flowchart LR
@@ -79,7 +75,7 @@ def _trace_config(extra=None) -> RunnableConfig:
 これによりコマンド側に条件分岐を持ち込まずに、トレーサーを一括で適用できる
 ようになっています。
 
-## ステップ 2a - Azure Monitor トレーシング (Issue #5)
+## ステップ 2a - Azure Monitor トレーシング
 
 ### なぜ Azure Monitor か
 
@@ -124,7 +120,7 @@ LangChain 実行ツリー、プロンプト、応答、トークン数を確認�
     [LangChain コールバックフィルター](https://docs.langchain.com/oss/python/langchain/callbacks)
     による機密情報のマスキングを併用してください。
 
-## ステップ 2b - MLflow によるローカル autologging (Issue #8)
+## ステップ 2b - MLflow によるローカル autologging
 
 ### なぜ MLflow か
 
@@ -238,9 +234,8 @@ make test
 
 ## 次のステップ
 
-Foundry + LangChain CLI を観測できる状態まで進みました。残るは構造的な
-改善: 長期的な成長に耐えるコード構成と、クラウドリソースを再現可能な形で
-プロビジョニングする仕組みです。
-
-[ステップ 3 - 次の一歩 (クリーンアーキテクチャ & IaC)](03-next-steps.md) に
+Foundry + LangChain CLI を観測できる状態まで進めました。永続ベクトル
+ストア (pgvector) をローカル Docker Compose またはマネージドな Azure
+Database for PostgreSQL Flexible Server に追加したい場合は、
+[ステップ 3 - PostgreSQL (pgvector) CRUD](03-postgres-vector-store.md) に
 進みます。

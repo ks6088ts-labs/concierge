@@ -10,9 +10,8 @@ Foundry models through LangChain and LangGraph-oriented workflows. The current
 codebase includes a Typer CLI for chat, agents, embeddings, vector-store search,
 Azure Monitor tracing, and local MLflow observability.
 
-Start with the [hands-on tutorial](tutorial/index.md) to see how the current
-Foundry and LangChain examples map back to the GitHub Issues that introduced
-them.
+Start with the [hands-on tutorial](tutorial/index.md) to build up the
+Foundry and LangChain examples step by step.
 
 Use the [development guide](development.md) for local setup, CLI examples,
 documentation commands, and Docker commands.
@@ -21,8 +20,6 @@ documentation commands, and Docker commands.
 
 * [Step 1 - Microsoft Foundry + LangChain](tutorial/01-foundry-langchain.md)
 * [Step 2 - Observability with tracing and MLflow](tutorial/02-observability.md)
-* [Step 3 - Next steps for Clean Architecture and IaC](tutorial/03-next-steps.md)
-* [Step 4 - PostgreSQL (pgvector) CRUD](tutorial/04-postgres-vector-store.md)
-* [Step 5 - Azure Database for PostgreSQL (pgvector) CRUD](tutorial/05-azure-postgres-vector-store.md)
+* [Step 3 - PostgreSQL (pgvector) CRUD](tutorial/03-postgres-vector-store.md)
 * [Development Guide](development.md)
 * [Appendix - References](tutorial/appendix.md)

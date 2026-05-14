@@ -7,9 +7,10 @@ local pgvector ``POSTGRES_*`` variables. Expected variables:
 
 ``AZURE_DBHOST``, ``AZURE_DBNAME``, ``AZURE_DBUSER``, ``AZURE_DBPASSWORD``,
 ``AZURE_DBPORT``, ``AZURE_SSLMODE``, ``AZURE_USE_ENTRA_AUTH``, and (optional)
-``AZURE_ENTRA_TOKEN_SCOPE``. When ``AZURE_USE_ENTRA_AUTH=true`` the script
-in ``scripts/postgresql/crud_azure.py`` fetches an access token via
-``DefaultAzureCredential`` and uses it as the database password.
+``AZURE_ENTRA_TOKEN_SCOPE``. When ``AZURE_USE_ENTRA_AUTH=true`` the
+unified CRUD CLI in ``scripts/postgresql/vanilla.py`` (run with
+``--target azure``) fetches an access token via ``DefaultAzureCredential``
+and uses it as the database password.
 """
 
 from functools import lru_cache
@@ -27,7 +28,7 @@ class AzurePostgresSettings(BaseSettings):
     dbpassword: str = ""
     dbport: int = 5432
     sslmode: str = "require"
-    # When true, ``scripts/postgresql/crud_azure.py`` ignores
+    # When true, ``scripts/postgresql/vanilla.py --target azure`` ignores
     # ``AZURE_DBUSER``/``AZURE_DBPASSWORD`` for the password and instead
     # fetches an Entra access token via ``DefaultAzureCredential``. The
     # Entra principal used must already be a PostgreSQL role configured for

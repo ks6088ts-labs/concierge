@@ -95,7 +95,10 @@ class TestSqliteUnit:
 
 class TestFactoryUnit:
     def test_memory_backend_returns_in_memory_repo(self, monkeypatch) -> None:
-        monkeypatch.delenv("CHAT_REPOSITORY_BACKEND", raising=False)
+        # Explicitly set to ``memory`` so the test is independent of any value
+        # configured in the local ``.env`` file (pydantic-settings reads ``.env``
+        # even after ``monkeypatch.delenv``).
+        monkeypatch.setenv("CHAT_REPOSITORY_BACKEND", "memory")
 
         from concierge.chat.infrastructure.persistence import factory
         from concierge.chat.infrastructure.persistence.memory import InMemoryConversationRepository

@@ -71,6 +71,11 @@ def _make_sqlite_repos() -> tuple[SqlAlchemyConversationRepository, SqlAlchemyMe
 
 
 class TestSqliteUnit:
+    def test_invalid_table_name_raises(self) -> None:
+        engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+        with pytest.raises(ValueError, match="Invalid SQL table name"):
+            SqlAlchemyConversationRepository(engine, "chat_conversations;DROP TABLE users;", "chat_participants")
+
     def test_crud(self) -> None:
         conversation_repo, message_repo = _make_sqlite_repos()
         participant = _participant()

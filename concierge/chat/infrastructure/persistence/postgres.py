@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
@@ -12,12 +13,20 @@ from concierge.chat.domain.value_objects import MessageRole, Participant, Partic
 if TYPE_CHECKING:
     from sqlalchemy import Engine
 
+_VALID_TABLE_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _validate_table_name(table_name: str) -> str:
+    if not _VALID_TABLE_NAME.fullmatch(table_name):
+        raise ValueError(f"Invalid SQL table name: {table_name!r}")
+    return table_name
+
 
 class SqlAlchemyConversationRepository:
     def __init__(self, engine: Engine, conversations_table_name: str, participants_table_name: str):
         self._engine = engine
-        self._conversations_table_name = conversations_table_name
-        self._participants_table_name = participants_table_name
+        self._conversations_table_name = _validate_table_name(conversations_table_name)
+        self._participants_table_name = _validate_table_name(participants_table_name)
 
     def init_schema(self) -> None:
         with self._engine.begin() as conn:
@@ -177,8 +186,8 @@ class SqlAlchemyConversationRepository:
 class SqlAlchemyMessageRepository:
     def __init__(self, engine: Engine, messages_table_name: str, conversations_table_name: str):
         self._engine = engine
-        self._messages_table_name = messages_table_name
-        self._conversations_table_name = conversations_table_name
+        self._messages_table_name = _validate_table_name(messages_table_name)
+        self._conversations_table_name = _validate_table_name(conversations_table_name)
 
     def init_schema(self) -> None:
         with self._engine.begin() as conn:

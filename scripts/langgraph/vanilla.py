@@ -10,13 +10,13 @@ import httpx
 import typer
 from azure.identity import DefaultAzureCredential
 from dotenv import load_dotenv
+from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, tool
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.memory import MemorySaver
-from langgraph.prebuilt import create_react_agent
 
 from concierge.loggers import get_logger
 from concierge.settings import (
@@ -264,10 +264,10 @@ def _build_agent(
     """Build a ReAct agent backed by LangGraph and Todo API tools."""
     tools = _build_tools(endpoint=endpoint, timeout=timeout)
     chat_model = init_chat_model(model)
-    return create_react_agent(
+    return create_agent(
         model=chat_model,
         tools=tools,
-        prompt=system_prompt,
+        system_prompt=system_prompt,
         checkpointer=checkpointer,
     )
 
@@ -539,10 +539,10 @@ def chat(
     resolved_thread_id = thread_id or str(uuid.uuid4())
     resolved_endpoint = _resolve_endpoint(endpoint)
     tools = _build_tools(endpoint=resolved_endpoint, timeout=timeout)
-    agent = create_react_agent(
+    agent = create_agent(
         model=init_chat_model(model),
         tools=tools,
-        prompt=system,
+        system_prompt=system,
         checkpointer=_build_checkpointer(),
     )
     _run_repl(agent=agent, tools=tools, initial_thread_id=resolved_thread_id)

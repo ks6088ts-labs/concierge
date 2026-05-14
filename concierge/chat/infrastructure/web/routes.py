@@ -146,7 +146,7 @@ def post_message(
                 bot_settings.bot_history_limit,
             ).execute(conversation_id)
         except ChatbotDisabledError:
-            pass
+            logger.debug("Bot is disabled; skipping auto-reply for conversation %s", conversation_id)
         except Exception:
             logger.warning("Bot reply failed for conversation %s", conversation_id, exc_info=True)
     return MessageResponse.model_validate(message)

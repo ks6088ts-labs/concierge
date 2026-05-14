@@ -36,11 +36,20 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: ["uvicorn", "concierge.todo.infrastructure.web.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+    command: ["uvicorn", "concierge.todo.infrastructure.web.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8080"]
     env_file:
       - .env
     ports:
-      - "8001:8000"
+      - "8080:8080"
+    # Uncomment the lines below to use the local PostgreSQL backend instead of
+    # the default in-memory backend.  Run `todo-cli db init` first to create
+    # the schema, or set the entrypoint to initialise it automatically.
+    # environment:
+    #   TODO_REPOSITORY_BACKEND: postgres
+    #   POSTGRES_HOST: postgres
+    # depends_on:
+    #   postgres:
+    #     condition: service_healthy
 
 volumes:
   postgres-data:

@@ -39,7 +39,7 @@ uv run python scripts/langgraph/vanilla.py run \
 
 ```bash
 uv run python scripts/langgraph/vanilla.py chat \
-  --endpoint http://localhost:8000
+  --endpoint http://localhost:8080
 ```
 
 Common options:

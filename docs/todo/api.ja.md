@@ -18,5 +18,5 @@ description: クリーンアーキテクチャ Todo FastAPI アプリのエン�
 ## 実行例
 
 ```bash
-curl -X POST http://localhost:8000/tasks -H 'content-type: application/json' -d '{"title":"buy milk"}'
+curl -X POST http://localhost:8080/tasks -H 'content-type: application/json' -d '{"title":"buy milk"}'
 ```

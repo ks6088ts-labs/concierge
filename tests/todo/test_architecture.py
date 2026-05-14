@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-FRAMEWORK_IMPORTS = {"fastapi", "pydantic", "typer", "uvicorn", "httpx"}
+FRAMEWORK_IMPORTS = {"fastapi", "pydantic", "typer", "uvicorn", "httpx", "sqlalchemy", "psycopg", "azure"}
 BASE_PATH = Path("concierge/todo")
 
 

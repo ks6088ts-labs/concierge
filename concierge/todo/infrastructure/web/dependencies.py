@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-from functools import lru_cache
-
 from concierge.todo.application.repositories import TaskRepository
-from concierge.todo.infrastructure.persistence.memory import InMemoryTaskRepository
+from concierge.todo.infrastructure.persistence.factory import get_task_repository as _factory_get_task_repository
 
 
-@lru_cache(maxsize=1)
 def get_task_repository() -> TaskRepository:
-    return InMemoryTaskRepository()
+    return _factory_get_task_repository()

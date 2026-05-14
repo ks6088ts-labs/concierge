@@ -128,4 +128,4 @@ api: ## run API server
 	uv run uvicorn concierge.todo.infrastructure.web.app:create_app \
 		--factory \
 		--host 0.0.0.0 \
-		--port 8000
+		--port 8080

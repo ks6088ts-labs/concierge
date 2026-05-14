@@ -20,6 +20,7 @@
 | 2a       | Azure Monitor / Foundry によるトレーシング    |
 | 2b       | MLflow によるローカル評価                   |
 | 3        | PostgreSQL (pgvector) で CRUD - Docker Compose または Azure Flexible Server |
+| 4        | LangGraph Todo Agent CLI                 |
 
 ステップ 1～2 で Foundry + LangChain の CLI を組み上げ、観測性を追加します。
 ステップ 3 では pgvector を使った永続ベクトルストアを追加します。ローカル
@@ -27,6 +28,9 @@ Docker Compose と マネージドな Azure Database for PostgreSQL Flexible Ser
 という 2 つのターゲットを 1 本の CLI
 (`scripts/postgresql/vanilla.py --target docker|azure`) で切り替えて全ての
 CRUD フローを試せる構成です。
+ステップ 4 では LangGraph ベースの Todo エージェント CLI
+(`scripts/langgraph/vanilla.py`) を追加し、単発 (`run`) と対話 (`chat`) の
+両モードで Todo Web API をツール越しに操作できるようにします。
 
 ## 全体アーキテクチャ
 

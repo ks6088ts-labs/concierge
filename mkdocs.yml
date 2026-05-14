@@ -11,6 +11,7 @@ nav:
       - 1. Microsoft Foundry + LangChain: tutorial/01-foundry-langchain.md
       - 2. Observability (Tracing & MLflow): tutorial/02-observability.md
       - 3. PostgreSQL (pgvector) CRUD: tutorial/03-postgres-vector-store.md
+      - 4. LangGraph Todo Agent CLI: tutorial/04-langgraph-todo-agent.md
       - Appendix - References: tutorial/appendix.md
   - Todo App (Clean Architecture):
       - Overview: todo/index.md

@@ -865,6 +865,7 @@ source = { editable = "." }
 dependencies = [
     { name = "azure-identity" },
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "langchain" },
     { name = "langchain-azure-ai", extra = ["opentelemetry"] },
     { name = "langchain-postgres" },
@@ -879,7 +880,6 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "coverage" },
-    { name = "httpx" },
     { name = "jupyterlab" },
     { name = "pre-commit" },
     { name = "pyrefly" },
@@ -897,6 +897,7 @@ docs = [
 requires-dist = [
     { name = "azure-identity", specifier = ">=1.25.3" },
     { name = "fastapi", specifier = ">=0.136.1" },
+    { name = "httpx", specifier = ">=0.28.0" },
     { name = "langchain", specifier = ">=1.2.18" },
     { name = "langchain-azure-ai", extras = ["opentelemetry"], specifier = ">=1.2.3" },
     { name = "langchain-postgres", specifier = ">=0.0.17" },
@@ -911,7 +912,6 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "coverage", specifier = ">=7.8.0" },
-    { name = "httpx", specifier = ">=0.28.0" },
     { name = "jupyterlab", specifier = ">=4.4.2" },
     { name = "pre-commit", specifier = ">=4.2.0" },
     { name = "pyrefly", specifier = ">=0.44.1" },

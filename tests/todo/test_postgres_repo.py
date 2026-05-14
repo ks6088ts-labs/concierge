@@ -116,11 +116,13 @@ class TestSqlAlchemyTaskRepositoryUnit:
 class TestFactoryUnit:
     def test_memory_backend_returns_in_memory_repo(self, monkeypatch) -> None:
         monkeypatch.delenv("TODO_REPOSITORY_BACKEND", raising=False)
+        from concierge.settings import get_todo_settings
         from concierge.todo.infrastructure.persistence.factory import (
             _get_cached_engine,
         )
         from concierge.todo.infrastructure.persistence.memory import InMemoryTaskRepository
 
+        get_todo_settings.cache_clear()
         _get_cached_engine.cache_clear()
 
         from concierge.todo.infrastructure.persistence import factory
@@ -130,12 +132,17 @@ class TestFactoryUnit:
 
     def test_unknown_backend_raises(self, monkeypatch) -> None:
         monkeypatch.setenv("TODO_REPOSITORY_BACKEND", "unknown-backend")
+        from concierge.settings import get_todo_settings
         from concierge.todo.infrastructure.persistence import factory
         from concierge.todo.infrastructure.persistence.factory import _get_cached_engine
 
+        get_todo_settings.cache_clear()
         _get_cached_engine.cache_clear()
 
-        with pytest.raises(ValueError, match="Unknown TODO_REPOSITORY_BACKEND"):
+        # ``pydantic.ValidationError`` (a ``ValueError`` subclass) is raised
+        # when ``TODO_REPOSITORY_BACKEND`` cannot be parsed into a
+        # ``TodoRepositoryBackend`` enum value.
+        with pytest.raises(ValueError, match="repository_backend"):
             factory.get_task_repository()
 
     def test_azure_entra_credential_path(self, monkeypatch) -> None:

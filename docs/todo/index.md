@@ -20,48 +20,56 @@ flowchart LR
 ## Quickstart
 
 ```bash
-uv run uvicorn concierge.todo.infrastructure.web.app:create_app --factory --host 0.0.0.0 --port 8000
+uv run todo-web
 ```
 
 ```bash
-uv run python -m concierge.todo.infrastructure.cli.app task create --title "buy milk"
+uv run todo-cli task create --title "buy milk"
 ```
 
 ## Persistence Backend
 
-The persistence backend is selected via the `TODO_REPOSITORY_BACKEND` environment variable.
+All Todo configuration is centralised in `concierge.settings.TodoSettings`,
+which reads `TODO_REPOSITORY_BACKEND` and `TODO_TABLE_NAME` from the
+environment (or `.env`). The backend is restricted to the
+`concierge.settings.TodoRepositoryBackend` enum — passing an unknown
+value raises a validation error at startup, so typos cannot silently
+change behaviour.
 
-| Value | Description |
-|---|---|
-| `memory` (default) | In-process storage; data is lost on restart |
-| `postgres` | Local Docker Compose PostgreSQL (`POSTGRES_*` variables) |
-| `azure-postgres` | Azure Database for PostgreSQL Flexible Server (`AZURE_*` variables) |
+| `TODO_REPOSITORY_BACKEND` | Enum member | Description |
+|---|---|---|
+| `memory` (default) | `TodoRepositoryBackend.MEMORY` | In-process storage; data is lost on restart |
+| `postgres` | `TodoRepositoryBackend.POSTGRES` | Local Docker Compose PostgreSQL (`POSTGRES_*` variables) |
+| `azure-postgres` | `TodoRepositoryBackend.AZURE_POSTGRES` | Azure Database for PostgreSQL Flexible Server (`AZURE_*` variables) |
 
 ### PostgreSQL Quickstart (Docker Compose)
+
+Set `TODO_REPOSITORY_BACKEND=postgres` in `.env` (see `.env.template`), then:
 
 ```bash
 # 1. Start the local PostgreSQL service
 docker compose up -d postgres
 
 # 2. Initialise the schema
-TODO_REPOSITORY_BACKEND=postgres uv run todo-cli db init
+uv run todo-cli db init
 
 # 3. Start the API server backed by PostgreSQL
-TODO_REPOSITORY_BACKEND=postgres uv run uvicorn concierge.todo.infrastructure.web.app:create_app --factory --host 0.0.0.0 --port 8000
+uv run todo-web
 
 # 4. Create and list tasks (data is now persisted)
-TODO_REPOSITORY_BACKEND=postgres uv run todo-cli task create --title "buy milk"
-TODO_REPOSITORY_BACKEND=postgres uv run todo-cli task list
+uv run todo-cli task create --title "buy milk"
+uv run todo-cli task list
 ```
 
 ### Azure Database for PostgreSQL
 
-Set the `AZURE_*` environment variables in `.env` (see `.env.template`), then:
+Set `TODO_REPOSITORY_BACKEND=azure-postgres` and the `AZURE_*` variables in
+`.env` (see `.env.template`), then:
 
 ```bash
 # Entra ID authentication (AZURE_USE_ENTRA_AUTH=true)
-TODO_REPOSITORY_BACKEND=azure-postgres uv run todo-cli db init
-TODO_REPOSITORY_BACKEND=azure-postgres uv run todo-cli task create --title "cloud task"
+uv run todo-cli db init
+uv run todo-cli task create --title "cloud task"
 ```
 
 ### Database CLI Commands

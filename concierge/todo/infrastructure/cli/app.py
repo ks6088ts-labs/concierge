@@ -7,6 +7,7 @@ from typing import Annotated
 import typer
 
 from concierge.loggers import get_logger
+from concierge.settings import TodoRepositoryBackend, get_todo_settings
 from concierge.todo.application.use_cases import (
     CompleteTaskUseCase,
     CreateTaskUseCase,
@@ -18,12 +19,7 @@ from concierge.todo.application.use_cases import (
 from concierge.todo.domain.entities import Task
 from concierge.todo.domain.exceptions import TaskNotFoundError, TaskValidationError
 from concierge.todo.domain.value_objects import TaskStatus
-from concierge.todo.infrastructure.persistence.factory import (
-    BACKEND_AZURE_POSTGRES,
-    BACKEND_MEMORY,
-    BACKEND_POSTGRES,
-    get_task_repository,
-)
+from concierge.todo.infrastructure.persistence.factory import get_task_repository
 
 app = typer.Typer(add_completion=False, help="Todo CLI")
 task_app = typer.Typer(help="Task commands")
@@ -122,13 +118,13 @@ def delete_task(task_id: uuid.UUID) -> None:
 
 def _require_sql_backend() -> None:
     """Exit with an error message when the backend is ``memory``."""
-    import os
-
-    backend = os.environ.get("TODO_REPOSITORY_BACKEND", BACKEND_MEMORY).strip().lower()
-    if backend == BACKEND_MEMORY:
+    backend = get_todo_settings().repository_backend
+    if backend is TodoRepositoryBackend.MEMORY:
         typer.echo(
             "The 'db' commands are not applicable for the 'memory' backend. "
-            f"Set TODO_REPOSITORY_BACKEND to '{BACKEND_POSTGRES}' or '{BACKEND_AZURE_POSTGRES}'.",
+            f"Set TODO_REPOSITORY_BACKEND to "
+            f"'{TodoRepositoryBackend.POSTGRES.value}' or "
+            f"'{TodoRepositoryBackend.AZURE_POSTGRES.value}'.",
             err=True,
         )
         raise typer.Exit(code=1)

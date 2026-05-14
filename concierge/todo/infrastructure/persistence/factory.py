@@ -1,13 +1,18 @@
-"""Factory that resolves a ``TaskRepository`` from the environment.
+"""Factory that resolves a ``TaskRepository`` from configuration.
 
-The backend is selected by the ``TODO_REPOSITORY_BACKEND`` environment
-variable:
+Configuration is centralised in :class:`concierge.settings.TodoSettings`,
+which reads the ``TODO_REPOSITORY_BACKEND`` and ``TODO_TABLE_NAME``
+environment variables. Supported backends are declared in the
+:class:`concierge.settings.TodoRepositoryBackend` enum:
 
-* ``memory`` (default) — in-process ``InMemoryTaskRepository``
-* ``postgres`` — ``SqlAlchemyTaskRepository`` backed by the local Docker
-  Compose PostgreSQL service (``POSTGRES_*`` variables)
-* ``azure-postgres`` — ``SqlAlchemyTaskRepository`` backed by Azure Database
-  for PostgreSQL Flexible Server (``AZURE_*`` variables)
+* :attr:`~concierge.settings.TodoRepositoryBackend.MEMORY` (default) —
+  in-process :class:`InMemoryTaskRepository`.
+* :attr:`~concierge.settings.TodoRepositoryBackend.POSTGRES` —
+  :class:`SqlAlchemyTaskRepository` backed by the local Docker Compose
+  PostgreSQL service (``POSTGRES_*`` variables).
+* :attr:`~concierge.settings.TodoRepositoryBackend.AZURE_POSTGRES` —
+  :class:`SqlAlchemyTaskRepository` backed by Azure Database for PostgreSQL
+  Flexible Server (``AZURE_*`` variables).
 
 When ``TODO_REPOSITORY_BACKEND=azure-postgres`` and
 ``AZURE_USE_ENTRA_AUTH=true``, a Microsoft Entra access token is obtained via
@@ -17,24 +22,11 @@ pattern in ``scripts/postgresql/vanilla.py``).
 
 from __future__ import annotations
 
-import os
 from functools import lru_cache
 
+from concierge.settings import TodoRepositoryBackend, get_todo_settings
 from concierge.todo.application.repositories import TaskRepository
 from concierge.todo.infrastructure.persistence.memory import InMemoryTaskRepository
-
-_BACKEND_ENV = "TODO_REPOSITORY_BACKEND"
-_TABLE_NAME_ENV = "TODO_TABLE_NAME"
-_DEFAULT_TABLE_NAME = "todo_tasks"
-
-# Valid backend values.
-BACKEND_MEMORY = "memory"
-BACKEND_POSTGRES = "postgres"
-BACKEND_AZURE_POSTGRES = "azure-postgres"
-
-
-def _get_table_name() -> str:
-    return os.environ.get(_TABLE_NAME_ENV, _DEFAULT_TABLE_NAME)
 
 
 def _build_postgres_engine():
@@ -93,12 +85,12 @@ def _build_azure_postgres_engine():
     return create_engine(url, pool_pre_ping=True)
 
 
-@lru_cache(maxsize=1)
-def _get_cached_engine(backend: str):
+@lru_cache(maxsize=2)
+def _get_cached_engine(backend: TodoRepositoryBackend):
     """Build (and cache per backend value) the SQLAlchemy engine."""
-    if backend == BACKEND_POSTGRES:
+    if backend is TodoRepositoryBackend.POSTGRES:
         return _build_postgres_engine()
-    if backend == BACKEND_AZURE_POSTGRES:
+    if backend is TodoRepositoryBackend.AZURE_POSTGRES:
         return _build_azure_postgres_engine()
     raise ValueError(f"Unknown backend: {backend!r}")  # pragma: no cover
 
@@ -110,18 +102,21 @@ def get_task_repository() -> TaskRepository:
     ``memory``). This function is safe to call from both FastAPI
     dependencies and the Typer CLI.
     """
-    backend = os.environ.get(_BACKEND_ENV, BACKEND_MEMORY).strip().lower()
+    settings = get_todo_settings()
+    backend = settings.repository_backend
 
-    if backend == BACKEND_MEMORY:
+    if backend is TodoRepositoryBackend.MEMORY:
         return InMemoryTaskRepository()
 
-    if backend in (BACKEND_POSTGRES, BACKEND_AZURE_POSTGRES):
+    if backend in (TodoRepositoryBackend.POSTGRES, TodoRepositoryBackend.AZURE_POSTGRES):
         from concierge.todo.infrastructure.persistence.postgres import SqlAlchemyTaskRepository
 
         engine = _get_cached_engine(backend)
-        return SqlAlchemyTaskRepository(engine, table_name=_get_table_name())
+        return SqlAlchemyTaskRepository(engine, table_name=settings.table_name)
 
-    raise ValueError(
-        f"Unknown TODO_REPOSITORY_BACKEND={backend!r}. "
-        f"Valid values: {BACKEND_MEMORY!r}, {BACKEND_POSTGRES!r}, {BACKEND_AZURE_POSTGRES!r}."
+    # ``repository_backend`` is enum-typed, so this branch is unreachable
+    # in practice; it stays as a defensive guard in case the enum is
+    # extended without updating this function.
+    raise ValueError(  # pragma: no cover
+        f"Unhandled TodoRepositoryBackend value: {backend!r}."
     )

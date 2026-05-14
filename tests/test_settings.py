@@ -1,9 +1,15 @@
 from logging import DEBUG
 
+import pytest
 from dotenv import load_dotenv
 
 from concierge.loggers import get_logger
-from concierge.settings import ObservabilitySettings, ProjectSettings
+from concierge.settings import (
+    ObservabilitySettings,
+    ProjectSettings,
+    TodoRepositoryBackend,
+    TodoSettings,
+)
 
 logger = get_logger(__name__)
 
@@ -43,3 +49,33 @@ def test_observability_settings_reads_env(monkeypatch):
 
     assert settings.mlflow_tracking_uri == "http://example.com:1234"
     assert settings.mlflow_experiment_name == "my-experiment"
+
+
+def test_todo_settings_defaults(monkeypatch):
+    """TodoSettings should default to the in-memory backend."""
+    monkeypatch.delenv("TODO_REPOSITORY_BACKEND", raising=False)
+    monkeypatch.delenv("TODO_TABLE_NAME", raising=False)
+
+    settings = TodoSettings(_env_file=None)  # ty: ignore[unknown-argument]
+
+    assert settings.repository_backend is TodoRepositoryBackend.MEMORY
+    assert settings.table_name == "todo_tasks"
+
+
+def test_todo_settings_reads_env(monkeypatch):
+    """TODO_REPOSITORY_BACKEND / TODO_TABLE_NAME should override defaults."""
+    monkeypatch.setenv("TODO_REPOSITORY_BACKEND", "postgres")
+    monkeypatch.setenv("TODO_TABLE_NAME", "custom_tasks")
+
+    settings = TodoSettings(_env_file=None)  # ty: ignore[unknown-argument]
+
+    assert settings.repository_backend is TodoRepositoryBackend.POSTGRES
+    assert settings.table_name == "custom_tasks"
+
+
+def test_todo_settings_rejects_unknown_backend(monkeypatch):
+    """Invalid backend strings must fail validation rather than silently passing through."""
+    monkeypatch.setenv("TODO_REPOSITORY_BACKEND", "unknown-backend")
+
+    with pytest.raises(ValueError, match="repository_backend"):
+        TodoSettings(_env_file=None)  # ty: ignore[unknown-argument]

@@ -20,48 +20,56 @@ flowchart LR
 ## クイックスタート
 
 ```bash
-uv run uvicorn concierge.todo.infrastructure.web.app:create_app --factory --host 0.0.0.0 --port 8000
+uv run todo-web
 ```
 
 ```bash
-uv run python -m concierge.todo.infrastructure.cli.app task create --title "buy milk"
+uv run todo-cli task create --title "buy milk"
 ```
 
 ## 永続化バックエンド
 
-永続化バックエンドは `TODO_REPOSITORY_BACKEND` 環境変数で切り替えます。
+Todo アプリの設定は `concierge.settings.TodoSettings`
+に集約されており、`TODO_REPOSITORY_BACKEND` および
+`TODO_TABLE_NAME` を環境変数（または `.env`）から読み込みます。
+バックエンドは `concierge.settings.TodoRepositoryBackend`
+列挙型に限定されているため、未定義の値が指定された場合は
+起動時にバリデーションエラーになり、タイプミスが暗黙的に
+挙動を変えることはありません。
 
-| 値 | 説明 |
-|---|---|
-| `memory`（デフォルト） | インメモリ保存。プロセス再起動でデータは失われます |
-| `postgres` | ローカル Docker Compose PostgreSQL（`POSTGRES_*` 変数を使用） |
-| `azure-postgres` | Azure Database for PostgreSQL Flexible Server（`AZURE_*` 変数を使用） |
+| `TODO_REPOSITORY_BACKEND` | 列挙メンバー | 説明 |
+|---|---|---|
+| `memory`（デフォルト） | `TodoRepositoryBackend.MEMORY` | インメモリ保存。プロセス再起動でデータは失われます |
+| `postgres` | `TodoRepositoryBackend.POSTGRES` | ローカル Docker Compose PostgreSQL（`POSTGRES_*` 変数を使用） |
+| `azure-postgres` | `TodoRepositoryBackend.AZURE_POSTGRES` | Azure Database for PostgreSQL Flexible Server（`AZURE_*` 変数を使用） |
 
 ### PostgreSQL クイックスタート（Docker Compose）
+
+`.env` に `TODO_REPOSITORY_BACKEND=postgres` を設定し（`.env.template` 参照）、以下を実行します:
 
 ```bash
 # 1. ローカル PostgreSQL サービスを起動
 docker compose up -d postgres
 
 # 2. スキーマを初期化
-TODO_REPOSITORY_BACKEND=postgres uv run todo-cli db init
+uv run todo-cli db init
 
 # 3. PostgreSQL バックエンドで API サーバを起動
-TODO_REPOSITORY_BACKEND=postgres uv run uvicorn concierge.todo.infrastructure.web.app:create_app --factory --host 0.0.0.0 --port 8000
+uv run todo-web
 
 # 4. タスクを作成・一覧表示（データが永続化されます）
-TODO_REPOSITORY_BACKEND=postgres uv run todo-cli task create --title "牛乳を買う"
-TODO_REPOSITORY_BACKEND=postgres uv run todo-cli task list
+uv run todo-cli task create --title "牛乳を買う"
+uv run todo-cli task list
 ```
 
 ### Azure Database for PostgreSQL
 
-`.env` に `AZURE_*` 環境変数を設定し（`.env.template` 参照）、以下を実行します:
+`.env` に `TODO_REPOSITORY_BACKEND=azure-postgres` および `AZURE_*` 変数を設定し（`.env.template` 参照）、以下を実行します:
 
 ```bash
 # Entra ID 認証（AZURE_USE_ENTRA_AUTH=true）
-TODO_REPOSITORY_BACKEND=azure-postgres uv run todo-cli db init
-TODO_REPOSITORY_BACKEND=azure-postgres uv run todo-cli task create --title "クラウドタスク"
+uv run todo-cli db init
+uv run todo-cli task create --title "クラウドタスク"
 ```
 
 ### データベース CLI コマンド

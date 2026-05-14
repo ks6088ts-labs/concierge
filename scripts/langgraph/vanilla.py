@@ -24,7 +24,7 @@ from concierge.settings import (
     get_observability_settings,
 )
 
-DEFAULT_ENDPOINT = "http://localhost:8000"
+DEFAULT_ENDPOINT = "http://localhost:8080"
 DEFAULT_MODEL_STRING = "azure_ai:gpt-5"
 DEFAULT_TIMEOUT_SECONDS = 30.0
 DEFAULT_SYSTEM_PROMPT = (
@@ -450,7 +450,7 @@ def run(
         typer.Option(
             "--endpoint",
             "-e",
-            help="Todo Web API base URL (default: TODO_API_ENDPOINT or http://localhost:8000)",
+            help="Todo Web API base URL (default: TODO_API_ENDPOINT or http://localhost:8080)",
         ),
     ] = None,
     model: Annotated[
@@ -502,7 +502,7 @@ def chat(
         typer.Option(
             "--endpoint",
             "-e",
-            help="Todo Web API base URL (default: TODO_API_ENDPOINT or http://localhost:8000)",
+            help="Todo Web API base URL (default: TODO_API_ENDPOINT or http://localhost:8080)",
         ),
     ] = None,
     model: Annotated[

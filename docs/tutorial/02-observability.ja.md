@@ -185,9 +185,33 @@ uv run python scripts/microsoft_foundry/vanilla.py --mlflow use-in-agents \
 
 ### 動作確認
 
-ブラウザで `http://127.0.0.1:5000` を開きます。`microsoft-foundry-vanilla`
-実験の中に LangChain トレースと入出力が紐付いた新しい run が表示されてい
-ればOKです。
+ブラウザで `http://127.0.0.1:5000` を開きます。MLflow GenAI ホームに
+**Recent Experiments** として実験が並びます。
+
+![MLflow ホーム画面と microsoft-foundry-vanilla 実験](../images/mlflow-home.png)
+
+`microsoft-foundry-vanilla` をクリックすると **Overview** が開きます。
+直近 7 日間のトレース数、レイテンシ、エラー率、トークン使用量が集計され
+ます。
+
+![MLflow 実験 Overview の使用状況グラフ](../images/mlflow-experiment-overview.png)
+
+左サイドバーの **Traces** タブには autolog で捕捉された LangChain
+実行が並びます。各行にはリクエスト・レスポンス・トークン数・レイテンシ・
+ステータスが表示されます。
+
+![MLflow トレース一覧](../images/mlflow-traces-list.png)
+
+任意の行をクリックすると **Summary** ビューが開き、入出力・レイテンシ・
+トークン数・推定コストを確認できます。
+
+![MLflow トレースの Summary ビュー](../images/mlflow-trace-detail.png)
+
+隣の **Details & Timeline** タブは実行を span 単位に分解して表示し、どの
+LangChain プリミティブ（`ChatPromptTemplate`、モデル呼び出しなど）が
+レイテンシを消費したかを把握できます。
+
+![MLflow トレースの Timeline ビュー](../images/mlflow-trace-timeline.png)
 
 ## 両方を組み合わせる
 

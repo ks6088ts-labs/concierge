@@ -5,7 +5,10 @@ description: FastAPI + Typer で実装したクリーンアーキテクチャ To
 
 ## 概要
 
-この Todo サンプルは、本リポジトリで最小構成のクリーンアーキテクチャを示します。
+**クリーンアーキテクチャ**で実装された最小構成の Todo アプリです。
+同じビジネスロジック (`application/use_cases.py` と `domain/entities.py`)
+を Typer CLI と FastAPI Web API の 2 つの入口から呼び出すことで、層の境界
+が見える形になっています。
 
 ```mermaid
 flowchart LR
@@ -17,31 +20,41 @@ flowchart LR
     Repo --> Domain
 ```
 
-## クイックスタート
+## 60 秒で試す
 
 ```bash
+# 1. API サーバを起動 (デフォルトは in-memory バックエンド)
 uv run todo-web
-```
 
-```bash
+# 2. ブラウザで Swagger UI を開く
+open http://localhost:8080/docs
+
+# 3. 別ターミナルから CLI でも操作できます
 uv run todo-cli task create --title "buy milk"
+uv run todo-cli task list
 ```
 
-## 永続化バックエンド
+Swagger UI は以下のような画面です。各行をクリックして **Try it out** を
+押すと、起動中のサーバに対して実際のリクエストを送れます。
+
+![Todo API Swagger UI 全体](../images/todo-api-swagger-overview.png)
+
+エンドポイントごとの使い方は [REST API リファレンス](api.md) を、CLI 側は
+[CLI リファレンス](cli.md) を参照してください。
+
+## 永続化バックエンドを選ぶ
 
 Todo アプリの設定は `concierge.settings.TodoSettings`
 に集約されており、`TODO_REPOSITORY_BACKEND` および
 `TODO_TABLE_NAME` を環境変数（または `.env`）から読み込みます。
 バックエンドは `concierge.settings.TodoRepositoryBackend`
-列挙型に限定されているため、未定義の値が指定された場合は
-起動時にバリデーションエラーになり、タイプミスが暗黙的に
-挙動を変えることはありません。
+列挙型に限定されているため、未定義の値は起動時に弾かれます。
 
-| `TODO_REPOSITORY_BACKEND` | 列挙メンバー | 説明 |
+| `TODO_REPOSITORY_BACKEND` | 列挙メンバー | 使いどころ |
 |---|---|---|
-| `memory`（デフォルト） | `TodoRepositoryBackend.MEMORY` | インメモリ保存。プロセス再起動でデータは失われます |
-| `postgres` | `TodoRepositoryBackend.POSTGRES` | ローカル Docker Compose PostgreSQL（`POSTGRES_*` 変数を使用） |
-| `azure-postgres` | `TodoRepositoryBackend.AZURE_POSTGRES` | Azure Database for PostgreSQL Flexible Server（`AZURE_*` 変数を使用） |
+| `memory`（デフォルト） | `TodoRepositoryBackend.MEMORY` | 最初の試運転。プロセス再起動でデータは失われます |
+| `postgres` | `TodoRepositoryBackend.POSTGRES` | ローカル Docker Compose PostgreSQL（`POSTGRES_*` 変数） |
+| `azure-postgres` | `TodoRepositoryBackend.AZURE_POSTGRES` | Azure Database for PostgreSQL Flexible Server（`AZURE_*` 変数） |
 
 ### PostgreSQL クイックスタート（Docker Compose）
 

@@ -185,9 +185,32 @@ the current Python process.
 
 ### Verify
 
-Open `http://127.0.0.1:5000` in your browser. The
-`microsoft-foundry-vanilla` experiment should contain a new run with the
-LangChain trace, inputs, and outputs attached.
+Open `http://127.0.0.1:5000` in your browser. The MLflow GenAI home shows
+your experiments under **Recent Experiments**:
+
+![MLflow home page with the microsoft-foundry-vanilla experiment](../images/mlflow-home.png)
+
+Click `microsoft-foundry-vanilla` to open the **Overview** page. It
+aggregates traces, latency, error rate, and token usage over the last 7 days:
+
+![MLflow experiment overview with usage charts](../images/mlflow-experiment-overview.png)
+
+The **Traces** tab on the left lists every LangChain run captured by
+autolog. Each row shows the request, the response, token count, latency, and
+status:
+
+![MLflow traces list](../images/mlflow-traces-list.png)
+
+Click any trace to drill into the **Summary** view, which shows inputs,
+outputs, latency, token count, and estimated cost:
+
+![MLflow trace summary view](../images/mlflow-trace-detail.png)
+
+The sibling **Details & Timeline** tab breaks the run down span-by-span so
+you can see which LangChain primitive (`ChatPromptTemplate`, the model call,
+etc.) consumed the latency:
+
+![MLflow trace timeline view](../images/mlflow-trace-timeline.png)
 
 ## Combining both toggles
 

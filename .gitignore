@@ -163,3 +163,4 @@ cython_debug/
 *.env
 requirements.txt
 *.db
+.playwright-cli

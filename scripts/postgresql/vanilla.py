@@ -1,25 +1,70 @@
-"""CRUD CLI for the local pgvector PostgreSQL service.
+"""Unified CRUD CLI for the local pgvector and Azure Database for PostgreSQL.
 
-The script demonstrates how to use the LangChain `langchain-postgres` integration
-to manage a vector store backed by ``pgvector`` running in Docker (see
-``compose.yml``). The defaults align with the embedding deployment used by
-``scripts/microsoft_foundry/vanilla.py`` (``text-embedding-3-small`` returning
-1536-dimensional vectors).
+This script merges the previous ``scripts/postgresql/crud.py`` (local Docker
+Compose pgvector) and ``scripts/postgresql/crud_azure.py`` (managed Azure
+Database for PostgreSQL Flexible Server) into a single Typer CLI. The only
+runtime difference between the two targets is the connection string and how
+the database password is resolved, so we keep the target-specific logic
+isolated in :func:`_build_connection_url` and share everything else
+(embeddings, table DDL, CRUD subcommands).
 
-Usage::
+Pick the target with the global ``--target/-T`` option (``docker`` or
+``azure``).
+
+Local pgvector (Docker Compose) usage::
 
     # Start the local PostgreSQL service first
     docker compose up -d postgres
 
-    # Create the table, bulk-insert sample documents, search, then drop
-    uv run python scripts/postgresql/crud.py create-table
-    uv run python scripts/postgresql/crud.py bulk-create
-    uv run python scripts/postgresql/crud.py search --query "fruit"
-    uv run python scripts/postgresql/crud.py drop-table
+    # Defaults to --target docker
+    uv run python scripts/postgresql/vanilla.py create-table
+    uv run python scripts/postgresql/vanilla.py bulk-create
+    uv run python scripts/postgresql/vanilla.py search --query "fruit"
+    uv run python scripts/postgresql/vanilla.py drop-table
+
+Azure Database for PostgreSQL Flexible Server usage::
+
+    # Authenticate the local environment with Azure (Entra) if needed
+    az login
+
+    uv run python scripts/postgresql/vanilla.py --target azure create-table
+    uv run python scripts/postgresql/vanilla.py --target azure bulk-create
+    uv run python scripts/postgresql/vanilla.py --target azure search --query "fruit"
+    uv run python scripts/postgresql/vanilla.py --target azure drop-table
+
+The defaults align with the embedding deployment used by
+``scripts/microsoft_foundry/vanilla.py`` (``text-embedding-3-small`` returning
+1536-dimensional vectors). Override with ``--vector-size`` if you switch to
+a model with a different dimension (for example ``text-embedding-3-large``
+returns 3072).
+
+Notes on the Azure target
+-------------------------
+The Azure target follows the authentication pattern documented in the
+Microsoft Learn guide
+[Use LangChain with Azure Database for PostgreSQL](https://learn.microsoft.com/en-us/azure/postgresql/azure-ai/generative-ai-develop-with-langchain).
+We deliberately reuse ``langchain-postgres`` (instead of
+``langchain-azure-postgresql`` / ``AzurePGVectorStore``) because at the time
+of writing the Azure package pins ``pgvector>=0.4,<0.5`` while
+``langchain-postgres==0.0.17`` pins ``pgvector>=0.2.5,<0.4``, so the two
+cannot coexist. Azure Database for PostgreSQL Flexible Server is plain
+PostgreSQL with the ``vector`` extension, so a single ``langchain-postgres``
+client and an Azure-aware connection string (SSL required, optional Entra
+access token used as the database password) cover both targets.
+
+Prerequisites for the Azure target:
+
+- ``pgvector`` enabled on the Azure server
+  (https://learn.microsoft.com/en-us/azure/postgresql/extensions/how-to-use-pgvector).
+- A PostgreSQL role for either password or Microsoft Entra authentication.
+- Environment variables described in ``.env.template`` (``AZURE_DBHOST``,
+  ``AZURE_DBNAME``, ``AZURE_DBUSER``, ``AZURE_DBPASSWORD``, ``AZURE_SSLMODE``,
+  ``AZURE_USE_ENTRA_AUTH``).
 """
 
 import logging
 import uuid
+from enum import Enum
 from functools import lru_cache
 from typing import Annotated
 
@@ -30,30 +75,62 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 
 from concierge.loggers import get_logger
-from concierge.settings import get_microsoft_foundry_settings, get_postgres_settings
+from concierge.settings import (
+    get_azure_postgres_settings,
+    get_microsoft_foundry_settings,
+    get_postgres_settings,
+)
+
+
+class Target(str, Enum):
+    """Which PostgreSQL deployment the CLI should talk to."""
+
+    docker = "docker"
+    azure = "azure"
+
 
 DEFAULT_SETTINGS = {
     "embedding_model": "text-embedding-3-small",
-    # ``text-embedding-3-small`` returns 1536-dimensional vectors. Override with
-    # ``--vector-size`` if you switch to a model that uses a different dimension
-    # (for example, ``text-embedding-3-large`` returns 3072).
+    # ``text-embedding-3-small`` returns 1536-dimensional vectors. Override
+    # with ``--vector-size`` if you switch to a model that uses a different
+    # dimension (for example, ``text-embedding-3-large`` returns 3072).
     "vector_size": 1536,
     "table_name": "concierge_docs",
 }
 
 app = typer.Typer(
     add_completion=False,
-    help="PostgreSQL (pgvector) CRUD CLI for the LangChain vector store",
+    help=(
+        "PostgreSQL (pgvector) CRUD CLI for the LangChain vector store. "
+        "Use --target/-T to switch between the local Docker Compose service "
+        "and an Azure Database for PostgreSQL Flexible Server."
+    ),
 )
 
 logger = get_logger(__name__)
 
-# Module-level state set by the global ``--fake-embeddings`` flag.
+# Module-level state set by the global options below. Each Typer invocation
+# touches only one target, so plain module-level variables are enough.
 _fake_embeddings_enabled: bool = False
+_target: Target = Target.docker
 
 
 @app.callback()
 def _global_options(
+    target: Annotated[
+        Target,
+        typer.Option(
+            "--target",
+            "-T",
+            help=(
+                "PostgreSQL deployment to talk to. ``docker`` uses the local "
+                "compose service (see ``compose.yml``). ``azure`` uses an Azure "
+                "Database for PostgreSQL Flexible Server (see ``.env.template`` "
+                "for the required ``AZURE_*`` variables)."
+            ),
+            case_sensitive=False,
+        ),
+    ] = Target.docker,
     verbose: Annotated[
         bool,
         typer.Option(
@@ -69,14 +146,17 @@ def _global_options(
             "-f",
             help=(
                 "Use ``DeterministicFakeEmbedding`` instead of Microsoft Foundry. "
-                "Handy for purely-local testing without Azure credentials."
+                "Handy for purely-local testing (with ``--target docker``) or for "
+                "exercising the Azure connection path (with ``--target azure``) "
+                "without having to call out to an embedding deployment."
             ),
         ),
     ] = False,
 ):
-    """PostgreSQL (pgvector) CRUD CLI - global options applied to every subcommand."""
-    global _fake_embeddings_enabled
+    """Global options applied to every subcommand."""
+    global _fake_embeddings_enabled, _target
     _fake_embeddings_enabled = fake_embeddings
+    _target = target
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
         logger.setLevel(logging.DEBUG)
@@ -113,14 +193,81 @@ def _build_embeddings(model_name: str, vector_size: int) -> Embeddings:
     )
 
 
-@lru_cache(maxsize=1)
-def _get_engine():
-    """Return (and cache) a ``PGEngine`` connected to the local postgres service."""
+# ---------------------------------------------------------------------------
+# Target-specific logic is localised here. Everything below this section is
+# shared between the docker and azure targets.
+# ---------------------------------------------------------------------------
+
+
+def _resolve_azure_credentials() -> tuple[str, str]:
+    """Return ``(user, password)`` for the Azure PostgreSQL connection.
+
+    With ``AZURE_USE_ENTRA_AUTH=true`` we exchange the local Entra credentials
+    for an access token scoped to ``ossrdbms-aad.database.windows.net`` and
+    use that token as the database password. Otherwise we use
+    ``AZURE_DBUSER`` and ``AZURE_DBPASSWORD`` verbatim.
+    """
+    settings = get_azure_postgres_settings()
+    if settings.use_entra_auth:
+        logger.info("Acquiring Microsoft Entra access token for Azure PostgreSQL")
+        token = DefaultAzureCredential().get_token(settings.entra_token_scope)
+        if not settings.dbuser:
+            raise typer.BadParameter(
+                "AZURE_DBUSER must be set to the Entra principal name (or PostgreSQL "
+                "role mapped to that principal) when AZURE_USE_ENTRA_AUTH=true.",
+            )
+        return settings.dbuser, token.token
+    if not (settings.dbuser and settings.dbpassword):
+        raise typer.BadParameter(
+            "AZURE_DBUSER and AZURE_DBPASSWORD must be set when AZURE_USE_ENTRA_AUTH=false.",
+        )
+    return settings.dbuser, settings.dbpassword
+
+
+def _build_connection_url(target: Target) -> str:
+    """Return the ``postgresql+psycopg://...`` URL for the chosen target.
+
+    This is the single place where the two deployments differ. Add a new
+    branch here (and update the ``Target`` enum) to support another target.
+    """
+    if target is Target.docker:
+        settings = get_postgres_settings()
+        url = settings.connection_string
+        logger.debug("Connecting to %s", url)
+        return url
+
+    # Azure Database for PostgreSQL Flexible Server.
+    azure_settings = get_azure_postgres_settings()
+    if not azure_settings.dbhost or not azure_settings.dbname:
+        raise typer.BadParameter(
+            "AZURE_DBHOST and AZURE_DBNAME must be set in the environment (.env). "
+            "See .env.template for the required Azure PostgreSQL variables.",
+        )
+    user, password = _resolve_azure_credentials()
+    url = azure_settings.build_connection_string(password=password, user=user)
+    # Avoid logging the token / password in the connection string.
+    logger.debug(
+        "Connecting to postgresql+psycopg://%s@%s:%d/%s?sslmode=%s",
+        user,
+        azure_settings.dbhost,
+        azure_settings.dbport,
+        azure_settings.dbname,
+        azure_settings.sslmode,
+    )
+    return url
+
+
+# ---------------------------------------------------------------------------
+# Shared engine/store helpers and CRUD subcommands.
+# ---------------------------------------------------------------------------
+
+
+@lru_cache(maxsize=len(Target))
+def _get_engine(target: Target):
+    """Return (and cache) a ``PGEngine`` connected to the chosen target."""
     from langchain_postgres import PGEngine
 
-    settings = get_postgres_settings()
-    url = settings.connection_string
-    logger.debug("Connecting to %s", url)
+    url = _build_connection_url(target)
     return PGEngine.from_connection_string(url=url)
 
 
@@ -128,7 +275,7 @@ def _get_store(table_name: str, model_name: str, vector_size: int):
     """Build a ``PGVectorStore`` instance bound to the given table."""
     from langchain_postgres import PGVectorStore
 
-    engine = _get_engine()
+    engine = _get_engine(_target)
     embeddings = _build_embeddings(model_name=model_name, vector_size=vector_size)
     return PGVectorStore.create_sync(
         engine=engine,
@@ -158,7 +305,7 @@ def create_table(
     """Create the pgvector-backed table that holds documents and embeddings."""
     from langchain_postgres import Column
 
-    engine = _get_engine()
+    engine = _get_engine(_target)
     engine.init_vectorstore_table(
         table_name=table_name,
         vector_size=vector_size,
@@ -176,7 +323,7 @@ def drop_table(
     ] = DEFAULT_SETTINGS["table_name"],
 ):
     """Drop the pgvector-backed table created by ``create-table``."""
-    engine = _get_engine()
+    engine = _get_engine(_target)
     engine.drop_table(table_name=table_name)
     print(f"[drop-table] table '{table_name}' dropped")
 

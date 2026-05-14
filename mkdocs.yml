@@ -17,6 +17,10 @@ nav:
       - Overview: todo/index.md
       - REST API Reference: todo/api.md
       - CLI Reference: todo/cli.md
+  - Chat App (Clean Architecture):
+      - Overview: chat/index.md
+      - REST API Reference: chat/api.md
+      - CLI Reference: chat/cli.md
 markdown_extensions:
   - admonition
   - attr_list

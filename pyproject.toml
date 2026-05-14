@@ -45,6 +45,8 @@ build-backend = "hatchling.build"
 [project.scripts]
 todo-web = "concierge.todo.infrastructure.web.app:start"
 todo-cli = "concierge.todo.infrastructure.cli.app:app"
+chat-web = "concierge.chat.infrastructure.web.app:start"
+chat-cli = "concierge.chat.infrastructure.cli.app:app"
 
 [tool.ruff]
 line-length = 120

@@ -55,6 +55,7 @@ Server**.
 Detailed setup, CLI examples, and development commands are published on GitHub Pages.
 
 * [concierge documentation](https://ks6088ts-labs.github.io/concierge/)
+* [Chat app (clean architecture)](https://ks6088ts-labs.github.io/concierge/chat/)
 * [Hands-on tutorial](https://ks6088ts-labs.github.io/concierge/tutorial/)
   * [Step 1 - Microsoft Foundry + LangChain](https://ks6088ts-labs.github.io/concierge/tutorial/01-foundry-langchain/)
   * [Step 2 - Observability (tracing & MLflow)](https://ks6088ts-labs.github.io/concierge/tutorial/02-observability/)
@@ -106,6 +107,7 @@ Compose** または **Azure Database for PostgreSQL Flexible Server**)。
 詳細なセットアップ、CLI 実行例、開発コマンドは GitHub Pages にまとめています。
 
 * [concierge ドキュメント (日本語)](https://ks6088ts-labs.github.io/concierge/ja/)
+* [Chat アプリ (クリーンアーキテクチャ)](https://ks6088ts-labs.github.io/concierge/ja/chat/)
 * [ハンズオンチュートリアル](https://ks6088ts-labs.github.io/concierge/ja/tutorial/)
   * [ステップ 1 - Microsoft Foundry + LangChain](https://ks6088ts-labs.github.io/concierge/ja/tutorial/01-foundry-langchain/)
   * [ステップ 2 - 観測性 (トレース & MLflow)](https://ks6088ts-labs.github.io/concierge/ja/tutorial/02-observability/)

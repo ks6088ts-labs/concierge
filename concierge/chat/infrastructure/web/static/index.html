@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Concierge Chat MVP</title>
+    <style>
+      body { font-family: sans-serif; margin: 1rem auto; max-width: 960px; }
+      input, button { margin: 0.25rem; }
+      .layout { display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; }
+      ul { padding-left: 1rem; }
+      li { cursor: pointer; margin: 0.25rem 0; }
+      .selected { font-weight: bold; }
+      pre { background: #f4f4f4; padding: 0.5rem; }
+    </style>
+  </head>
+  <body>
+    <h1>Concierge Chat MVP</h1>
+
+    <section>
+      <label>User ID <input id="user-id" /></label>
+      <label>Display Name <input id="display-name" placeholder="alice" /></label>
+      <button id="save-profile">Save</button>
+    </section>
+
+    <section class="layout">
+      <div>
+        <h2>Conversations</h2>
+        <form id="create-conversation-form">
+          <input id="conversation-title" placeholder="new conversation title" required />
+          <button type="submit">Create</button>
+        </form>
+        <button id="reload-conversations">Reload</button>
+        <ul id="conversations"></ul>
+      </div>
+
+      <div>
+        <h2 id="messages-title">Messages</h2>
+        <pre id="messages"></pre>
+        <form id="post-message-form">
+          <input id="message-content" placeholder="message" required />
+          <button type="submit">Send</button>
+        </form>
+      </div>
+    </section>
+
+    <script>
+      const userIdInput = document.getElementById('user-id');
+      const displayNameInput = document.getElementById('display-name');
+      const conversationsEl = document.getElementById('conversations');
+      const messagesEl = document.getElementById('messages');
+      const messagesTitleEl = document.getElementById('messages-title');
+      let selectedConversationId = null;
+
+      function ensureProfile() {
+        const storedUserId = localStorage.getItem('chat_user_id');
+        if (storedUserId) {
+          userIdInput.value = storedUserId;
+        } else {
+          const generated = crypto.randomUUID();
+          userIdInput.value = generated;
+          localStorage.setItem('chat_user_id', generated);
+        }
+        displayNameInput.value = localStorage.getItem('chat_display_name') || '';
+      }
+
+      function saveProfile() {
+        const userId = userIdInput.value.trim() || crypto.randomUUID();
+        userIdInput.value = userId;
+        localStorage.setItem('chat_user_id', userId);
+        localStorage.setItem('chat_display_name', displayNameInput.value.trim());
+      }
+
+      async function api(path, options = {}) {
+        saveProfile();
+        const headers = Object.assign({}, options.headers || {}, {
+          'X-User-Id': userIdInput.value.trim(),
+          'content-type': 'application/json',
+        });
+        const response = await fetch(path, Object.assign({}, options, { headers }));
+        if (!response.ok) {
+          const body = await response.text();
+          throw new Error(`${response.status}: ${body}`);
+        }
+        if (response.status === 204) {
+          return null;
+        }
+        return response.json();
+      }
+
+      async function loadConversations() {
+        const conversations = await api('/conversations?mine=true');
+        conversationsEl.innerHTML = '';
+        conversations.forEach((conversation) => {
+          const li = document.createElement('li');
+          li.textContent = `${conversation.title} (${conversation.id.slice(0, 8)})`;
+          li.className = selectedConversationId === conversation.id ? 'selected' : '';
+          li.addEventListener('click', async () => {
+            selectedConversationId = conversation.id;
+            await loadConversations();
+            await loadMessages();
+          });
+          conversationsEl.appendChild(li);
+        });
+      }
+
+      async function loadMessages() {
+        if (!selectedConversationId) {
+          messagesTitleEl.textContent = 'Messages';
+          messagesEl.textContent = 'Select a conversation';
+          return;
+        }
+        const messages = await api(`/conversations/${selectedConversationId}/messages`);
+        messagesTitleEl.textContent = `Messages (${selectedConversationId.slice(0, 8)})`;
+        messagesEl.textContent = messages
+          .slice()
+          .reverse()
+          .map((message) => `[${message.created_at}] ${message.sender.display_name}: ${message.content}`)
+          .join('\n');
+      }
+
+      document.getElementById('save-profile').addEventListener('click', saveProfile);
+      document.getElementById('reload-conversations').addEventListener('click', async () => {
+        await loadConversations();
+        await loadMessages();
+      });
+
+      document.getElementById('create-conversation-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const title = document.getElementById('conversation-title').value.trim();
+        if (!title) return;
+        await api('/conversations', {
+          method: 'POST',
+          body: JSON.stringify({ title, display_name: displayNameInput.value.trim() || null }),
+        });
+        document.getElementById('conversation-title').value = '';
+        await loadConversations();
+      });
+
+      document.getElementById('post-message-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!selectedConversationId) return;
+        const content = document.getElementById('message-content').value.trim();
+        if (!content) return;
+        await api(`/conversations/${selectedConversationId}/participants`, {
+          method: 'POST',
+          body: JSON.stringify({ display_name: displayNameInput.value.trim() || null }),
+        });
+        await api(`/conversations/${selectedConversationId}/messages`, {
+          method: 'POST',
+          body: JSON.stringify({ content, display_name: displayNameInput.value.trim() || null }),
+        });
+        document.getElementById('message-content').value = '';
+        await loadMessages();
+      });
+
+      ensureProfile();
+      loadConversations().then(loadMessages).catch((error) => {
+        messagesEl.textContent = error.message;
+      });
+    </script>
+  </body>
+</html>

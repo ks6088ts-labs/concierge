@@ -1,35 +1,32 @@
 # ハンズオンチュートリアル
 
-ようこそ。本ガイドは **concierge** リポジトリの現在の実装を GitHub Issue
-の流れに沿って段階的に理解するハンズオンです。実装済みコードを単に読むの
-ではなく、各 Issue が「なぜ」「何を」変えたのかを追体験しながら手を動かせ
-る構成にしています。
+ようこそ。本ガイドは **concierge** リポジトリの現在の実装を段階的に理解
+するハンズオンです。各ステップで「なぜ」「何を」変えるのかを追体験しな
+がら手を動かせる構成にしています。
 
 ## このチュートリアルの目的
 
 このリポジトリは [Microsoft Foundry](https://learn.microsoft.com/ja-jp/azure/foundry/)
 上で [LangChain](https://docs.langchain.com/) / [LangGraph](https://docs.langchain.com/oss/python/langgraph/quickstart)
-を使った LLM アプリケーションを始めるためのテンプレートです。Issue 単位で
-作業の流れを追うことで、各実装が **どんな課題を解決するために入ったのか**
-を理解できます。
+を使った LLM アプリケーションを始めるためのテンプレートです。完成したコード
+を単に読むよりも、ステップごとに組み上げていくことで設計意図が見えるよう
+にしています。
 
-## Issue とステップの対応表
+## チュートリアル全体マップ
 
-| ステップ | テーマ                                  | GitHub Issue | 状態   |
-| :------- | :-------------------------------------- | :----------- | :----- |
-| 1        | Microsoft Foundry + LangChain のセットアップ | [#3](https://github.com/ks6088ts-labs/concierge/issues/3) | Closed |
-| 2a       | Azure Monitor / Foundry によるトレーシング    | [#5](https://github.com/ks6088ts-labs/concierge/issues/5) | Closed |
-| 2b       | MLflow によるローカル評価                   | [#8](https://github.com/ks6088ts-labs/concierge/issues/8) | Closed |
-| 3a       | クリーンアーキテクチャの適用                | [#6](https://github.com/ks6088ts-labs/concierge/issues/6) | Open   |
-| 3b       | IaC によるインフラ構築                      | [#10](https://github.com/ks6088ts-labs/concierge/issues/10) | Open   |
-| 4        | Docker Compose 上の PostgreSQL (pgvector) で CRUD | -    | -      |
-| 5        | Azure Database for PostgreSQL (pgvector) で CRUD | [#14](https://github.com/ks6088ts-labs/concierge/issues/14) | Open |
+| ステップ | テーマ                                  |
+| :------- | :-------------------------------------- |
+| 1        | Microsoft Foundry + LangChain のセットアップ |
+| 2a       | Azure Monitor / Foundry によるトレーシング    |
+| 2b       | MLflow によるローカル評価                   |
+| 3        | PostgreSQL (pgvector) で CRUD - Docker Compose または Azure Flexible Server |
 
-ステップ 1〜2 はすでにマージ済みのコードに対応します。ステップ 3 は今後の
-作業として Open Issue を起点に進める内容です。ステップ 4 では Docker で動く
-PostgreSQL を永続的なベクトルストアとして使う構成を追加し、ステップ 5 では
-同じ CRUD フローを Azure Database for PostgreSQL Flexible Server に対しても
-動かせるようにします。
+ステップ 1～2 で Foundry + LangChain の CLI を組み上げ、観測性を追加します。
+ステップ 3 では pgvector を使った永続ベクトルストアを追加します。ローカル
+Docker Compose と マネージドな Azure Database for PostgreSQL Flexible Server
+という 2 つのターゲットを 1 本の CLI
+(`scripts/postgresql/vanilla.py --target docker|azure`) で切り替えて全ての
+CRUD フローを試せる構成です。
 
 ## 全体アーキテクチャ
 
@@ -86,11 +83,10 @@ flowchart LR
 すべてのステップは同じ構造で記述しています。
 
 1. **ゴール**: そのステップで何が手に入るか。
-2. **参照 Issue**: 元になった GitHub Issue。
-3. **背景**: なぜ必要なのか / なぜこの設計なのか。
-4. **手順**: 実行できるコマンドと、理解に必要なコード抜粋。
-5. **動作確認**: 期待される出力。
-6. **トラブルシューティング**: よくあるつまずきと対処。
+2. **背景**: なぜ必要なのか / なぜこの設計なのか。
+3. **手順**: 実行できるコマンドと、理解に必要なコード抜粋。
+4. **動作確認**: 期待される出力。
+5. **トラブルシューティング**: よくあるつまずきと対処。
 
 それでは [ステップ 1 - Microsoft Foundry + LangChain](01-foundry-langchain.md)
 から始めましょう。

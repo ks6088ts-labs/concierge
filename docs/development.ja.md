@@ -91,90 +91,39 @@ make docker-run
 
 ## PostgreSQL (pgvector) CRUD
 
-[`compose.yml`](https://github.com/ks6088ts-labs/concierge/blob/main/compose.yml)
-には LangChain の `PGVectorStore` を載せるための
-[pgvector](https://github.com/pgvector/pgvector) 入り PostgreSQL サービスを
-同梱しています。Docker Compose で起動してください。
+[`scripts/postgresql/vanilla.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/postgresql/vanilla.py)
+の 1 本の Typer CLI で、本リポジトリがサポートする 2 つのターゲットを
+カバーします。
 
-```bash
-docker compose up -d postgres
-```
+* `--target docker` (既定):
+  [`compose.yml`](https://github.com/ks6088ts-labs/concierge/blob/main/compose.yml)
+  のローカル [pgvector](https://github.com/pgvector/pgvector) PostgreSQL
+  サービスを使います。
+* `--target azure`: `pgvector` を有効化したマネージドな
+  [Azure Database for PostgreSQL Flexible Server](https://learn.microsoft.com/ja-jp/azure/postgresql/flexible-server/overview)
+  を使います。既定では Microsoft Entra 認証 (`DefaultAzureCredential` で
+  取得したアクセストークンを DB パスワードとして利用) です。
 
+サーバ作成や Entra 構成も含む手順は
+[ステップ 3 - PostgreSQL (pgvector) CRUD](tutorial/03-postgres-vector-store.md)
+にまとめています。
+
+### 接続情報を設定する
+
+どちらのターゲットも `.env` から設定を読み込みます。
 [`.env.template`](https://github.com/ks6088ts-labs/concierge/blob/main/.env.template)
-のデフォルト値は次の通りです。
+の該当ブロックを `.env` にコピーしてください。
 
 ```dotenv
+# --target docker (既定値は compose.yml の `postgres` サービスに揃えています)
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 POSTGRES_USER=concierge
 POSTGRES_PASSWORD=concierge
 POSTGRES_DB=concierge
 POSTGRES_COLLECTION=concierge_docs
-```
 
-[`scripts/postgresql/crud.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/postgresql/crud.py)
-の CRUD CLI を実行します。
-
-```bash
-# 利用可能な Typer サブコマンドを確認します。
-uv run python scripts/postgresql/crud.py --help
-
-# テーブル作成 → サンプル一括投入 → 類似検索の順に試します。
-uv run python scripts/postgresql/crud.py create-table
-uv run python scripts/postgresql/crud.py bulk-create
-uv run python scripts/postgresql/crud.py search --query "fruit"
-
-# id 指定で取得・更新・削除します。
-uv run python scripts/postgresql/crud.py read --id apple
-uv run python scripts/postgresql/crud.py update --id apple \
-    --text "Apples, oranges, and bananas are fruits."
-uv run python scripts/postgresql/crud.py delete --id apple
-
-# 検証が終わったらテーブルを削除します。
-uv run python scripts/postgresql/crud.py drop-table
-```
-
-Microsoft Foundry を使わずローカルだけで完結させたい場合は
-`--fake-embeddings` を付けると `DeterministicFakeEmbedding` に切り替わり、
-Azure 認証なしで CRUD を試せます。
-
-```bash
-uv run python scripts/postgresql/crud.py --fake-embeddings create-table
-uv run python scripts/postgresql/crud.py --fake-embeddings bulk-create
-uv run python scripts/postgresql/crud.py --fake-embeddings search \
-    --query "fruit"
-```
-
-データベースの停止や調査は `docker compose` を直接使います。
-
-```bash
-# PostgreSQL のログを tail します。
-docker compose logs -f postgres
-
-# コンテナ内で psql を起動します。
-docker compose exec postgres psql -U concierge -d concierge
-
-# サービスを停止します (ボリュームは保持されます)。
-docker compose stop postgres
-docker compose rm -f postgres
-```
-
-## Azure Database for PostgreSQL (pgvector) CRUD
-
-上記ローカル Compose 構成と対をなすマネージド DB 向け実装が
-[`scripts/postgresql/crud_azure.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/postgresql/crud_azure.py)
-にあります。`pgvector` 拡張を有効化した
-[Azure Database for PostgreSQL Flexible Server](https://learn.microsoft.com/ja-jp/azure/postgresql/flexible-server/overview)
-を対象にしており、既定では `DefaultAzureCredential` で取得した Microsoft
-Entra アクセストークンを DB パスワードとして利用します。サーバ作成や
-Entra 構成も含めた手順は
-[ステップ 5 - Azure Database for PostgreSQL (pgvector) で CRUD](tutorial/05-azure-postgres-vector-store.md)
-にまとめています。
-
-[`.env.template`](https://github.com/ks6088ts-labs/concierge/blob/main/.env.template)
-の Azure 用ブロックを `.env` に埋めてください。
-
-```dotenv
+# --target azure
 AZURE_DBHOST=<server-name>.postgres.database.azure.com
 AZURE_DBNAME=postgres
 AZURE_DBPORT=5432
@@ -186,41 +135,78 @@ AZURE_DBUSER=<entra-principal-or-db-user>
 AZURE_DBPASSWORD=
 ```
 
-`DefaultAzureCredential` が ID を参照できるよう、Azure CLI でサインインします。
+### 接続先を起動する (またはサインインする)
+
+ローカルターゲットでは Compose サービスを起動します。
+
+```bash
+docker compose up -d postgres
+```
+
+Azure ターゲットでは `DefaultAzureCredential` が ID を参照できるように
+サインインしておきます。
 
 ```bash
 az login
 ```
 
-Azure 向け CRUD CLI を実行します。サブコマンドはローカル版と同一です。
+### CRUD CLI を実行する
+
+サブコマンドは両ターゲットで完全に共通です。`--target docker` と
+`--target azure` を切り替えるだけです。
 
 ```bash
 # 利用可能な Typer サブコマンドを確認します。
-uv run python scripts/postgresql/crud_azure.py --help
+uv run python scripts/postgresql/vanilla.py --help
 
 # テーブル作成 → サンプル一括投入 → 類似検索の順に試します。
-uv run python scripts/postgresql/crud_azure.py create-table
-uv run python scripts/postgresql/crud_azure.py bulk-create
-uv run python scripts/postgresql/crud_azure.py search --query "fruit"
+uv run python scripts/postgresql/vanilla.py create-table
+uv run python scripts/postgresql/vanilla.py bulk-create
+uv run python scripts/postgresql/vanilla.py search --query "fruit"
+
+# Azure Flexible Server に対しても同じ流れで実行できます。
+uv run python scripts/postgresql/vanilla.py --target azure create-table
+uv run python scripts/postgresql/vanilla.py --target azure bulk-create
+uv run python scripts/postgresql/vanilla.py --target azure search --query "fruit"
 
 # id 指定で取得・更新・削除します。
-uv run python scripts/postgresql/crud_azure.py read --id apple
-uv run python scripts/postgresql/crud_azure.py update --id apple \
+uv run python scripts/postgresql/vanilla.py read --id apple
+uv run python scripts/postgresql/vanilla.py update --id apple \
     --text "Apples, oranges, and bananas are fruits."
-uv run python scripts/postgresql/crud_azure.py delete --id apple
+uv run python scripts/postgresql/vanilla.py delete --id apple
 
 # 検証が終わったらテーブルを削除します。
-uv run python scripts/postgresql/crud_azure.py drop-table
+uv run python scripts/postgresql/vanilla.py drop-table
 ```
 
-Foundry の埋め込みデプロイがまだ無い、あるいは呼び出したくないときは
-`--fake-embeddings` を付けて Azure 接続パスだけを確認できます。
+`--fake-embeddings` を付けると Microsoft Foundry を呼ばずに
+`DeterministicFakeEmbedding` で実行できます。両ターゲットで使えるフラグで、
+`--target docker` ならローカル完結のオフライン反復、
+`--target azure` なら Foundry 埋め込みデプロイがまだ無い段階で Azure 接続
+パスを通しで確認するのに便利です。
 
 ```bash
-uv run python scripts/postgresql/crud_azure.py --fake-embeddings create-table --overwrite
-uv run python scripts/postgresql/crud_azure.py --fake-embeddings bulk-create
-uv run python scripts/postgresql/crud_azure.py --fake-embeddings search \
+uv run python scripts/postgresql/vanilla.py --fake-embeddings create-table --overwrite
+uv run python scripts/postgresql/vanilla.py --fake-embeddings bulk-create
+uv run python scripts/postgresql/vanilla.py --fake-embeddings search \
     --query "fruit"
+
+# Azure ターゲットに対しても同じフラグが使えます。
+uv run python scripts/postgresql/vanilla.py --target azure --fake-embeddings create-table --overwrite
+```
+
+### ローカル DB の確認・停止
+
+```bash
+# PostgreSQL のログを tail します。
+docker compose logs -f postgres
+
+# コンテナ内で psql を起動します。
+docker compose exec postgres psql -U concierge -d concierge
+
+# サービスを停止します (ボリュームは保持されます)。
+docker compose stop postgres
+docker compose rm -f postgres
 ```
 
 ## GitHub Pages

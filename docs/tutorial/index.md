@@ -1,11 +1,10 @@
 # Hands-on Tutorial
 
 Welcome to the **concierge** hands-on tutorial. This guide walks you through
-the current application step by step, using the actual GitHub Issues that
-shaped the codebase as the storyline.
+the current application step by step.
 
-Each step links back to the originating Issue, explains the **why** behind the
-change, and shows runnable commands plus selected code excerpts.
+Each step explains the **why** behind the change and shows runnable commands
+plus selected code excerpts.
 
 ## Why follow this tutorial?
 
@@ -13,25 +12,24 @@ The repository is a template for building LLM applications on top of
 [Microsoft Foundry](https://learn.microsoft.com/en-us/azure/foundry/) with
 [LangChain](https://docs.langchain.com/) and
 [LangGraph](https://docs.langchain.com/oss/python/langgraph/quickstart). Rather
-than reading the finished code in isolation, you will trace it issue by issue
+than reading the finished code in isolation, you will build it up step by step
 so the design decisions stay visible.
 
-## Issue-to-step map
+## Tutorial map
 
-| Step | Topic                                | GitHub Issue | Status |
-| :--- | :----------------------------------- | :----------- | :----- |
-| 1    | Microsoft Foundry + LangChain setup  | [#3](https://github.com/ks6088ts-labs/concierge/issues/3) | Closed |
-| 2a   | Tracing with Azure Monitor / Foundry | [#5](https://github.com/ks6088ts-labs/concierge/issues/5) | Closed |
-| 2b   | Local evaluation with MLflow         | [#8](https://github.com/ks6088ts-labs/concierge/issues/8) | Closed |
-| 3a   | Apply Clean Architecture             | [#6](https://github.com/ks6088ts-labs/concierge/issues/6) | Open   |
-| 3b   | Provision infrastructure via IaC     | [#10](https://github.com/ks6088ts-labs/concierge/issues/10) | Open  |
-| 4    | PostgreSQL (pgvector) CRUD via Docker Compose | -    | -      |
-| 5    | Azure Database for PostgreSQL (pgvector) CRUD | [#14](https://github.com/ks6088ts-labs/concierge/issues/14) | Open |
+| Step | Topic                                |
+| :--- | :----------------------------------- |
+| 1    | Microsoft Foundry + LangChain setup  |
+| 2a   | Tracing with Azure Monitor / Foundry |
+| 2b   | Local evaluation with MLflow         |
+| 3    | PostgreSQL (pgvector) CRUD - Docker Compose or Azure Flexible Server |
 
-Steps 1 and 2 mirror code that is already merged. Step 3 is forward-looking and
-points to the open issues you can pick up next. Step 4 adds a persistent vector
-store option backed by Docker-hosted PostgreSQL, and Step 5 reuses the same
-CRUD flow against a managed Azure Database for PostgreSQL Flexible Server.
+Steps 1 and 2 build the Foundry + LangChain CLI and add observability.
+Step 3 adds a persistent vector store backed by PostgreSQL with pgvector and
+walks through the same CRUD workflow against two interchangeable targets - a
+local Docker Compose service or a managed Azure Database for PostgreSQL
+Flexible Server - using a single CLI
+(`scripts/postgresql/vanilla.py --target docker|azure`).
 
 ## High-level architecture
 
@@ -86,10 +84,9 @@ expect.
 Every step page is structured the same way so you can pattern-match quickly:
 
 1. **Goal** - the user value the step unlocks.
-2. **Reference issue** - link to the GitHub Issue that originally tracked it.
-3. **Why** - the design rationale.
-4. **Steps** - runnable commands and selected code excerpts.
-5. **Verify** - how to confirm the change works.
-6. **Troubleshooting** - common pitfalls and fixes.
+2. **Why** - the design rationale.
+3. **Steps** - runnable commands and selected code excerpts.
+4. **Verify** - how to confirm the change works.
+5. **Troubleshooting** - common pitfalls and fixes.
 
 Continue with [Step 1 - Microsoft Foundry + LangChain](01-foundry-langchain.md).

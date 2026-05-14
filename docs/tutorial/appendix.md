@@ -3,18 +3,6 @@
 This page collects every external document referenced from the tutorial,
 grouped by topic, so you have a single place to bookmark.
 
-## GitHub Issues that shaped the code
-
-| # | Title                                  | State  | Link |
-| - | :------------------------------------- | :----- | :--- |
-| 1 | rename project                         | Closed | <https://github.com/ks6088ts-labs/concierge/issues/1> |
-| 3 | set up LangGraph project               | Closed | <https://github.com/ks6088ts-labs/concierge/issues/3> |
-| 5 | add tracing feature                    | Closed | <https://github.com/ks6088ts-labs/concierge/issues/5> |
-| 6 | apply clean architecture               | Open   | <https://github.com/ks6088ts-labs/concierge/issues/6> |
-| 8 | support MLflow locally for evaluation  | Closed | <https://github.com/ks6088ts-labs/concierge/issues/8> |
-| 10 | set up infra via IaC                  | Open   | <https://github.com/ks6088ts-labs/concierge/issues/10> |
-| 14 | run CRUD against Azure PostgreSQL     | Open   | <https://github.com/ks6088ts-labs/concierge/issues/14> |
-
 ## Tooling
 
 - [Python](https://www.python.org/downloads/)
@@ -46,12 +34,7 @@ grouped by topic, so you have a single place to bookmark.
 - [MLflow LangGraph integration](https://mlflow.org/docs/latest/genai/tracing/integrations/listing/langgraph/)
 - [MLflow tracking server](https://mlflow.org/docs/latest/tracking.html)
 
-## Clean Architecture (Issue #6)
-
-- [PacktPublishing/Clean-Architecture-with-Python](https://github.com/PacktPublishing/Clean-Architecture-with-Python)
-- [*Pythonではじめるクリーンアーキテクチャ* (Impress)](https://book.impress.co.jp/books/1125101112)
-
-## Infrastructure as Code (Issue #10)
+## Infrastructure as Code
 
 - [microsoft/CAIRA](https://github.com/microsoft/CAIRA)
 - [microsoft-foundry/foundry-samples - infrastructure](https://github.com/microsoft-foundry/foundry-samples/tree/main/infrastructure)
@@ -80,8 +63,7 @@ grouped by topic, so you have a single place to bookmark.
 - [`compose.yml`](https://github.com/ks6088ts-labs/concierge/blob/main/compose.yml)
 - [`.env.template`](https://github.com/ks6088ts-labs/concierge/blob/main/.env.template)
 - [`scripts/microsoft_foundry/vanilla.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/microsoft_foundry/vanilla.py)
-- [`scripts/postgresql/crud.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/postgresql/crud.py)
-- [`scripts/postgresql/crud_azure.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/postgresql/crud_azure.py)
+- [`scripts/postgresql/vanilla.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/postgresql/vanilla.py)
 - [`concierge/settings/microsoft_foundry.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/microsoft_foundry.py)
 - [`concierge/settings/observability.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/observability.py)
 - [`concierge/settings/postgres.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/postgres.py)

@@ -1,8 +1,5 @@
 # ステップ 1 - Microsoft Foundry + LangChain
 
-!!! info "参照 Issue"
-    [#3 - set up LangGraph project](https://github.com/ks6088ts-labs/concierge/issues/3) (Closed)
-
 ## ゴール
 
 このステップ完了時には、以下の状態になります。
@@ -11,9 +8,6 @@
 - Microsoft Foundry プロジェクトを指す `.env` が用意されている。
 - Foundry にホストされたモデルに対して **チャット**、**エージェント**、
   **埋め込み**、**ベクトル検索** を実行できる Typer CLI が動作する。
-
-これは Issue [#3](https://github.com/ks6088ts-labs/concierge/issues/3) で
-完了した内容そのものです。
 
 ## なぜこのステップが必要か
 

@@ -1,8 +1,5 @@
 # Step 1 - Microsoft Foundry + LangChain
 
-!!! info "Reference issue"
-    [#3 - set up LangGraph project](https://github.com/ks6088ts-labs/concierge/issues/3) (Closed)
-
 ## Goal
 
 By the end of this step you will have:
@@ -11,9 +8,6 @@ By the end of this step you will have:
 - a `.env` pointing at your Microsoft Foundry project,
 - and a working Typer CLI that can call **chat**, **agent**, **embedding**, and
   **vector-store** flows against a Foundry-hosted model.
-
-This is exactly what Issue [#3](https://github.com/ks6088ts-labs/concierge/issues/3)
-delivered.
 
 ## Why this step exists
 

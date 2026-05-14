@@ -91,88 +91,38 @@ make docker-run
 
 ## PostgreSQL (pgvector) CRUD
 
-The [`compose.yml`](https://github.com/ks6088ts-labs/concierge/blob/main/compose.yml)
-file ships a [pgvector](https://github.com/pgvector/pgvector) PostgreSQL service
-that can host a LangChain `PGVectorStore`. Start it with Docker Compose.
+A single Typer CLI in
+[`scripts/postgresql/vanilla.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/postgresql/vanilla.py)
+covers both targets supported by this repo:
 
-```bash
-docker compose up -d postgres
-```
+* `--target docker` (default) talks to the local
+  [pgvector](https://github.com/pgvector/pgvector) PostgreSQL service from
+  [`compose.yml`](https://github.com/ks6088ts-labs/concierge/blob/main/compose.yml).
+* `--target azure` talks to a managed
+  [Azure Database for PostgreSQL Flexible Server](https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/overview)
+  with `pgvector` enabled, defaulting to Microsoft Entra authentication
+  (an access token from `DefaultAzureCredential` is used as the database
+  password).
 
-Defaults from [`.env.template`](https://github.com/ks6088ts-labs/concierge/blob/main/.env.template):
+See [Step 3 - PostgreSQL (pgvector) CRUD](tutorial/03-postgres-vector-store.md)
+for the full walkthrough (including server provisioning and Entra setup
+for the Azure target).
+
+### Configure the connection
+
+Both targets read settings from `.env`. Copy the relevant block(s) from
+[`.env.template`](https://github.com/ks6088ts-labs/concierge/blob/main/.env.template):
 
 ```dotenv
+# --target docker (defaults match the `postgres` service in compose.yml)
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
 POSTGRES_USER=concierge
 POSTGRES_PASSWORD=concierge
 POSTGRES_DB=concierge
 POSTGRES_COLLECTION=concierge_docs
-```
 
-Run the CRUD CLI defined in
-[`scripts/postgresql/crud.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/postgresql/crud.py).
-
-```bash
-# List available Typer subcommands.
-uv run python scripts/postgresql/crud.py --help
-
-# Create the pgvector table, bulk-insert sample documents, and search.
-uv run python scripts/postgresql/crud.py create-table
-uv run python scripts/postgresql/crud.py bulk-create
-uv run python scripts/postgresql/crud.py search --query "fruit"
-
-# Read, update, delete by id.
-uv run python scripts/postgresql/crud.py read --id apple
-uv run python scripts/postgresql/crud.py update --id apple \
-    --text "Apples, oranges, and bananas are fruits."
-uv run python scripts/postgresql/crud.py delete --id apple
-
-# Drop the table when you are done.
-uv run python scripts/postgresql/crud.py drop-table
-```
-
-Use `--fake-embeddings` to skip Microsoft Foundry and run end-to-end against
-`DeterministicFakeEmbedding`, which is helpful when iterating locally without
-Azure credentials.
-
-```bash
-uv run python scripts/postgresql/crud.py --fake-embeddings create-table
-uv run python scripts/postgresql/crud.py --fake-embeddings bulk-create
-uv run python scripts/postgresql/crud.py --fake-embeddings search \
-    --query "fruit"
-```
-
-Stop or inspect the database with `docker compose` directly.
-
-```bash
-# Tail PostgreSQL logs.
-docker compose logs -f postgres
-
-# Open a psql shell inside the container.
-docker compose exec postgres psql -U concierge -d concierge
-
-# Stop and remove the service (volume is preserved).
-docker compose stop postgres
-docker compose rm -f postgres
-```
-
-## Azure Database for PostgreSQL (pgvector) CRUD
-
-A managed-database companion to the local Compose flow above lives at
-[`scripts/postgresql/crud_azure.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/postgresql/crud_azure.py).
-It targets an
-[Azure Database for PostgreSQL Flexible Server](https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/overview)
-with the `pgvector` extension enabled and authenticates by default through
-Microsoft Entra (an access token from `DefaultAzureCredential` is used as the
-database password). See
-[Step 5 - Azure Database for PostgreSQL (pgvector) CRUD](tutorial/05-azure-postgres-vector-store.md)
-for the full walkthrough including server provisioning and Entra setup.
-
-Fill the Azure block of [`.env.template`](https://github.com/ks6088ts-labs/concierge/blob/main/.env.template)
-in your `.env`:
-
-```dotenv
+# --target azure
 AZURE_DBHOST=<server-name>.postgres.database.azure.com
 AZURE_DBNAME=postgres
 AZURE_DBPORT=5432
@@ -184,42 +134,78 @@ AZURE_DBUSER=<entra-principal-or-db-user>
 AZURE_DBPASSWORD=
 ```
 
-Sign in once so `DefaultAzureCredential` can pick up your identity.
+### Start (or sign in to) the target service
+
+For the local target, start the Compose service:
+
+```bash
+docker compose up -d postgres
+```
+
+For the Azure target, sign in so `DefaultAzureCredential` can pick up your
+identity:
 
 ```bash
 az login
 ```
 
-Then run the Azure CRUD CLI - the subcommand surface is identical to the
-local CRUD CLI:
+### Run the CRUD CLI
+
+The subcommand surface is identical for both targets - swap
+`--target docker` for `--target azure` to switch.
 
 ```bash
 # List available Typer subcommands.
-uv run python scripts/postgresql/crud_azure.py --help
+uv run python scripts/postgresql/vanilla.py --help
 
 # Create the pgvector table, bulk-insert sample documents, and search.
-uv run python scripts/postgresql/crud_azure.py create-table
-uv run python scripts/postgresql/crud_azure.py bulk-create
-uv run python scripts/postgresql/crud_azure.py search --query "fruit"
+uv run python scripts/postgresql/vanilla.py create-table
+uv run python scripts/postgresql/vanilla.py bulk-create
+uv run python scripts/postgresql/vanilla.py search --query "fruit"
+
+# Same flow against the Azure Flexible Server.
+uv run python scripts/postgresql/vanilla.py --target azure create-table
+uv run python scripts/postgresql/vanilla.py --target azure bulk-create
+uv run python scripts/postgresql/vanilla.py --target azure search --query "fruit"
 
 # Read, update, delete by id.
-uv run python scripts/postgresql/crud_azure.py read --id apple
-uv run python scripts/postgresql/crud_azure.py update --id apple \
+uv run python scripts/postgresql/vanilla.py read --id apple
+uv run python scripts/postgresql/vanilla.py update --id apple \
     --text "Apples, oranges, and bananas are fruits."
-uv run python scripts/postgresql/crud_azure.py delete --id apple
+uv run python scripts/postgresql/vanilla.py delete --id apple
 
 # Drop the table when you are done.
-uv run python scripts/postgresql/crud_azure.py drop-table
+uv run python scripts/postgresql/vanilla.py drop-table
 ```
 
-Use `--fake-embeddings` to exercise the Azure connection path without
-calling out to a Foundry embedding deployment.
+Use `--fake-embeddings` to skip Microsoft Foundry and run end-to-end against
+`DeterministicFakeEmbedding`. This works for both targets - it is handy for
+purely-local iteration with `--target docker`, and also for exercising the
+Azure connection path with `--target azure` before a Foundry embedding
+deployment is ready.
 
 ```bash
-uv run python scripts/postgresql/crud_azure.py --fake-embeddings create-table --overwrite
-uv run python scripts/postgresql/crud_azure.py --fake-embeddings bulk-create
-uv run python scripts/postgresql/crud_azure.py --fake-embeddings search \
+uv run python scripts/postgresql/vanilla.py --fake-embeddings create-table --overwrite
+uv run python scripts/postgresql/vanilla.py --fake-embeddings bulk-create
+uv run python scripts/postgresql/vanilla.py --fake-embeddings search \
     --query "fruit"
+
+# Same flag against the Azure target.
+uv run python scripts/postgresql/vanilla.py --target azure --fake-embeddings create-table --overwrite
+```
+
+### Inspect or stop the local database
+
+```bash
+# Tail PostgreSQL logs.
+docker compose logs -f postgres
+
+# Open a psql shell inside the container.
+docker compose exec postgres psql -U concierge -d concierge
+
+# Stop and remove the service (volume is preserved).
+docker compose stop postgres
+docker compose rm -f postgres
 ```
 
 ## GitHub Pages

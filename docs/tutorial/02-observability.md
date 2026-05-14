@@ -1,9 +1,5 @@
 # Step 2 - Observability (Tracing & MLflow)
 
-!!! info "Reference issues"
-    - [#5 - add tracing feature](https://github.com/ks6088ts-labs/concierge/issues/5) (Closed)
-    - [#8 - support MLflow locally for evaluation](https://github.com/ks6088ts-labs/concierge/issues/8) (Closed)
-
 ## Goal
 
 In this step you will enable two complementary observability backends for the
@@ -26,11 +22,10 @@ you answer questions like:
 - how long did each step take?
 - how many tokens did each call consume?
 
-Issue [#5](https://github.com/ks6088ts-labs/concierge/issues/5) wires LangChain
-to Azure Monitor through the
-[`AzureAIOpenTelemetryTracer`](https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/langchain-traces).
-Issue [#8](https://github.com/ks6088ts-labs/concierge/issues/8) adds MLflow
-autologging so you can iterate offline without leaving the laptop.
+This step wires LangChain to Azure Monitor through the
+[`AzureAIOpenTelemetryTracer`](https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/langchain-traces),
+and adds MLflow autologging so you can iterate offline without leaving the
+laptop.
 
 ```mermaid
 flowchart LR
@@ -82,7 +77,7 @@ def _trace_config(extra=None) -> RunnableConfig:
 This is what keeps the per-command code free of conditional logic: the toggle
 is set once globally, and every LangChain call picks it up uniformly.
 
-## Step 2a - Azure Monitor tracing (Issue #5)
+## Step 2a - Azure Monitor tracing
 
 ### Why Azure Monitor
 
@@ -126,7 +121,7 @@ into the LangChain run tree, prompt, response, and token counts.
     redact sensitive content via [LangChain callback filters](https://docs.langchain.com/oss/python/langchain/callbacks)
     when you graduate beyond exploration.
 
-## Step 2b - MLflow local autologging (Issue #8)
+## Step 2b - MLflow local autologging
 
 ### Why MLflow
 
@@ -240,9 +235,7 @@ the suite before pushing.
 
 ## What's next
 
-You now have a working, observable Foundry + LangChain CLI. The remaining work
-is structural: shaping the codebase for long-term growth and provisioning the
-cloud resources reproducibly.
-
-Continue with
-[Step 3 - Next steps (Clean Architecture & IaC)](03-next-steps.md).
+You now have a working, observable Foundry + LangChain CLI. To add a
+persistent vector store backed by pgvector (locally via Docker Compose or
+managed via Azure Database for PostgreSQL Flexible Server), continue with
+[Step 3 - PostgreSQL (pgvector) CRUD](03-postgres-vector-store.md).

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
 
 from concierge.todo.application.repositories import TaskRepository
 from concierge.todo.domain.entities import Task
@@ -56,15 +55,7 @@ class UpdateTaskUseCase:
         task = self.repository.find_by_id(task_id)
         if task is None:
             raise TaskNotFoundError(task_id)
-        if title is not None:
-            task._validate_title(title)
-            task.title = title
-        if description is not None:
-            task._validate_description(description)
-            task.description = description
-        if status is not None:
-            task.status = status
-        task.updated_at = datetime.now(timezone.utc)
+        task.update(title=title, description=description, status=status)
         updated = self.repository.save(task)
         logger.info("Updated task id=%s", updated.id)
         return updated
@@ -78,8 +69,7 @@ class CompleteTaskUseCase:
         task = self.repository.find_by_id(task_id)
         if task is None:
             raise TaskNotFoundError(task_id)
-        task.status = TaskStatus.DONE
-        task.updated_at = datetime.now(timezone.utc)
+        task.mark_done()
         completed = self.repository.save(task)
         logger.info("Completed task id=%s", completed.id)
         return completed

@@ -25,6 +25,27 @@ class Task:
         self._validate_title(self.title)
         self._validate_description(self.description)
 
+    def update(
+        self,
+        *,
+        title: str | None = None,
+        description: str | None = None,
+        status: TaskStatus | None = None,
+    ) -> None:
+        if title is not None:
+            self._validate_title(title)
+            self.title = title
+        if description is not None:
+            self._validate_description(description)
+            self.description = description
+        if status is not None:
+            self.status = status
+        self.updated_at = _utcnow()
+
+    def mark_done(self) -> None:
+        self.status = TaskStatus.DONE
+        self.updated_at = _utcnow()
+
     @staticmethod
     def _validate_title(title: str) -> None:
         if not 1 <= len(title) <= 200:

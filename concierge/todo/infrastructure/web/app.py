@@ -24,7 +24,7 @@ def create_app() -> FastAPI:
 
 
 def start() -> None:
-    uvicorn.run(create_app(), host="0.0.0.0", port=8000)
+    uvicorn.run("concierge.todo.infrastructure.web.app:create_app", factory=True, host="0.0.0.0", port=8000)
 
 
 if __name__ == "__main__":

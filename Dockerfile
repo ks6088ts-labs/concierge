@@ -26,4 +26,8 @@ RUN pip install --no-cache-dir --upgrade -r /app/requirements.txt
 # Copy application code after dependencies are installed
 COPY . .
 
+# Install the project itself (without re-resolving deps) so `concierge` is importable
+# from scripts run as files (e.g. `python scripts/microsoft_foundry/vanilla.py`).
+RUN pip install --no-cache-dir --no-deps .
+
 CMD ["python", "-m", "concierge.core"]

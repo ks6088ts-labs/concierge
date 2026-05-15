@@ -72,6 +72,9 @@ make test
 # format check、lint、test をまとめて実行します。
 make ci-test
 
+# import-linter でクリーンアーキテクチャの依存方向を検証します。
+make lint-imports
+
 # docs 依存関係のインストールと site build をまとめて実行します。
 make ci-test-docs
 

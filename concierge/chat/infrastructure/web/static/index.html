@@ -6,22 +6,31 @@
     <title>Concierge Chat</title>
     <style>
       :root {
-        --bg: #f5f7fb;
+        --bg: #f7f8fb;
         --surface: #ffffff;
         --surface-muted: #f1f3f8;
-        --border: #dde2ec;
+        --surface-hover: #eef1f7;
+        --border: #e3e6ee;
+        --border-strong: #cdd3df;
         --text: #1f2937;
         --text-muted: #6b7280;
+        --text-subtle: #9ca3af;
         --primary: #2563eb;
         --primary-hover: #1d4ed8;
+        --primary-soft: #eff6ff;
         --danger: #dc2626;
         --success: #16a34a;
         --warning: #d97706;
-        --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
+        --agent: #7c3aed;
+        --agent-soft: #f5f3ff;
+        --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.05);
+        --shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+        --radius: 10px;
       }
 
       * { box-sizing: border-box; }
 
+      html, body { height: 100%; }
       body {
         margin: 0;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
@@ -29,182 +38,81 @@
         background: var(--bg);
         color: var(--text);
         font-size: 14px;
-        line-height: 1.5;
+        line-height: 1.55;
+        display: flex;
+        flex-direction: column;
       }
 
+      /* ---------- Header ---------- */
       header.topbar {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 1rem;
-        padding: 0.75rem 1.25rem;
+        padding: 0.6rem 1rem;
         background: var(--surface);
         border-bottom: 1px solid var(--border);
-        position: sticky;
-        top: 0;
-        z-index: 10;
+        flex-shrink: 0;
       }
-
-      header.topbar h1 {
-        font-size: 1.05rem;
-        margin: 0;
+      header.topbar .brand {
         display: flex;
         align-items: center;
         gap: 0.5rem;
+        font-weight: 600;
+        font-size: 1rem;
+        color: var(--text);
       }
-
-      header.topbar .badge {
-        background: var(--surface-muted);
-        color: var(--text-muted);
-        padding: 0.15rem 0.5rem;
-        border-radius: 999px;
-        font-size: 0.75rem;
-        font-weight: 500;
+      header.topbar .brand .logo {
+        font-size: 1.2rem;
       }
-
-      header.topbar .links {
+      header.topbar .actions {
         display: flex;
-        gap: 0.5rem;
+        gap: 0.4rem;
         align-items: center;
       }
-
-      header.topbar a {
-        color: var(--primary);
-        text-decoration: none;
-        font-weight: 500;
-        font-size: 0.85rem;
-      }
-
-      header.topbar a:hover { text-decoration: underline; }
 
       .api-status {
         display: inline-flex;
         align-items: center;
-        gap: 0.4rem;
-        font-size: 0.8rem;
+        gap: 0.35rem;
+        font-size: 0.78rem;
         color: var(--text-muted);
+        padding: 0.25rem 0.55rem;
+        border-radius: 999px;
+        background: var(--surface-muted);
       }
-
       .api-status .dot {
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        background: #9ca3af;
+        background: var(--text-subtle);
       }
       .api-status.ok .dot { background: var(--success); }
       .api-status.err .dot { background: var(--danger); }
 
-      main {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 1rem;
-      }
-
-      .card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 10px;
-        box-shadow: var(--shadow);
-      }
-
-      .card-header {
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid var(--border);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 0.5rem;
-      }
-
-      .card-header h2 {
-        margin: 0;
-        font-size: 0.95rem;
-        font-weight: 600;
-      }
-
-      .card-body {
-        padding: 1rem;
-      }
-
-      details.help {
-        background: #eff6ff;
-        border: 1px solid #bfdbfe;
-        border-radius: 8px;
-        padding: 0.5rem 0.75rem;
-        margin-bottom: 1rem;
-        font-size: 0.85rem;
-      }
-      details.help summary {
-        cursor: pointer;
-        font-weight: 600;
-        color: #1d4ed8;
-      }
-      details.help ol { margin: 0.5rem 0 0 1rem; padding-left: 0.5rem; }
-      details.help li { margin: 0.25rem 0; }
-      details.help code { background: #dbeafe; padding: 0 0.25rem; border-radius: 3px; }
-
-      .profile-card { margin-bottom: 1rem; }
-
-      .field {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-        flex: 1 1 0;
-        min-width: 0;
-      }
-
-      .field label {
-        font-size: 0.78rem;
-        color: var(--text-muted);
-        font-weight: 600;
-      }
-
-      .field .hint {
-        font-size: 0.72rem;
-        color: var(--text-muted);
-      }
-
-      input[type="text"], textarea {
-        width: 100%;
-        padding: 0.5rem 0.65rem;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        background: var(--surface);
-        color: var(--text);
-        font: inherit;
-        transition: border-color 0.15s, box-shadow 0.15s;
-      }
-
-      input[type="text"]:focus, textarea:focus {
-        outline: none;
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
-      }
-
-      input[readonly] {
-        background: var(--surface-muted);
-        color: var(--text-muted);
-        cursor: not-allowed;
-      }
-
+      /* ---------- Buttons ---------- */
       button {
         font: inherit;
-        padding: 0.5rem 0.85rem;
-        border-radius: 6px;
+        padding: 0.45rem 0.8rem;
+        border-radius: 8px;
         border: 1px solid var(--border);
         background: var(--surface);
         color: var(--text);
         cursor: pointer;
-        transition: background 0.15s, border-color 0.15s, color 0.15s;
+        transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.05s;
         white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
       }
-      button:hover:not(:disabled) {
-        background: var(--surface-muted);
+      button:hover:not(:disabled) { background: var(--surface-hover); }
+      button:active:not(:disabled) { transform: translateY(1px); }
+      button:disabled { opacity: 0.5; cursor: not-allowed; }
+      button:focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 2px;
       }
-      button:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
+
       button.primary {
         background: var(--primary);
         border-color: var(--primary);
@@ -214,148 +122,438 @@
         background: var(--primary-hover);
         border-color: var(--primary-hover);
       }
+      button.ghost {
+        border-color: transparent;
+        background: transparent;
+        color: var(--text-muted);
+      }
+      button.ghost:hover:not(:disabled) {
+        background: var(--surface-muted);
+        color: var(--text);
+      }
       button.ghost-danger {
         color: var(--danger);
         border-color: transparent;
         background: transparent;
-        padding: 0.25rem 0.4rem;
       }
       button.ghost-danger:hover:not(:disabled) {
         background: #fee2e2;
       }
       button.icon-btn {
-        padding: 0.4rem 0.55rem;
+        padding: 0.4rem 0.5rem;
+        font-size: 1rem;
+        line-height: 1;
+      }
+      button.block { width: 100%; justify-content: center; }
+      [hidden] { display: none !important; }
+
+      /* ---------- Inputs ---------- */
+      input[type="text"], textarea {
+        width: 100%;
+        padding: 0.5rem 0.7rem;
+        border: 1px solid var(--border-strong);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+        transition: border-color 0.15s, box-shadow 0.15s;
+      }
+      input[type="text"]:focus, textarea:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+      }
+      input[readonly] {
+        background: var(--surface-muted);
+        color: var(--text-muted);
       }
 
-      .row {
-        display: flex;
-        gap: 0.5rem;
-        align-items: flex-end;
-        flex-wrap: wrap;
+      .field { display: flex; flex-direction: column; gap: 0.3rem; }
+      .field label {
+        font-size: 0.78rem;
+        color: var(--text-muted);
+        font-weight: 600;
+      }
+      .field .hint {
+        font-size: 0.72rem;
+        color: var(--text-subtle);
+      }
+      .field .hint code {
+        background: var(--surface-muted);
+        padding: 0 0.25rem;
+        border-radius: 3px;
+        font-size: 0.95em;
       }
 
-      .row > .field { flex: 1 1 220px; }
-
-      .layout {
+      /* ---------- App layout ---------- */
+      .app {
+        flex: 1;
         display: grid;
-        grid-template-columns: minmax(260px, 1fr) 2fr;
-        gap: 1rem;
+        grid-template-columns: 280px 1fr;
+        min-height: 0;
+      }
+      @media (max-width: 760px) {
+        .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+        .sidebar { max-height: 40vh; border-right: none; border-bottom: 1px solid var(--border); }
       }
 
-      @media (max-width: 800px) {
-        .layout { grid-template-columns: 1fr; }
+      /* ---------- Sidebar ---------- */
+      .sidebar {
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
       }
-
-      /* Conversation list */
+      .sidebar-top {
+        padding: 0.75rem;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      .sidebar-filter {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.78rem;
+        color: var(--text-muted);
+      }
+      .sidebar-filter label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        cursor: pointer;
+      }
       .conv-list {
         list-style: none;
-        padding: 0;
+        padding: 0.25rem 0;
         margin: 0;
-        max-height: 60vh;
         overflow-y: auto;
+        flex: 1;
       }
       .conv-list li {
-        padding: 0.6rem 0.75rem;
-        border-bottom: 1px solid var(--border);
+        padding: 0.6rem 0.85rem;
         cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        gap: 0.15rem;
+        border-left: 3px solid transparent;
+      }
+      .conv-list li:hover { background: var(--surface-hover); }
+      .conv-list li.selected {
+        background: var(--primary-soft);
+        border-left-color: var(--primary);
+      }
+      .conv-list li.selected .conv-title { color: var(--primary-hover); }
+      .conv-title {
+        font-weight: 500;
+        font-size: 0.9rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .conv-meta { font-size: 0.72rem; color: var(--text-subtle); }
+      .conv-list .empty {
+        color: var(--text-subtle);
+        padding: 1.5rem 1rem;
+        text-align: center;
+        font-size: 0.85rem;
+        cursor: default;
+        border-left: none !important;
+      }
+      .conv-list .empty:hover { background: transparent !important; }
+
+      /* ---------- Chat pane ---------- */
+      .chat {
+        display: flex;
+        flex-direction: column;
+        background: var(--bg);
+        min-height: 0;
+      }
+      .chat-header {
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        padding: 0.6rem 1rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
         gap: 0.5rem;
+        flex-shrink: 0;
       }
-      .conv-list li:last-child { border-bottom: none; }
-      .conv-list li:hover { background: var(--surface-muted); }
-      .conv-list li.selected {
-        background: #eff6ff;
-        border-left: 3px solid var(--primary);
-        padding-left: calc(0.75rem - 3px);
+      .chat-title {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+        min-width: 0;
+        flex: 1;
       }
-      .conv-title { font-weight: 500; }
-      .conv-meta { font-size: 0.72rem; color: var(--text-muted); }
-      .conv-list .empty { color: var(--text-muted); padding: 1rem; text-align: center; }
+      .chat-title h2 {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .chat-actions { display: flex; gap: 0.3rem; align-items: center; }
 
-      /* Messages */
-      .messages-card { display: flex; flex-direction: column; height: calc(100vh - 220px); min-height: 480px; }
-      .messages-card .card-body { flex: 1; display: flex; flex-direction: column; padding: 0; }
+      .participants {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3rem;
+      }
+      .chip {
+        background: var(--surface-muted);
+        color: var(--text-muted);
+        font-size: 0.7rem;
+        padding: 0.1rem 0.5rem;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+      }
+      .chip.agent { background: var(--agent-soft); color: var(--agent); border-color: #ddd6fe; }
+      .chip.system { background: #fffbeb; color: #92400e; border-color: #fcd34d; }
 
+      /* ---------- Messages ---------- */
       .messages-list {
         flex: 1;
         overflow-y: auto;
-        padding: 1rem;
+        padding: 1.25rem 1rem;
         display: flex;
         flex-direction: column;
-        gap: 0.65rem;
-        background: var(--surface-muted);
+        gap: 0.5rem;
       }
-
       .message {
-        max-width: 75%;
-        padding: 0.55rem 0.8rem;
-        border-radius: 12px;
+        max-width: min(680px, 80%);
+        padding: 0.6rem 0.85rem;
+        border-radius: 14px;
         background: var(--surface);
         border: 1px solid var(--border);
         word-wrap: break-word;
         white-space: pre-wrap;
+        box-shadow: var(--shadow-sm);
       }
       .message .meta {
         font-size: 0.7rem;
-        color: var(--text-muted);
+        color: var(--text-subtle);
         margin-bottom: 0.2rem;
         display: flex;
         gap: 0.5rem;
+        align-items: center;
       }
+      .message .meta strong { color: var(--text-muted); font-weight: 600; }
+      .message .content { font-size: 0.92rem; }
       .message.mine {
         align-self: flex-end;
         background: var(--primary);
         color: #fff;
         border-color: var(--primary);
       }
-      .message.mine .meta { color: rgba(255,255,255,0.85); }
-      .message.agent { border-color: #a7f3d0; background: #f0fdf4; }
-      .message.assistant { border-color: #d8b4fe; background: #faf5ff; }
-      .message.system { border-color: #fcd34d; background: #fffbeb; font-style: italic; }
+      .message.mine .meta { color: rgba(255,255,255,0.8); }
+      .message.mine .meta strong { color: rgba(255,255,255,0.95); }
+      .message.agent {
+        border-color: #ddd6fe;
+        background: var(--agent-soft);
+      }
+      .message.agent .meta strong { color: var(--agent); }
+      .message.streaming {
+        border-style: dashed;
+        border-color: var(--agent);
+      }
+      .message.streaming .typing-dot {
+        display: inline-block;
+        width: 4px;
+        height: 4px;
+        margin: 0 1px;
+        background: var(--agent);
+        border-radius: 50%;
+        animation: blink 1.2s infinite ease-in-out;
+      }
+      .message.streaming .typing-dot:nth-child(2) { animation-delay: 0.15s; }
+      .message.streaming .typing-dot:nth-child(3) { animation-delay: 0.3s; }
+      @keyframes blink {
+        0%, 80%, 100% { opacity: 0.2; }
+        40% { opacity: 1; }
+      }
 
       .messages-empty {
         margin: auto;
         text-align: center;
         color: var(--text-muted);
         padding: 2rem;
+        max-width: 480px;
+      }
+      .messages-empty .icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+        display: block;
+      }
+      .messages-empty h3 {
+        margin: 0 0 0.4rem;
+        font-size: 1rem;
+        color: var(--text);
+      }
+      .messages-empty p {
+        margin: 0;
+        font-size: 0.85rem;
       }
 
-      .composer {
-        border-top: 1px solid var(--border);
-        padding: 0.75rem;
+      /* ---------- Composer ---------- */
+      .composer-wrapper {
         background: var(--surface);
+        border-top: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+      .ai-banner {
+        background: #fef3c7;
+        border-bottom: 1px solid #fcd34d;
+        color: #92400e;
+        font-size: 0.78rem;
+        padding: 0.4rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      .ai-banner.hidden { display: none; }
+      .composer {
+        padding: 0.75rem 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      .composer-input-row {
         display: flex;
         gap: 0.5rem;
         align-items: flex-end;
       }
       .composer textarea {
         flex: 1;
-        resize: vertical;
-        min-height: 48px;
+        resize: none;
+        min-height: 44px;
         max-height: 200px;
+        overflow-y: auto;
+        line-height: 1.45;
+      }
+      .composer-controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.78rem;
+        color: var(--text-muted);
+      }
+      .composer-controls .hint {
+        color: var(--text-subtle);
       }
 
-      .participants {
+      /* ---------- Toggle switch ---------- */
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        cursor: pointer;
+        user-select: none;
+        font-size: 0.8rem;
+      }
+      .toggle input { position: absolute; opacity: 0; pointer-events: none; }
+      .toggle .track {
+        position: relative;
+        width: 32px;
+        height: 18px;
+        background: var(--border-strong);
+        border-radius: 999px;
+        transition: background 0.15s;
+        flex-shrink: 0;
+      }
+      .toggle .track::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 14px;
+        height: 14px;
+        background: #fff;
+        border-radius: 50%;
+        transition: transform 0.15s;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+      }
+      .toggle input:checked + .track { background: var(--agent); }
+      .toggle input:checked + .track::after { transform: translateX(14px); }
+      .toggle input:disabled + .track { opacity: 0.5; cursor: not-allowed; }
+      .toggle .label { color: var(--text-muted); }
+      .toggle.on .label { color: var(--agent); font-weight: 500; }
+
+      /* ---------- Empty pane ---------- */
+      .empty-pane {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        color: var(--text-muted);
+        padding: 2rem;
+      }
+      .empty-pane .icon { font-size: 3rem; display: block; margin-bottom: 0.75rem; }
+      .empty-pane h3 { margin: 0 0 0.3rem; color: var(--text); font-size: 1.1rem; }
+      .empty-pane p { margin: 0; font-size: 0.9rem; }
+
+      /* ---------- Modal ---------- */
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.45);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 200;
+        padding: 1rem;
+      }
+      .modal-backdrop.open { display: flex; }
+      .modal {
+        background: var(--surface);
+        border-radius: 12px;
+        box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+        width: 100%;
+        max-width: 480px;
+        max-height: 90vh;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+      }
+      .modal-header {
+        padding: 0.85rem 1.1rem;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .modal-header h2 { margin: 0; font-size: 1rem; font-weight: 600; }
+      .modal-body {
+        padding: 1.1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      .modal-body .links {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.3rem;
-        margin-top: 0.5rem;
+        gap: 0.75rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--border);
+        font-size: 0.82rem;
       }
-      .chip {
-        background: var(--surface-muted);
-        color: var(--text);
-        font-size: 0.72rem;
-        padding: 0.15rem 0.5rem;
-        border-radius: 999px;
-        border: 1px solid var(--border);
+      .modal-body .links a {
+        color: var(--primary);
+        text-decoration: none;
       }
-      .chip.assistant { background: #faf5ff; color: #6b21a8; border-color: #d8b4fe; }
-      .chip.agent { background: #f0fdf4; color: #065f46; border-color: #a7f3d0; }
-      .chip.system { background: #fffbeb; color: #92400e; border-color: #fcd34d; }
+      .modal-body .links a:hover { text-decoration: underline; }
+      .uuid-row {
+        display: flex;
+        gap: 0.35rem;
+      }
+      .uuid-row input { flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.78rem; }
 
-      /* Toast */
+      /* ---------- Toast ---------- */
       .toast-container {
         position: fixed;
         bottom: 1rem;
@@ -363,7 +561,7 @@
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
-        z-index: 100;
+        z-index: 300;
       }
       .toast {
         background: var(--surface);
@@ -375,148 +573,209 @@
         font-size: 0.85rem;
         min-width: 240px;
         max-width: 360px;
+        animation: toastIn 0.2s ease;
+      }
+      @keyframes toastIn {
+        from { transform: translateY(8px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
       }
       .toast.error { border-left-color: var(--danger); }
       .toast.success { border-left-color: var(--success); }
       .toast.warning { border-left-color: var(--warning); }
 
-      .empty-pane {
-        text-align: center;
-        color: var(--text-muted);
-        padding: 2rem 1rem;
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
       }
     </style>
   </head>
   <body>
     <header class="topbar">
-      <h1>
-        Concierge Chat
-        <span class="badge">FastAPI MVP</span>
-      </h1>
-      <div class="links">
-        <span id="api-status" class="api-status"><span class="dot"></span><span class="label">checking…</span></span>
-        <a href="/docs" target="_blank" rel="noopener">Swagger UI</a>
-        <a href="/redoc" target="_blank" rel="noopener">ReDoc</a>
-        <a href="/openapi.json" target="_blank" rel="noopener">OpenAPI</a>
+      <div class="brand">
+        <span class="logo" aria-hidden="true">💬</span>
+        <span>Concierge</span>
+      </div>
+      <div class="actions">
+        <span id="api-status" class="api-status" title="API ヘルスチェック">
+          <span class="dot"></span><span class="label">接続確認中…</span>
+        </span>
+        <button id="open-settings" class="icon-btn ghost" type="button" title="設定" aria-label="設定を開く">⚙️</button>
       </div>
     </header>
 
-    <main>
-      <details class="help" open>
-        <summary>はじめての方へ — 操作ガイド</summary>
-        <ol>
-          <li><strong>プロフィール</strong>: <code>User ID</code> はブラウザに自動保存される UUID です(API の <code>X-User-Id</code> ヘッダに使用)。<code>Display Name</code> はチャットに表示される名前です。</li>
-          <li><strong>会話を作成</strong>: 左パネルの「新規会話」フォームにタイトルを入力して作成します。</li>
-          <li><strong>会話を選択</strong>: 一覧から会話をクリックすると右側にメッセージが表示されます。</li>
-          <li><strong>メッセージを送信</strong>: 下部の入力欄に本文を入れて送信します(<code>Enter</code> で送信 / <code>Shift+Enter</code> で改行)。初回送信時は自動的に参加(<code>POST /conversations/{id}/participants</code>)します。</li>
-          <li>API 仕様の詳細は右上の <a href="/docs" target="_blank" rel="noopener">Swagger UI</a> を参照してください。</li>
-        </ol>
-      </details>
-
-      <section class="card profile-card">
-        <div class="card-header">
-          <h2>プロフィール</h2>
-          <span class="conv-meta">ブラウザの localStorage に保存されます</span>
-        </div>
-        <div class="card-body">
-          <div class="row">
-            <div class="field" style="flex: 2 1 320px;">
-              <label for="user-id">User ID (X-User-Id, UUID)</label>
-              <div class="row" style="gap: 0.35rem;">
-                <input id="user-id" type="text" readonly aria-describedby="user-id-hint" />
-                <button id="copy-user-id" class="icon-btn" type="button" title="クリップボードにコピー">📋</button>
-                <button id="regen-user-id" class="icon-btn" type="button" title="新しい UUID を生成(別ユーザーとして扱われます)">🔄</button>
-              </div>
-              <span id="user-id-hint" class="hint">API 呼び出し時に <code>X-User-Id</code> ヘッダとして送信されます。</span>
-            </div>
-            <div class="field" style="flex: 1 1 200px;">
-              <label for="display-name">Display Name</label>
-              <input id="display-name" type="text" placeholder="例: alice" maxlength="100" />
-              <span class="hint">空欄の場合は <code>user-XXXXXXXX</code> が自動採用されます。</span>
-            </div>
-            <div class="field" style="flex: 0 0 auto;">
-              <label>&nbsp;</label>
-              <button id="save-profile" class="primary" type="button">保存</button>
-            </div>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="sidebar-top">
+          <button id="new-conversation" class="primary block" type="button">
+            <span aria-hidden="true">+</span> 新しい会話
+          </button>
+          <div class="sidebar-filter">
+            <label>
+              <input id="mine-only" type="checkbox" checked /> 自分の会話のみ
+            </label>
+            <button id="reload-conversations" class="icon-btn ghost" type="button" title="再読込" aria-label="会話一覧を再読込">⟳</button>
           </div>
         </div>
-      </section>
+        <ul id="conversations" class="conv-list" role="list">
+          <li class="empty">会話がまだありません</li>
+        </ul>
+      </aside>
 
-      <section class="layout">
-        <div class="card">
-          <div class="card-header">
-            <h2>会話一覧</h2>
-            <div class="row" style="gap: 0.3rem;">
-              <label class="hint" style="display:flex;align-items:center;gap:0.25rem;">
-                <input id="mine-only" type="checkbox" checked /> 自分の会話のみ
-              </label>
-              <button id="reload-conversations" class="icon-btn" type="button" title="再読込">⟳</button>
-            </div>
+      <section class="chat">
+        <div class="chat-header">
+          <div class="chat-title">
+            <h2 id="messages-title">会話を選択してください</h2>
+            <div id="participants" class="participants"></div>
           </div>
-          <div class="card-body">
-            <form id="create-conversation-form" class="row" style="margin-bottom: 0.75rem;">
-              <div class="field">
-                <label for="conversation-title">新規会話のタイトル</label>
-                <input id="conversation-title" type="text" placeholder="例: 旅行プラン相談" required maxlength="200" />
-              </div>
-              <div class="field" style="flex: 0 0 auto;">
-                <label>&nbsp;</label>
-                <button class="primary" type="submit">作成</button>
-              </div>
-            </form>
-            <ul id="conversations" class="conv-list">
-              <li class="empty">会話がまだありません</li>
-            </ul>
+          <div class="chat-actions">
+            <button id="reload-messages" class="icon-btn ghost" type="button" title="再読込" aria-label="メッセージを再読込" disabled>⟳</button>
+            <button id="delete-conversation" class="ghost-danger" type="button" title="この会話を削除" aria-label="会話を削除" disabled>🗑</button>
           </div>
         </div>
 
-        <div class="card messages-card">
-          <div class="card-header">
-            <div>
-              <h2 id="messages-title">メッセージ</h2>
-              <div id="participants" class="participants"></div>
-            </div>
-            <div class="row" style="gap: 0.3rem;">
-              <button id="reload-messages" class="icon-btn" type="button" title="再読込" disabled>⟳</button>
-              <button id="delete-conversation" class="ghost-danger" type="button" title="この会話を削除" disabled>🗑 削除</button>
-            </div>
+        <div id="messages" class="messages-list">
+          <div class="empty-pane">
+            <span class="icon" aria-hidden="true">💭</span>
+            <h3>会話を始めましょう</h3>
+            <p>左の「新しい会話」から始めるか、一覧から選択してください。</p>
           </div>
-          <div class="card-body">
-            <div id="messages" class="messages-list">
-              <div class="messages-empty">左側から会話を選択するか、新規作成してください。</div>
-            </div>
-            <form id="post-message-form" class="composer">
-              <textarea id="message-content" placeholder="メッセージを入力 (Enter で送信 / Shift+Enter で改行)" maxlength="4000" disabled></textarea>
+        </div>
+
+        <div class="composer-wrapper">
+          <div id="ai-banner" class="ai-banner hidden" role="status">
+            <span aria-hidden="true">⚠️</span>
+            <span id="ai-banner-text">AI 自動応答は無効です(Microsoft Foundry が未設定)。</span>
+          </div>
+          <form id="post-message-form" class="composer">
+            <div class="composer-input-row">
+              <textarea
+                id="message-content"
+                placeholder="メッセージを入力 (Shift+Enter で送信 / Enter で改行)"
+                maxlength="4000"
+                rows="1"
+                disabled
+              ></textarea>
               <button id="send-button" class="primary" type="submit" disabled>送信</button>
-            </form>
-          </div>
+            </div>
+            <div class="composer-controls">
+              <label id="ai-toggle" class="toggle on" title="ユーザーメッセージ送信後に AI が自動で応答します">
+                <input id="ai-auto-reply" type="checkbox" checked />
+                <span class="track" aria-hidden="true"></span>
+                <span class="label">🤖 AI 自動応答</span>
+              </label>
+              <div class="composer-controls" style="gap: 0.5rem; padding:0;">
+                <button id="manual-agent-reply" class="ghost" type="button" title="AI に応答を生成させる" disabled hidden>
+                  🤖 AI に応答してもらう
+                </button>
+                <span class="hint">Shift+Enter で送信 / Enter で改行</span>
+              </div>
+            </div>
+          </form>
         </div>
       </section>
-    </main>
+    </div>
+
+    <!-- Settings modal -->
+    <div id="settings-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 id="settings-title">設定</h2>
+          <button id="close-settings" class="icon-btn ghost" type="button" aria-label="閉じる">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="field">
+            <label for="display-name">表示名</label>
+            <input id="display-name" type="text" placeholder="例: alice" maxlength="100" />
+            <span class="hint">チャットに表示される名前です。空欄の場合は <code>user-XXXXXXXX</code> が自動採用されます。</span>
+          </div>
+          <div class="field">
+            <label for="user-id">ユーザー ID (UUID)</label>
+            <div class="uuid-row">
+              <input id="user-id" type="text" readonly aria-describedby="user-id-hint" />
+              <button id="copy-user-id" class="icon-btn ghost" type="button" title="クリップボードにコピー" aria-label="コピー">📋</button>
+              <button id="regen-user-id" class="icon-btn ghost" type="button" title="新しい UUID を生成" aria-label="再生成">🔄</button>
+            </div>
+            <span id="user-id-hint" class="hint">
+              ブラウザの localStorage に保存され、API 呼び出し時に <code>X-User-Id</code> ヘッダで送信されます。
+            </span>
+          </div>
+          <div class="links">
+            <a href="/docs" target="_blank" rel="noopener">Swagger UI</a>
+            <a href="/redoc" target="_blank" rel="noopener">ReDoc</a>
+            <a href="/openapi.json" target="_blank" rel="noopener">OpenAPI</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- New conversation modal -->
+    <div id="new-conv-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="new-conv-title">
+      <div class="modal">
+        <div class="modal-header">
+          <h2 id="new-conv-title">新しい会話</h2>
+          <button id="close-new-conv" class="icon-btn ghost" type="button" aria-label="閉じる">✕</button>
+        </div>
+        <div class="modal-body">
+          <form id="create-conversation-form" class="field">
+            <label for="conversation-title">会話のタイトル</label>
+            <input id="conversation-title" type="text" placeholder="例: 旅行プラン相談" required maxlength="200" autocomplete="off" />
+            <div style="display:flex; justify-content:flex-end; gap:0.5rem; margin-top:0.5rem;">
+              <button id="cancel-new-conv" type="button" class="ghost">キャンセル</button>
+              <button class="primary" type="submit">作成</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
 
     <div id="toasts" class="toast-container" aria-live="polite"></div>
 
     <script>
       const els = {
+        // Header
+        apiStatus: document.getElementById('api-status'),
+        openSettings: document.getElementById('open-settings'),
+        // Sidebar
+        newConversation: document.getElementById('new-conversation'),
+        mineOnly: document.getElementById('mine-only'),
+        reloadConversations: document.getElementById('reload-conversations'),
+        conversations: document.getElementById('conversations'),
+        // Chat header
+        messagesTitle: document.getElementById('messages-title'),
+        participants: document.getElementById('participants'),
+        reloadMessages: document.getElementById('reload-messages'),
+        deleteConversation: document.getElementById('delete-conversation'),
+        // Messages / composer
+        messages: document.getElementById('messages'),
+        postForm: document.getElementById('post-message-form'),
+        messageContent: document.getElementById('message-content'),
+        sendButton: document.getElementById('send-button'),
+        aiToggle: document.getElementById('ai-toggle'),
+        aiAutoReply: document.getElementById('ai-auto-reply'),
+        manualAgentReply: document.getElementById('manual-agent-reply'),
+        aiBanner: document.getElementById('ai-banner'),
+        aiBannerText: document.getElementById('ai-banner-text'),
+        // Settings modal
+        settingsModal: document.getElementById('settings-modal'),
+        closeSettings: document.getElementById('close-settings'),
         userId: document.getElementById('user-id'),
         displayName: document.getElementById('display-name'),
         copyUserId: document.getElementById('copy-user-id'),
         regenUserId: document.getElementById('regen-user-id'),
-        saveProfile: document.getElementById('save-profile'),
-        mineOnly: document.getElementById('mine-only'),
-        reloadConversations: document.getElementById('reload-conversations'),
+        // New conversation modal
+        newConvModal: document.getElementById('new-conv-modal'),
+        closeNewConv: document.getElementById('close-new-conv'),
+        cancelNewConv: document.getElementById('cancel-new-conv'),
         createForm: document.getElementById('create-conversation-form'),
         conversationTitle: document.getElementById('conversation-title'),
-        conversations: document.getElementById('conversations'),
-        messagesTitle: document.getElementById('messages-title'),
-        messages: document.getElementById('messages'),
-        participants: document.getElementById('participants'),
-        postForm: document.getElementById('post-message-form'),
-        messageContent: document.getElementById('message-content'),
-        sendButton: document.getElementById('send-button'),
-        reloadMessages: document.getElementById('reload-messages'),
-        deleteConversation: document.getElementById('delete-conversation'),
-        apiStatus: document.getElementById('api-status'),
+        // Toast
         toasts: document.getElementById('toasts'),
       };
 
@@ -524,6 +783,9 @@
         selectedConversationId: null,
         conversations: [],
         joinedConversations: new Set(),
+        // 'unknown' | 'available' | 'unavailable'
+        aiAvailability: 'unknown',
+        agentReplyInFlight: false,
       };
 
       const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -548,29 +810,32 @@
         els.displayName.value = localStorage.getItem('chat_display_name') || '';
       }
 
-      function saveProfile(notify = true) {
-        const userId = els.userId.value.trim();
-        if (!UUID_RE.test(userId)) {
-          toast('User ID は UUID 形式でなければなりません', 'error');
-          return false;
-        }
-        localStorage.setItem('chat_user_id', userId);
+      function persistDisplayName() {
         localStorage.setItem('chat_display_name', els.displayName.value.trim());
-        if (notify) toast('プロフィールを保存しました', 'success');
-        return true;
       }
 
-      // -------- API --------
+      function persistAiPreference() {
+        localStorage.setItem('chat_ai_auto_reply', els.aiAutoReply.checked ? '1' : '0');
+      }
+
+      function loadAiPreference() {
+        const saved = localStorage.getItem('chat_ai_auto_reply');
+        if (saved === '0') els.aiAutoReply.checked = false;
+        syncAiToggleClass();
+      }
+
+      function syncAiToggleClass() {
+        els.aiToggle.classList.toggle('on', els.aiAutoReply.checked && state.aiAvailability !== 'unavailable');
+      }
+
+      // -------- API helper --------
       async function api(path, options = {}) {
         const userId = els.userId.value.trim();
         if (!UUID_RE.test(userId)) {
-          throw new Error('User ID が不正です(UUID 形式が必要)');
+          throw new Error('User ID が不正です');
         }
         const headers = Object.assign(
-          {
-            'X-User-Id': userId,
-            'Accept': 'application/json',
-          },
+          { 'X-User-Id': userId, 'Accept': 'application/json' },
           options.body ? { 'Content-Type': 'application/json' } : {},
           options.headers || {},
         );
@@ -583,30 +848,30 @@
           } catch (_) {
             detail = await response.text();
           }
-          throw new Error(`${response.status} ${response.statusText}: ${detail}`);
+          const err = new Error(`${response.status} ${response.statusText}: ${detail}`);
+          err.status = response.status;
+          throw err;
         }
         if (response.status === 204) return null;
         return response.json();
       }
 
       async function checkHealth() {
+        const setLabel = (cls, label) => {
+          els.apiStatus.classList.remove('ok', 'err');
+          if (cls) els.apiStatus.classList.add(cls);
+          els.apiStatus.querySelector('.label').textContent = label;
+        };
         try {
           const r = await fetch('/healthz');
-          if (r.ok) {
-            els.apiStatus.classList.add('ok');
-            els.apiStatus.classList.remove('err');
-            els.apiStatus.querySelector('.label').textContent = 'API: OK';
-          } else {
-            throw new Error();
-          }
+          if (!r.ok) throw new Error();
+          setLabel('ok', 'API: OK');
         } catch (_) {
-          els.apiStatus.classList.add('err');
-          els.apiStatus.classList.remove('ok');
-          els.apiStatus.querySelector('.label').textContent = 'API: 接続不可';
+          setLabel('err', 'API: 接続不可');
         }
       }
 
-      // -------- Conversations --------
+      // -------- Date helpers --------
       function formatRelative(iso) {
         const date = new Date(iso);
         const diff = (Date.now() - date.getTime()) / 1000;
@@ -617,6 +882,17 @@
         return date.toLocaleString();
       }
 
+      // -------- HTML escape --------
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      // -------- Conversations --------
       async function loadConversations() {
         const mine = els.mineOnly.checked ? 'true' : 'false';
         try {
@@ -634,8 +910,8 @@
           const empty = document.createElement('li');
           empty.className = 'empty';
           empty.textContent = els.mineOnly.checked
-            ? 'まだ参加している会話がありません。上のフォームから作成してください。'
-            : '会話がありません。';
+            ? 'まだ参加している会話がありません'
+            : '会話がありません';
           els.conversations.appendChild(empty);
           return;
         }
@@ -645,12 +921,10 @@
           .forEach((c) => {
             const li = document.createElement('li');
             li.className = state.selectedConversationId === c.id ? 'selected' : '';
-            const left = document.createElement('div');
-            left.innerHTML = `
+            li.innerHTML = `
               <div class="conv-title">${escapeHtml(c.title)}</div>
-              <div class="conv-meta">${c.participants.length} 名 ・ 更新 ${escapeHtml(formatRelative(c.updated_at))}</div>
+              <div class="conv-meta">${c.participants.length} 名 ・ ${escapeHtml(formatRelative(c.updated_at))}</div>
             `;
-            li.appendChild(left);
             li.addEventListener('click', () => selectConversation(c.id));
             els.conversations.appendChild(li);
           });
@@ -663,8 +937,10 @@
         els.deleteConversation.disabled = false;
         els.messageContent.disabled = false;
         els.sendButton.disabled = false;
+        updateManualAgentButton();
         await loadMessages();
         renderParticipants();
+        els.messageContent.focus();
       }
 
       function renderParticipants() {
@@ -674,29 +950,20 @@
         conv.participants.forEach((p) => {
           const chip = document.createElement('span');
           chip.className = `chip ${p.kind.toLowerCase()}`;
-          chip.textContent = `${p.display_name} (${p.kind.toLowerCase()})`;
+          chip.textContent = p.display_name;
           els.participants.appendChild(chip);
         });
       }
 
       // -------- Messages --------
-      function escapeHtml(s) {
-        return String(s)
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&#39;');
-      }
-
       async function loadMessages() {
         if (!state.selectedConversationId) {
-          els.messagesTitle.textContent = 'メッセージ';
-          els.messages.innerHTML = '<div class="messages-empty">左側から会話を選択するか、新規作成してください。</div>';
+          els.messagesTitle.textContent = '会話を選択してください';
+          renderEmptyChat();
           return;
         }
         const conv = state.conversations.find((c) => c.id === state.selectedConversationId);
-        els.messagesTitle.textContent = conv ? `メッセージ — ${conv.title}` : 'メッセージ';
+        els.messagesTitle.textContent = conv ? conv.title : 'メッセージ';
         try {
           const messages = await api(`/conversations/${state.selectedConversationId}/messages?limit=100`);
           renderMessages(messages);
@@ -705,68 +972,109 @@
         }
       }
 
+      function renderEmptyChat() {
+        els.messages.innerHTML = `
+          <div class="empty-pane">
+            <span class="icon" aria-hidden="true">💭</span>
+            <h3>会話を始めましょう</h3>
+            <p>左の「新しい会話」から始めるか、一覧から選択してください。</p>
+          </div>
+        `;
+      }
+
       function renderMessages(messages) {
         els.messages.innerHTML = '';
         if (messages.length === 0) {
           const empty = document.createElement('div');
           empty.className = 'messages-empty';
-          empty.textContent = 'まだメッセージがありません。最初の一言を送ってみましょう。';
+          empty.innerHTML = `
+            <span class="icon" aria-hidden="true">✏️</span>
+            <h3>最初の一言を送ってみましょう</h3>
+            <p>下の入力欄からメッセージを送信できます。</p>
+          `;
           els.messages.appendChild(empty);
           return;
         }
         const myUserId = els.userId.value.trim();
-        // API returns newest-first; we want oldest at top.
         messages
           .slice()
           .reverse()
-          .forEach((m) => {
-            const div = document.createElement('div');
-            const isMine = m.sender && m.sender.id === myUserId;
-            const role = (m.role || '').toLowerCase();
-            div.className = `message ${isMine ? 'mine' : role}`;
-            div.innerHTML = `
-              <div class="meta">
-                <strong>${escapeHtml(m.sender.display_name)}</strong>
-                <span>${escapeHtml(role)}</span>
-                <span title="${escapeHtml(m.created_at)}">${escapeHtml(formatRelative(m.created_at))}</span>
-              </div>
-              <div>${escapeHtml(m.content)}</div>
-            `;
-            els.messages.appendChild(div);
-          });
+          .forEach((m) => appendMessage(m, myUserId));
+        scrollMessagesToBottom();
+      }
+
+      function appendMessage(m, myUserId) {
+        const div = document.createElement('div');
+        const isMine = m.sender && m.sender.id === myUserId;
+        const role = (m.role || '').toLowerCase();
+        div.className = `message ${isMine ? 'mine' : role}`;
+        div.innerHTML = `
+          <div class="meta">
+            <strong>${escapeHtml(m.sender.display_name)}</strong>
+            <span title="${escapeHtml(m.created_at)}">${escapeHtml(formatRelative(m.created_at))}</span>
+          </div>
+          <div class="content">${escapeHtml(m.content)}</div>
+        `;
+        els.messages.appendChild(div);
+      }
+
+      function scrollMessagesToBottom() {
         els.messages.scrollTop = els.messages.scrollHeight;
       }
 
-      // -------- Event handlers --------
-      els.copyUserId.addEventListener('click', async () => {
-        try {
-          await navigator.clipboard.writeText(els.userId.value);
-          toast('User ID をコピーしました', 'success', 1500);
-        } catch (_) {
-          toast('クリップボードへのアクセスに失敗しました', 'error');
+      // -------- Auto-resize textarea --------
+      function autoResize() {
+        els.messageContent.style.height = 'auto';
+        const next = Math.min(els.messageContent.scrollHeight, 200);
+        els.messageContent.style.height = `${next}px`;
+      }
+
+      // -------- Modals --------
+      function openModal(modal, focusEl) {
+        modal.classList.add('open');
+        if (focusEl) setTimeout(() => focusEl.focus(), 0);
+      }
+      function closeModal(modal) {
+        modal.classList.remove('open');
+      }
+
+      // -------- AI helpers --------
+      function setAiAvailability(value) {
+        state.aiAvailability = value;
+        if (value === 'unavailable') {
+          els.aiBanner.classList.remove('hidden');
+          els.aiAutoReply.disabled = true;
+        } else {
+          els.aiBanner.classList.add('hidden');
+          els.aiAutoReply.disabled = false;
         }
+        syncAiToggleClass();
+        updateManualAgentButton();
+      }
+
+      function updateManualAgentButton() {
+        const usable =
+          state.selectedConversationId &&
+          state.aiAvailability !== 'unavailable' &&
+          !state.agentReplyInFlight;
+        // Show the manual button when auto-reply is off, hide it otherwise.
+        const visible = !els.aiAutoReply.checked && state.aiAvailability !== 'unavailable';
+        els.manualAgentReply.hidden = !visible;
+        els.manualAgentReply.disabled = !usable;
+      }
+
+      // -------- Conversation actions --------
+      els.newConversation.addEventListener('click', () => {
+        openModal(els.newConvModal, els.conversationTitle);
       });
-
-      els.regenUserId.addEventListener('click', () => {
-        if (!confirm('新しい User ID を生成しますか?既存の会話には引き続き参加できますが、別ユーザーとして扱われます。')) return;
-        const next = crypto.randomUUID();
-        els.userId.value = next;
-        localStorage.setItem('chat_user_id', next);
-        state.joinedConversations.clear();
-        toast('新しい User ID を生成しました', 'success');
-        loadConversations();
+      els.closeNewConv.addEventListener('click', () => closeModal(els.newConvModal));
+      els.cancelNewConv.addEventListener('click', () => closeModal(els.newConvModal));
+      els.newConvModal.addEventListener('click', (e) => {
+        if (e.target === els.newConvModal) closeModal(els.newConvModal);
       });
-
-      els.saveProfile.addEventListener('click', () => saveProfile(true));
-      els.displayName.addEventListener('change', () => saveProfile(false));
-
-      els.mineOnly.addEventListener('change', loadConversations);
-      els.reloadConversations.addEventListener('click', loadConversations);
-      els.reloadMessages.addEventListener('click', loadMessages);
 
       els.createForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        if (!saveProfile(false)) return;
         const title = els.conversationTitle.value.trim();
         if (!title) return;
         try {
@@ -779,6 +1087,7 @@
           });
           els.conversationTitle.value = '';
           state.joinedConversations.add(created.id);
+          closeModal(els.newConvModal);
           toast(`会話「${created.title}」を作成しました`, 'success');
           await loadConversations();
           await selectConversation(created.id);
@@ -802,6 +1111,7 @@
           els.messageContent.disabled = true;
           els.sendButton.disabled = true;
           els.participants.innerHTML = '';
+          updateManualAgentButton();
           await loadConversations();
           await loadMessages();
         } catch (err) {
@@ -809,8 +1119,60 @@
         }
       });
 
+      els.mineOnly.addEventListener('change', loadConversations);
+      els.reloadConversations.addEventListener('click', loadConversations);
+      els.reloadMessages.addEventListener('click', loadMessages);
+
+      // -------- Settings --------
+      els.openSettings.addEventListener('click', () => openModal(els.settingsModal, els.displayName));
+      els.closeSettings.addEventListener('click', () => closeModal(els.settingsModal));
+      els.settingsModal.addEventListener('click', (e) => {
+        if (e.target === els.settingsModal) closeModal(els.settingsModal);
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          closeModal(els.settingsModal);
+          closeModal(els.newConvModal);
+        }
+      });
+
+      els.displayName.addEventListener('input', persistDisplayName);
+
+      els.copyUserId.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(els.userId.value);
+          toast('ユーザー ID をコピーしました', 'success', 1500);
+        } catch (_) {
+          toast('クリップボードへのアクセスに失敗しました', 'error');
+        }
+      });
+
+      els.regenUserId.addEventListener('click', () => {
+        if (!confirm('新しいユーザー ID を生成しますか?既存の会話には引き続きアクセスできますが、別ユーザーとして扱われます。')) return;
+        const next = crypto.randomUUID();
+        els.userId.value = next;
+        localStorage.setItem('chat_user_id', next);
+        state.joinedConversations.clear();
+        toast('新しいユーザー ID を生成しました', 'success');
+        loadConversations();
+      });
+
+      // -------- AI auto-reply toggle --------
+      els.aiAutoReply.addEventListener('change', () => {
+        persistAiPreference();
+        syncAiToggleClass();
+        updateManualAgentButton();
+      });
+
+      els.manualAgentReply.addEventListener('click', async () => {
+        if (!state.selectedConversationId) return;
+        await runAgentReply(state.selectedConversationId);
+      });
+
+      // -------- Composer --------
+      els.messageContent.addEventListener('input', autoResize);
       els.messageContent.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+        if (e.key === 'Enter' && e.shiftKey && !e.isComposing) {
           e.preventDefault();
           els.postForm.requestSubmit();
         }
@@ -819,7 +1181,6 @@
       els.postForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!state.selectedConversationId) return;
-        if (!saveProfile(false)) return;
         const content = els.messageContent.value.trim();
         if (!content) return;
         const conversationId = state.selectedConversationId;
@@ -833,7 +1194,7 @@
                 body: JSON.stringify({ display_name: displayName }),
               });
             } catch (err) {
-              // If already a participant, the API may still 200; ignore non-fatal errors.
+              // Already a participant? non-fatal.
               console.warn('join warning', err);
             }
             state.joinedConversations.add(conversationId);
@@ -843,7 +1204,14 @@
             body: JSON.stringify({ content, display_name: displayName }),
           });
           els.messageContent.value = '';
+          autoResize();
           await Promise.all([loadConversations(), loadMessages()]);
+          // Auto-reply only when the toggle is on and AI is known to be available.
+          if (els.aiAutoReply.checked && state.aiAvailability !== 'unavailable') {
+            runAgentReply(conversationId).catch((err) => {
+              console.warn('agent reply error', err);
+            });
+          }
         } catch (err) {
           toast(`送信に失敗: ${err.message}`, 'error');
         } finally {
@@ -852,10 +1220,121 @@
         }
       });
 
+      // -------- Agent reply (SSE) --------
+      function appendStreamingBubble() {
+        const empty = els.messages.querySelector('.empty-pane, .messages-empty');
+        if (empty) empty.remove();
+        const div = document.createElement('div');
+        div.className = 'message agent streaming';
+        div.innerHTML = `
+          <div class="meta">
+            <strong>🤖 Concierge AI</strong>
+            <span>応答を生成中</span>
+          </div>
+          <div class="content"><span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span></div>
+        `;
+        els.messages.appendChild(div);
+        scrollMessagesToBottom();
+        return div;
+      }
+
+      async function runAgentReply(conversationId) {
+        if (state.agentReplyInFlight) return;
+        state.agentReplyInFlight = true;
+        updateManualAgentButton();
+        const userId = els.userId.value.trim();
+        if (!UUID_RE.test(userId)) {
+          state.agentReplyInFlight = false;
+          updateManualAgentButton();
+          return;
+        }
+        const bubble = appendStreamingBubble();
+        const contentEl = bubble.querySelector('.content');
+        let buffer = '';
+        let success = false;
+        try {
+          const response = await fetch(
+            `/conversations/${conversationId}/agent-replies`,
+            {
+              method: 'POST',
+              headers: { 'X-User-Id': userId, 'Accept': 'text/event-stream' },
+            },
+          );
+          if (!response.ok) {
+            const body = await response.text().catch(() => '');
+            if (response.status === 503) {
+              setAiAvailability('unavailable');
+              let detail = '';
+              try { detail = JSON.parse(body).detail || ''; } catch (_) { detail = body; }
+              if (detail) els.aiBannerText.textContent = `AI 自動応答は無効です: ${detail}`;
+              throw new Error(detail || 'AI が利用できません');
+            }
+            throw new Error(`${response.status} ${response.statusText}: ${body}`);
+          }
+          setAiAvailability('available');
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let sseBuffer = '';
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            sseBuffer += decoder.decode(value, { stream: true });
+            let sepIdx;
+            while ((sepIdx = sseBuffer.indexOf('\n\n')) !== -1) {
+              const rawEvent = sseBuffer.slice(0, sepIdx);
+              sseBuffer = sseBuffer.slice(sepIdx + 2);
+              const parsed = parseSseEvent(rawEvent);
+              if (!parsed) continue;
+              if (parsed.event === 'delta' && parsed.data && typeof parsed.data.content === 'string') {
+                buffer += parsed.data.content;
+                contentEl.textContent = buffer;
+                scrollMessagesToBottom();
+              } else if (parsed.event === 'complete') {
+                success = true;
+              } else if (parsed.event === 'error') {
+                throw new Error(parsed.data && parsed.data.detail ? parsed.data.detail : 'agent error');
+              }
+            }
+          }
+        } catch (err) {
+          bubble.remove();
+          if (state.aiAvailability !== 'unavailable') {
+            toast(`AI 応答に失敗: ${err.message}`, 'error');
+          }
+        } finally {
+          state.agentReplyInFlight = false;
+          if (success) {
+            bubble.remove();
+            await Promise.all([loadConversations(), loadMessages()]);
+          }
+          updateManualAgentButton();
+        }
+      }
+
+      function parseSseEvent(raw) {
+        let event = 'message';
+        const dataLines = [];
+        for (const line of raw.split('\n')) {
+          if (line.startsWith('event:')) {
+            event = line.slice(6).trim();
+          } else if (line.startsWith('data:')) {
+            dataLines.push(line.slice(5).trim());
+          }
+        }
+        if (dataLines.length === 0) return null;
+        try {
+          return { event, data: JSON.parse(dataLines.join('\n')) };
+        } catch (_) {
+          return { event, data: null };
+        }
+      }
+
       // -------- Init --------
       ensureProfile();
+      loadAiPreference();
       checkHealth();
       loadConversations();
+      autoResize();
     </script>
   </body>
 </html>

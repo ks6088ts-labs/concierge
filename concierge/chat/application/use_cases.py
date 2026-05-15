@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import logging
 import uuid
+from collections.abc import Iterator
+from dataclasses import dataclass
 from datetime import datetime
 
 from concierge.chat.application.repositories import ConversationRepository, MessageRepository
@@ -105,6 +107,14 @@ class DeleteConversationUseCase:
 
 
 class GenerateBotReplyUseCase:
+    """Stream an AI bot reply for a conversation.
+
+    ``execute()`` performs synchronous validation (conversation existence) and
+    returns an iterator that yields :class:`BotReplyEvent` values. Validation
+    errors propagate before the iterator starts so that transport layers can
+    map them to HTTP errors via the regular exception handlers.
+    """
+
     def __init__(
         self,
         conversation_repository: ConversationRepository,
@@ -119,20 +129,50 @@ class GenerateBotReplyUseCase:
         self.bot_participant = bot_participant
         self.history_limit = history_limit
 
-    def execute(self, conversation_id: uuid.UUID) -> Message:
+    def execute(self, conversation_id: uuid.UUID) -> Iterator[BotReplyEvent]:
         conversation = self.conversation_repository.find_by_id(conversation_id)
         if conversation is None:
             raise ConversationNotFoundError(conversation_id)
         history = self.message_repository.find_by_conversation(conversation_id, limit=self.history_limit)
-        reply_content = self.responder.generate_reply(conversation, history)
         conversation.add_participant(self.bot_participant)
         self.conversation_repository.save(conversation)
+        return self._stream(conversation, history, conversation_id)
+
+    def _stream(
+        self,
+        conversation: Conversation,
+        history: list[Message],
+        conversation_id: uuid.UUID,
+    ) -> Iterator[BotReplyEvent]:
+        chunks: list[str] = []
+        for chunk in self.responder.stream_reply(conversation, history):
+            if not chunk:
+                continue
+            chunks.append(chunk)
+            yield BotReplyDelta(content=chunk)
         message = Message(
             conversation_id=conversation_id,
             sender=self.bot_participant,
-            content=reply_content,
+            content="".join(chunks),
             role=MessageRole.AGENT,
         )
         saved = self.message_repository.save(message)
         logger.info("Bot replied message id=%s in conversation=%s", saved.id, conversation_id)
-        return saved
+        yield BotReplyComplete(message=saved)
+
+
+@dataclass(frozen=True)
+class BotReplyDelta:
+    """Incremental text chunk emitted while the bot is generating."""
+
+    content: str
+
+
+@dataclass(frozen=True)
+class BotReplyComplete:
+    """Terminal event carrying the persisted :class:`Message`."""
+
+    message: Message
+
+
+BotReplyEvent = BotReplyDelta | BotReplyComplete

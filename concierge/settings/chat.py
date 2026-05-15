@@ -21,7 +21,6 @@ class ChatSettings(BaseSettings):
     participants_table_name: str = "chat_participants"
     messages_table_name: str = "chat_messages"
 
-    bot_enabled: bool = False
     bot_participant_id: UUID = UUID("00000000-0000-0000-0000-000000000001")
     bot_display_name: str = "Concierge AI"
     bot_history_limit: int = 20

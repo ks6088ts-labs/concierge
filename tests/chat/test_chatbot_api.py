@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import uuid
+from collections.abc import Iterator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -13,40 +15,55 @@ from concierge.chat.infrastructure.web.dependencies import (
     get_conversation_repository,
     get_message_repository,
 )
-from concierge.chat.infrastructure.web.routes import get_bot_settings
-from concierge.settings.chat import ChatSettings
 
 
-class FakeChatbotResponder:
-    def __init__(self, reply: str = "Bot reply") -> None:
-        self.reply = reply
+class FakeStreamingResponder:
+    def __init__(self, chunks: list[str]) -> None:
+        self._chunks = chunks
 
-    def generate_reply(self, conversation: Conversation, history: list[Message]) -> str:
-        return self.reply
-
-
-class NullResponder:
-    def generate_reply(self, conversation: Conversation, history: list[Message]) -> str:
-        from concierge.chat.infrastructure.ai.null_responder import ChatbotDisabledError
-
-        raise ChatbotDisabledError("Chatbot is disabled")
+    def stream_reply(self, conversation: Conversation, history: list[Message]) -> Iterator[str]:
+        yield from self._chunks
 
 
-def _make_app(*, bot_enabled: bool, responder: object):
+class FailingResponder:
+    def stream_reply(self, conversation: Conversation, history: list[Message]) -> Iterator[str]:
+        raise RuntimeError("model unavailable")
+        yield  # pragma: no cover — make this a generator
+
+
+def _make_app(responder: object):
     _app = create_app()
     conversation_repo = InMemoryConversationRepository()
     message_repo = InMemoryMessageRepository()
     _app.dependency_overrides[get_conversation_repository] = lambda: conversation_repo
     _app.dependency_overrides[get_message_repository] = lambda: message_repo
     _app.dependency_overrides[get_chatbot_responder] = lambda: responder
-    _app.dependency_overrides[get_bot_settings] = lambda: ChatSettings(bot_enabled=bot_enabled)
     return _app
 
 
+def _parse_sse(body: str) -> list[tuple[str, dict]]:
+    """Parse a Server-Sent Events stream into ``[(event, data_dict), ...]``."""
+    events: list[tuple[str, dict]] = []
+    for block in body.strip().split("\n\n"):
+        if not block.strip():
+            continue
+        event_name = "message"
+        data_lines: list[str] = []
+        for line in block.splitlines():
+            if line.startswith("event:"):
+                event_name = line[len("event:") :].strip()
+            elif line.startswith("data:"):
+                data_lines.append(line[len("data:") :].strip())
+        if not data_lines:
+            continue
+        events.append((event_name, json.loads("\n".join(data_lines))))
+    return events
+
+
 @pytest.mark.anyio
-async def test_post_message_auto_reply_enabled() -> None:
-    """When bot is enabled, POST /messages triggers bot reply; GET /messages returns 2 messages."""
-    _app = _make_app(bot_enabled=True, responder=FakeChatbotResponder("AIの返事"))
+async def test_post_message_does_not_trigger_bot_reply() -> None:
+    """POST /messages persists only the user message; no bot reply is created."""
+    _app = _make_app(responder=FakeStreamingResponder(["should-not-be-called"]))
     user_id = str(uuid.uuid4())
     headers = {"X-User-Id": user_id}
 
@@ -65,23 +82,19 @@ async def test_post_message_auto_reply_enabled() -> None:
             json={"content": "hello"},
         )
         assert posted.status_code == 201
-        # The immediate response is still the user's message
         assert posted.json()["role"] == "USER"
 
         messages = await client.get(f"/conversations/{conversation_id}/messages", headers=headers)
         assert messages.status_code == 200
-        msg_list = messages.json()
-        # Should have user message + bot reply
-        assert len(msg_list) == 2
-        roles = {m["role"] for m in msg_list}
-        assert "USER" in roles
-        assert "AGENT" in roles
+        assert len(messages.json()) == 1
+        assert messages.json()[0]["role"] == "USER"
 
 
 @pytest.mark.anyio
-async def test_agent_reply_endpoint_enabled() -> None:
-    """POST /agent-replies with bot enabled returns 201 + AGENT MessageResponse."""
-    _app = _make_app(bot_enabled=True, responder=FakeChatbotResponder("AIの返事"))
+async def test_agent_replies_streams_sse_events() -> None:
+    """POST /agent-replies returns an SSE stream of delta + complete events."""
+    chunks = ["こんに", "ちは", "！"]
+    _app = _make_app(responder=FakeStreamingResponder(chunks))
     user_id = str(uuid.uuid4())
     headers = {"X-User-Id": user_id}
 
@@ -91,7 +104,6 @@ async def test_agent_reply_endpoint_enabled() -> None:
             headers=headers,
             json={"title": "test", "display_name": "alice"},
         )
-        assert created.status_code == 201
         conversation_id = created.json()["id"]
 
         await client.post(
@@ -104,16 +116,32 @@ async def test_agent_reply_endpoint_enabled() -> None:
             f"/conversations/{conversation_id}/agent-replies",
             headers=headers,
         )
-        assert reply.status_code == 201
-        data = reply.json()
-        assert data["role"] == "AGENT"
-        assert data["content"] == "AIの返事"
+        assert reply.status_code == 200
+        assert reply.headers["content-type"].startswith("text/event-stream")
+
+        events = _parse_sse(reply.text)
+        deltas = [data for name, data in events if name == "delta"]
+        completes = [data for name, data in events if name == "complete"]
+
+        assert [d["content"] for d in deltas] == chunks
+        assert len(completes) == 1
+        complete = completes[0]
+        assert complete["role"] == "AGENT"
+        assert complete["content"] == "".join(chunks)
+        assert complete["conversation_id"] == conversation_id
+
+        # The complete message should now be visible via GET /messages.
+        messages = await client.get(f"/conversations/{conversation_id}/messages", headers=headers)
+        roles = [m["role"] for m in messages.json()]
+        assert "AGENT" in roles
+        agent = next(m for m in messages.json() if m["role"] == "AGENT")
+        assert agent["content"] == "".join(chunks)
 
 
 @pytest.mark.anyio
-async def test_agent_reply_endpoint_disabled() -> None:
-    """POST /agent-replies with bot disabled returns 409 Conflict."""
-    _app = _make_app(bot_enabled=False, responder=NullResponder())
+async def test_agent_replies_emits_error_event_on_failure() -> None:
+    """When the responder raises mid-stream, the SSE stream ends with an ``error`` event."""
+    _app = _make_app(responder=FailingResponder())
     user_id = str(uuid.uuid4())
     headers = {"X-User-Id": user_id}
 
@@ -123,49 +151,28 @@ async def test_agent_reply_endpoint_disabled() -> None:
             headers=headers,
             json={"title": "test"},
         )
-        assert created.status_code == 201
         conversation_id = created.json()["id"]
 
         reply = await client.post(
             f"/conversations/{conversation_id}/agent-replies",
             headers=headers,
         )
-        assert reply.status_code == 409
+        # The stream itself starts with 200 even on errors (headers go out first).
+        assert reply.status_code == 200
+        events = _parse_sse(reply.text)
+        assert any(name == "error" for name, _ in events)
 
 
 @pytest.mark.anyio
-async def test_post_message_bot_disabled_schema_unchanged() -> None:
-    """When bot is disabled (default), POST /messages response schema is unchanged and no bot message is saved."""
-    _app = _make_app(bot_enabled=False, responder=NullResponder())
+async def test_agent_replies_404_for_unknown_conversation() -> None:
+    """Unknown ``conversation_id`` returns 404 before the stream begins."""
+    _app = _make_app(responder=FakeStreamingResponder(["unused"]))
     user_id = str(uuid.uuid4())
     headers = {"X-User-Id": user_id}
 
     async with AsyncClient(transport=ASGITransport(app=_app), base_url="http://test") as client:
-        created = await client.post(
-            "/conversations",
+        reply = await client.post(
+            f"/conversations/{uuid.uuid4()}/agent-replies",
             headers=headers,
-            json={"title": "test", "display_name": "alice"},
         )
-        assert created.status_code == 201
-        conversation_id = created.json()["id"]
-
-        posted = await client.post(
-            f"/conversations/{conversation_id}/messages",
-            headers=headers,
-            json={"content": "hello", "display_name": "alice"},
-        )
-        assert posted.status_code == 201
-        data = posted.json()
-        # Schema must include these fields, unchanged
-        assert "id" in data
-        assert "conversation_id" in data
-        assert "sender" in data
-        assert "role" in data
-        assert "content" in data
-        assert "created_at" in data
-        assert data["role"] == "USER"
-
-        messages = await client.get(f"/conversations/{conversation_id}/messages", headers=headers)
-        assert messages.status_code == 200
-        # Only the user message, no bot reply
-        assert len(messages.json()) == 1
+        assert reply.status_code == 404

@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+import json
 import logging
 import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, Response, status
+from fastapi.responses import StreamingResponse
 
 from concierge.chat.application.repositories import ConversationRepository, MessageRepository
 from concierge.chat.application.responders import ChatbotResponder
 from concierge.chat.application.use_cases import (
+    BotReplyComplete,
+    BotReplyDelta,
     CreateConversationUseCase,
     DeleteConversationUseCase,
     GenerateBotReplyUseCase,
@@ -20,7 +24,6 @@ from concierge.chat.application.use_cases import (
     PostMessageUseCase,
 )
 from concierge.chat.domain.value_objects import Participant, ParticipantKind
-from concierge.chat.infrastructure.ai.null_responder import ChatbotDisabledError
 from concierge.chat.infrastructure.web.dependencies import (
     get_chatbot_responder,
     get_conversation_repository,
@@ -56,7 +59,7 @@ def _bot_participant(settings: ChatSettings) -> Participant:
     )
 
 
-def get_bot_settings() -> ChatSettings:
+def get_chat_settings_dep() -> ChatSettings:
     return get_chat_settings()
 
 
@@ -128,27 +131,17 @@ def post_message(
     current_participant: Annotated[Participant, Depends(get_current_participant)],
     conversation_repository: Annotated[ConversationRepository, Depends(get_conversation_repository)],
     message_repository: Annotated[MessageRepository, Depends(get_message_repository)],
-    chatbot_responder: Annotated[ChatbotResponder, Depends(get_chatbot_responder)],
-    bot_settings: Annotated[ChatSettings, Depends(get_bot_settings)],
 ) -> MessageResponse:
+    """Persist a user message.
+
+    This endpoint only stores the caller's message. AI agent replies are
+    delivered separately via ``POST /conversations/{id}/agent-replies``.
+    """
     message = PostMessageUseCase(conversation_repository, message_repository).execute(
         conversation_id,
         sender=_with_display_name(current_participant, payload.display_name),
         content=payload.content,
     )
-    if bot_settings.bot_enabled:
-        try:
-            GenerateBotReplyUseCase(
-                conversation_repository,
-                message_repository,
-                chatbot_responder,
-                _bot_participant(bot_settings),
-                bot_settings.bot_history_limit,
-            ).execute(conversation_id)
-        except ChatbotDisabledError:
-            logger.debug("Bot is disabled; skipping auto-reply for conversation %s", conversation_id)
-        except Exception:
-            logger.warning("Bot reply failed for conversation %s", conversation_id, exc_info=True)
     return MessageResponse.model_validate(message)
 
 
@@ -168,28 +161,61 @@ def list_messages(
     return [MessageResponse.model_validate(message) for message in messages]
 
 
+def _format_sse(event: str, data: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
 @router.post(
     "/conversations/{conversation_id}/agent-replies",
-    response_model=MessageResponse,
-    status_code=status.HTTP_201_CREATED,
+    responses={
+        200: {
+            "content": {"text/event-stream": {}},
+            "description": "Server-Sent Events stream of the agent reply.",
+        },
+    },
 )
-def agent_reply(
+def stream_agent_reply(
     conversation_id: uuid.UUID,
     conversation_repository: Annotated[ConversationRepository, Depends(get_conversation_repository)],
     message_repository: Annotated[MessageRepository, Depends(get_message_repository)],
     chatbot_responder: Annotated[ChatbotResponder, Depends(get_chatbot_responder)],
-    bot_settings: Annotated[ChatSettings, Depends(get_bot_settings)],
-) -> MessageResponse:
-    if not bot_settings.bot_enabled:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Chatbot is disabled")
-    try:
-        message = GenerateBotReplyUseCase(
-            conversation_repository,
-            message_repository,
-            chatbot_responder,
-            _bot_participant(bot_settings),
-            bot_settings.bot_history_limit,
-        ).execute(conversation_id)
-    except ChatbotDisabledError as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Chatbot is disabled") from exc
-    return MessageResponse.model_validate(message)
+    chat_settings: Annotated[ChatSettings, Depends(get_chat_settings_dep)],
+) -> StreamingResponse:
+    """Stream an AI agent reply over Server-Sent Events.
+
+    Connection protocol:
+
+    - ``event: delta`` ``data: {"content": "<chunk>"}`` — emitted for each
+      partial token as the model produces it.
+    - ``event: complete`` ``data: <MessageResponse JSON>`` — emitted once at
+      the end with the persisted ``MessageResponse``.
+
+    Synchronous validation (e.g. unknown ``conversation_id``) is reported via
+    a normal JSON error response (404 / 422 / 503) before the stream starts.
+    """
+    use_case = GenerateBotReplyUseCase(
+        conversation_repository,
+        message_repository,
+        chatbot_responder,
+        _bot_participant(chat_settings),
+        chat_settings.bot_history_limit,
+    )
+    events = use_case.execute(conversation_id)
+
+    def event_stream():
+        try:
+            for event in events:
+                if isinstance(event, BotReplyDelta):
+                    yield _format_sse("delta", {"content": event.content})
+                elif isinstance(event, BotReplyComplete):
+                    payload = MessageResponse.model_validate(event.message).model_dump(mode="json")
+                    yield _format_sse("complete", payload)
+        except Exception as exc:  # noqa: BLE001 — surface as SSE error event
+            logger.exception("Bot reply stream failed for conversation %s", conversation_id)
+            yield _format_sse("error", {"detail": str(exc)})
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )

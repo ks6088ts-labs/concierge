@@ -2,16 +2,26 @@ from __future__ import annotations
 
 from concierge.chat.application.responders import ChatbotResponder
 from concierge.chat.infrastructure.ai.foundry_responder import FoundryChatbotResponder
-from concierge.chat.infrastructure.ai.null_responder import NullChatbotResponder
 from concierge.settings import get_chat_settings, get_microsoft_foundry_settings
 
 
+class ChatbotNotConfiguredError(RuntimeError):
+    """Raised at startup when the chatbot dependencies are missing."""
+
+
 def create_chatbot_responder() -> ChatbotResponder:
-    settings = get_chat_settings()
+    """Build the chatbot responder.
+
+    Raises :class:`ChatbotNotConfiguredError` when ``AZURE_AI_PROJECT_ENDPOINT``
+    is not set, since the responder is unusable without a Foundry endpoint.
+    """
     foundry_settings = get_microsoft_foundry_settings()
-    if settings.bot_enabled and foundry_settings.azure_ai_project_endpoint:
-        return FoundryChatbotResponder(
-            model=settings.bot_model,
-            system_prompt=settings.bot_system_prompt,
+    if not foundry_settings.azure_ai_project_endpoint:
+        raise ChatbotNotConfiguredError(
+            "AZURE_AI_PROJECT_ENDPOINT is not configured; cannot build the chatbot responder.",
         )
-    return NullChatbotResponder()
+    settings = get_chat_settings()
+    return FoundryChatbotResponder(
+        model=settings.bot_model,
+        system_prompt=settings.bot_system_prompt,
+    )

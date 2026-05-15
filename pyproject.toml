@@ -28,6 +28,7 @@ docs = [
 ]
 dev = [
     "coverage>=7.8.0",
+    "import-linter>=2.11",
     "jupyterlab>=4.4.2",
     "pre-commit>=4.2.0",
     "pyrefly>=0.44.1",

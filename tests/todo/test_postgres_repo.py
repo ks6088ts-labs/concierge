@@ -211,6 +211,9 @@ def _pg_container_repo():
 
 @pytest.fixture(scope="module")
 def pg_repo():
+    from tests.conftest import skip_if_docker_unavailable
+
+    skip_if_docker_unavailable()
     repo, container = _pg_container_repo()
     yield repo
     container.stop()

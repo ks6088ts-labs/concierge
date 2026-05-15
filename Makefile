@@ -39,7 +39,12 @@ lint: ## lint
 	uv run ruff check .
 	uv run ty check
 	uv run pyrefly check
+	uv run lint-imports
 	actionlint
+
+.PHONY: lint-imports
+lint-imports: ## run import-linter to enforce clean architecture dependency direction
+	uv run lint-imports
 
 .PHONY: test
 test: ## run tests
@@ -122,10 +127,3 @@ mlflow: ## run MLflow server
 		--port 5000 \
 		--allowed-hosts "*" \
 		--cors-allowed-origins "*"
-
-.PHONY: api
-api: ## run API server
-	uv run uvicorn concierge.todo.infrastructure.web.app:create_app \
-		--factory \
-		--host 0.0.0.0 \
-		--port 8080

@@ -72,6 +72,9 @@ make test
 # Run format check, lint, and tests.
 make ci-test
 
+# Enforce clean architecture dependency direction with import-linter.
+make lint-imports
+
 # Install docs dependencies and build the site.
 make ci-test-docs
 

@@ -73,6 +73,26 @@ def get_task_repository() -> TaskRepository:
         from concierge.cloud_agent.infrastructure.persistence.postgres import SqlAlchemyTaskRepository
 
         engine = _get_cached_engine(backend)
-        return SqlAlchemyTaskRepository(engine, table_name=settings.table_name)
+        repository = SqlAlchemyTaskRepository(engine, table_name=settings.table_name)
+        _ensure_schema(backend, repository)
+        return repository
 
     raise ValueError(f"Unhandled CloudAgentRepositoryBackend value: {backend!r}.")  # pragma: no cover
+
+
+_initialised_backends: set[CloudAgentRepositoryBackend] = set()
+
+
+def _ensure_schema(backend: CloudAgentRepositoryBackend, repository) -> None:
+    """Run ``init_schema`` once per backend to keep startup idempotent.
+
+    The Cloud Agent docs promise automatic schema initialisation for the
+    ``postgres`` / ``azure-postgres`` backends. The SQL DDL itself uses
+    ``CREATE TABLE IF NOT EXISTS``, so re-running is safe; we still cache
+    the call to avoid the round-trip on every CLI invocation within the
+    same process.
+    """
+    if backend in _initialised_backends:
+        return
+    repository.init_schema()
+    _initialised_backends.add(backend)

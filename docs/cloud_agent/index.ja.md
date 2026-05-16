@@ -100,7 +100,7 @@ Cloud Agent の設定はすべて
 | `CLOUD_AGENT_QUEUE_BACKEND` | `memory` | ジョブキューバックエンド: `memory` / `azure-storage-queue` |
 | `CLOUD_AGENT_QUEUE_NAME` | `cloud-agent-tasks` | メインキュー名（Azure Storage Queue のリソース名） |
 | `CLOUD_AGENT_DLQ_NAME` | `cloud-agent-dlq` | Dead Letter Queue 名（初回利用時に自動作成） |
-| `CLOUD_AGENT_AZURE_STORAGE_CONNECTION_STRING` | _(空)_ | `CLOUD_AGENT_QUEUE_BACKEND=azure-storage-queue` のとき**必須** |
+| `CLOUD_AGENT_AZURE_STORAGE_ACCOUNT_URL` | _(空)_ | `CLOUD_AGENT_QUEUE_BACKEND=azure-storage-queue` のとき**必須**。Queue サービスエンドポイント（例: `https://<account>.queue.core.windows.net`）。認証は Microsoft Entra ID（`DefaultAzureCredential`）のみ、接続文字列 / アカウントキーは**未サポート** |
 | `CLOUD_AGENT_VISIBILITY_TIMEOUT_SECONDS` | `60` | デキューしたメッセージが他ワーカーから見えなくなる時間（秒）。エージェントの最悪実行時間より十分長く設定する |
 | `CLOUD_AGENT_MAX_RETRIES` | `3` | `DispatchTaskUseCase` のデフォルトリトライ予算。`retry_count > max_retries` で DLQ 行き。API / CLI でディスパッチごとに上書き可能 |
 | `CLOUD_AGENT_WORKER_CONCURRENCY` | `1` | 1 ワーカー内の同時実行数（将来拡張用）。現状の実装は逐次処理のため、スケールしたい場合はワーカープロセスを増やす |
@@ -128,9 +128,12 @@ Cloud Agent の設定はすべて
 | 値 | 使いどころ | 必須変数 |
 |---|---|---|
 | `memory`（デフォルト） | ローカル試運転。`asyncio.Queue` を使う in-process 実装。API と worker が同一 Python プロセス内にいる場合のみ機能 | — |
-| `azure-storage-queue` | 本番向けの永続キュー。メインキューと DLQ は起動時に自動作成される | `CLOUD_AGENT_AZURE_STORAGE_CONNECTION_STRING` |
+| `azure-storage-queue` | 本番向けの永続キュー。メインキューと DLQ は起動時に自動作成。認証は `DefaultAzureCredential` による Entra ID のみ | `CLOUD_AGENT_AZURE_STORAGE_ACCOUNT_URL` |
 
-接続文字列なしで `azure-storage-queue` を選ぶとファクトリが `ValueError` を送出します。
+アカウント URL なしで `azure-storage-queue` を選ぶとファクトリが `ValueError` を送出します。
+認証は `DefaultAzureCredential` による Microsoft Entra ID のみサポートされ、
+呼び出し側プリンシパルにはストレージアカウント上で **Storage Queue Data Contributor**
+（または同等のカスタム RBAC）ロールが必要です。
 可視性タイムアウトと DLQ ルーティングは
 `CLOUD_AGENT_VISIBILITY_TIMEOUT_SECONDS` と `CLOUD_AGENT_DLQ_NAME` で制御します。
 
@@ -151,7 +154,7 @@ CLOUD_AGENT_QUEUE_BACKEND=memory
 # .env
 CLOUD_AGENT_REPOSITORY_BACKEND=postgres
 CLOUD_AGENT_QUEUE_BACKEND=azure-storage-queue
-CLOUD_AGENT_AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net
+CLOUD_AGENT_AZURE_STORAGE_ACCOUNT_URL=https://<account>.queue.core.windows.net
 CLOUD_AGENT_QUEUE_NAME=cloud-agent-tasks
 CLOUD_AGENT_DLQ_NAME=cloud-agent-dlq
 CLOUD_AGENT_VISIBILITY_TIMEOUT_SECONDS=120
@@ -167,9 +170,13 @@ POSTGRES_DB=concierge
 
 ```bash
 docker compose up -d postgres
+az login                       # DefaultAzureCredential がトークンを取得できる状態に
 uv run cloud-agent-web        # ターミナル 1
 uv run cloud-agent-cli worker # ターミナル 2
 ```
+
+起動前に、サインイン済みプリンシパル（またはマネージド ID）に
+ストレージアカウントへの **Storage Queue Data Contributor** ロールを付与しておいてください。
 
 ### 例: Azure Database for PostgreSQL（Entra ID）+ Azure Storage Queue
 
@@ -177,7 +184,7 @@ uv run cloud-agent-cli worker # ターミナル 2
 # .env
 CLOUD_AGENT_REPOSITORY_BACKEND=azure-postgres
 CLOUD_AGENT_QUEUE_BACKEND=azure-storage-queue
-CLOUD_AGENT_AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net
+CLOUD_AGENT_AZURE_STORAGE_ACCOUNT_URL=https://<account>.queue.core.windows.net
 
 AZURE_DBHOST=<server-name>.postgres.database.azure.com
 AZURE_DBNAME=postgres
@@ -186,4 +193,6 @@ AZURE_DBUSER=<entra-principal>
 ```
 
 API / worker 起動前に `az login` などで `DefaultAzureCredential` がトークンを
-発行できる状態にしておいてください。
+発行できる状態にしておいてください。同じプリンシパルに、`AZURE_DBUSER` に使う
+PostgreSQL ロールに加えてストレージアカウントで **Storage Queue Data Contributor**
+ロールも付与しておく必要があります。

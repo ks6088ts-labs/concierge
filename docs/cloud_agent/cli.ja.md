@@ -87,7 +87,7 @@ uv run cloud-agent-cli agents
 | `CLOUD_AGENT_QUEUE_BACKEND` | `memory` | `memory` / `azure-storage-queue` |
 | `CLOUD_AGENT_QUEUE_NAME` | `cloud-agent-tasks` | メインキュー名 |
 | `CLOUD_AGENT_DLQ_NAME` | `cloud-agent-dlq` | Dead Letter キュー名 |
-| `CLOUD_AGENT_AZURE_STORAGE_CONNECTION_STRING` | — | Azure Storage 接続文字列 |
+| `CLOUD_AGENT_AZURE_STORAGE_ACCOUNT_URL` | — | Azure Storage Queue のエンドポイント（Entra ID 認証 / `DefaultAzureCredential`） |
 | `CLOUD_AGENT_VISIBILITY_TIMEOUT_SECONDS` | `60` | キュー可視性タイムアウト |
 | `CLOUD_AGENT_MAX_RETRIES` | `3` | デフォルト最大リトライ回数 |
 | `CLOUD_AGENT_WORKER_CONCURRENCY` | `1` | ワーカー内同時実行数（将来拡張用） |
@@ -97,8 +97,13 @@ uv run cloud-agent-cli agents
 
 ## 例: Azure Storage Queue バックエンド
 
+認証は `DefaultAzureCredential` を介した Microsoft Entra ID のみサポートします。
+サインイン済みプリンシパル（またはマネージド ID）に
+ストレージアカウントで **Storage Queue Data Contributor** ロールを付与してください。
+
 ```bash
 export CLOUD_AGENT_QUEUE_BACKEND=azure-storage-queue
-export CLOUD_AGENT_AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;..."
+export CLOUD_AGENT_AZURE_STORAGE_ACCOUNT_URL="https://<account>.queue.core.windows.net"
+az login
 uv run cloud-agent-cli worker
 ```

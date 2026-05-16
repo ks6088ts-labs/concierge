@@ -102,7 +102,7 @@ share the exact same configuration object.
 | `CLOUD_AGENT_QUEUE_BACKEND` | `memory` | Job queue backend: `memory` / `azure-storage-queue`. |
 | `CLOUD_AGENT_QUEUE_NAME` | `cloud-agent-tasks` | Main task queue name (Azure Storage Queue resource name). |
 | `CLOUD_AGENT_DLQ_NAME` | `cloud-agent-dlq` | Dead Letter Queue name (created automatically on first use). |
-| `CLOUD_AGENT_AZURE_STORAGE_CONNECTION_STRING` | _(empty)_ | **Required** when `CLOUD_AGENT_QUEUE_BACKEND=azure-storage-queue`. |
+| `CLOUD_AGENT_AZURE_STORAGE_ACCOUNT_URL` | _(empty)_ | **Required** when `CLOUD_AGENT_QUEUE_BACKEND=azure-storage-queue`. Queue service endpoint (e.g. `https://<account>.queue.core.windows.net`). Authentication is performed only via Microsoft Entra ID (`DefaultAzureCredential`); connection strings / account keys are **not** supported. |
 | `CLOUD_AGENT_VISIBILITY_TIMEOUT_SECONDS` | `60` | How long a dequeued message is hidden from other workers while a task is being processed. Should comfortably exceed the worst-case agent execution time. |
 | `CLOUD_AGENT_MAX_RETRIES` | `3` | Default retry budget injected into `DispatchTaskUseCase`. A task is moved to the DLQ when `retry_count > max_retries`. Can be overridden per dispatch via the API / CLI. |
 | `CLOUD_AGENT_WORKER_CONCURRENCY` | `1` | Reserved for future concurrent processing per worker. The current loop processes one task at a time; scale horizontally instead. |
@@ -130,10 +130,13 @@ and the worker. The choice is made by `CLOUD_AGENT_REPOSITORY_BACKEND`:
 | Value | When to use | Required variables |
 |-------|-------------|--------------------|
 | `memory` (default) | Local smoke tests. Uses an in-process `asyncio.Queue`. Only useful when the API and the worker live in the same Python process. | — |
-| `azure-storage-queue` | Production-grade durable queue. The main queue and DLQ are auto-created on startup. | `CLOUD_AGENT_AZURE_STORAGE_CONNECTION_STRING` |
+| `azure-storage-queue` | Production-grade durable queue. The main queue and DLQ are auto-created on startup. Auth is Entra ID only via `DefaultAzureCredential`. | `CLOUD_AGENT_AZURE_STORAGE_ACCOUNT_URL` |
 
-The factory raises `ValueError` if `azure-storage-queue` is selected without a
-connection string. Visibility timeouts and DLQ routing are driven by
+The factory raises `ValueError` if `azure-storage-queue` is selected without an
+account URL. Authentication is performed exclusively via Microsoft Entra ID
+using `DefaultAzureCredential` — the calling principal must hold the
+**Storage Queue Data Contributor** role (or equivalent custom RBAC) on the
+storage account. Visibility timeouts and DLQ routing are driven by
 `CLOUD_AGENT_VISIBILITY_TIMEOUT_SECONDS` and `CLOUD_AGENT_DLQ_NAME`.
 
 ### Example: local development (memory only)
@@ -155,7 +158,7 @@ only for unit-style end-to-end checks.
 # .env
 CLOUD_AGENT_REPOSITORY_BACKEND=postgres
 CLOUD_AGENT_QUEUE_BACKEND=azure-storage-queue
-CLOUD_AGENT_AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net
+CLOUD_AGENT_AZURE_STORAGE_ACCOUNT_URL=https://<account>.queue.core.windows.net
 CLOUD_AGENT_QUEUE_NAME=cloud-agent-tasks
 CLOUD_AGENT_DLQ_NAME=cloud-agent-dlq
 CLOUD_AGENT_VISIBILITY_TIMEOUT_SECONDS=120
@@ -171,9 +174,14 @@ POSTGRES_DB=concierge
 
 ```bash
 docker compose up -d postgres
+az login                       # so DefaultAzureCredential can mint a token
 uv run cloud-agent-web        # terminal 1
 uv run cloud-agent-cli worker # terminal 2
 ```
+
+Grant the signed-in principal (or managed identity) the **Storage Queue Data
+Contributor** role on the target storage account before starting the
+services.
 
 ### Example: Azure Database for PostgreSQL (Entra ID) + Azure Storage Queue
 
@@ -181,7 +189,7 @@ uv run cloud-agent-cli worker # terminal 2
 # .env
 CLOUD_AGENT_REPOSITORY_BACKEND=azure-postgres
 CLOUD_AGENT_QUEUE_BACKEND=azure-storage-queue
-CLOUD_AGENT_AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=...;AccountKey=...;EndpointSuffix=core.windows.net
+CLOUD_AGENT_AZURE_STORAGE_ACCOUNT_URL=https://<account>.queue.core.windows.net
 
 AZURE_DBHOST=<server-name>.postgres.database.azure.com
 AZURE_DBNAME=postgres
@@ -190,4 +198,6 @@ AZURE_DBUSER=<entra-principal>
 ```
 
 Ensure `DefaultAzureCredential` can mint a token (e.g. `az login` or a
-managed identity) before starting the API / worker.
+managed identity) before starting the API / worker. The same principal must
+have the **Storage Queue Data Contributor** role on the storage account in
+addition to the PostgreSQL role used for `AZURE_DBUSER`.

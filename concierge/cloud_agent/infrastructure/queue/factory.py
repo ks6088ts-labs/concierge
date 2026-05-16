@@ -18,13 +18,16 @@ def get_task_queue() -> TaskQueue:
     if backend is CloudAgentQueueBackend.AZURE_STORAGE_QUEUE:
         from concierge.cloud_agent.infrastructure.queue.azure_storage_queue import AzureStorageQueueTaskQueue
 
-        if not settings.azure_storage_connection_string:
+        if not settings.azure_storage_account_url:
             raise ValueError(
-                "CLOUD_AGENT_AZURE_STORAGE_CONNECTION_STRING must be set when "
-                "CLOUD_AGENT_QUEUE_BACKEND=azure-storage-queue."
+                "CLOUD_AGENT_AZURE_STORAGE_ACCOUNT_URL must be set when "
+                "CLOUD_AGENT_QUEUE_BACKEND=azure-storage-queue. Authentication "
+                "uses Microsoft Entra ID via DefaultAzureCredential; ensure the "
+                "caller has been granted the 'Storage Queue Data Contributor' "
+                "role on the account."
             )
         return AzureStorageQueueTaskQueue(
-            connection_string=settings.azure_storage_connection_string,
+            account_url=settings.azure_storage_account_url,
             queue_name=settings.queue_name,
             dlq_name=settings.dlq_name,
         )

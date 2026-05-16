@@ -113,7 +113,7 @@ All settings are controlled by environment variables (or a `.env` file).
 | `CLOUD_AGENT_QUEUE_BACKEND` | `memory` | `memory` / `azure-storage-queue` |
 | `CLOUD_AGENT_QUEUE_NAME` | `cloud-agent-tasks` | Main queue name |
 | `CLOUD_AGENT_DLQ_NAME` | `cloud-agent-dlq` | Dead letter queue name |
-| `CLOUD_AGENT_AZURE_STORAGE_CONNECTION_STRING` | — | Azure Storage connection string |
+| `CLOUD_AGENT_AZURE_STORAGE_ACCOUNT_URL` | — | Azure Storage queue endpoint (Entra ID auth via `DefaultAzureCredential`) |
 | `CLOUD_AGENT_VISIBILITY_TIMEOUT_SECONDS` | `60` | Queue visibility timeout |
 | `CLOUD_AGENT_MAX_RETRIES` | `3` | Default max retries |
 | `CLOUD_AGENT_WORKER_CONCURRENCY` | `1` | Worker concurrency (future) |
@@ -124,8 +124,13 @@ backend selection tables and end-to-end `.env` examples.
 
 ## Example: Azure Storage Queue backend
 
+Authentication uses Microsoft Entra ID via `DefaultAzureCredential`.
+Grant the signed-in principal (or managed identity) the **Storage Queue Data
+Contributor** role on the storage account.
+
 ```bash
 export CLOUD_AGENT_QUEUE_BACKEND=azure-storage-queue
-export CLOUD_AGENT_AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;..."
+export CLOUD_AGENT_AZURE_STORAGE_ACCOUNT_URL="https://<account>.queue.core.windows.net"
+az login
 uv run cloud-agent-cli worker
 ```

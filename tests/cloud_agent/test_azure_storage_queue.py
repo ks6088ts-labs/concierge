@@ -7,28 +7,72 @@ import uuid
 from unittest.mock import MagicMock, patch
 
 import pytest
+from azure.core.exceptions import ResourceExistsError
 
 from concierge.cloud_agent.application.queues import QueueMessage
 from concierge.cloud_agent.infrastructure.queue.azure_storage_queue import AzureStorageQueueTaskQueue
 
 
 def _make_queue(
-    connection_string: str = "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;"
-    "AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KlB4a5UsC8OA==;"
-    "QueueEndpoint=http://127.0.0.1:10001/devstoreaccount1;",
+    account_url: str = "https://devstoreaccount1.queue.core.windows.net",
 ) -> tuple[AzureStorageQueueTaskQueue, MagicMock, MagicMock]:
-    with patch("concierge.cloud_agent.infrastructure.queue.azure_storage_queue.QueueClient") as MockClient:
-        mock_instance = MagicMock()
-        MockClient.from_connection_string.return_value = mock_instance
+    mock_queue_client = MagicMock()
+    mock_dlq_client = MagicMock()
+
+    def _client_factory(*_args, queue_name: str, **_kwargs):
+        return mock_queue_client if queue_name == "test-queue" else mock_dlq_client
+
+    with patch(
+        "concierge.cloud_agent.infrastructure.queue.azure_storage_queue.QueueClient",
+        side_effect=_client_factory,
+    ):
         queue = AzureStorageQueueTaskQueue(
-            connection_string=connection_string,
+            account_url=account_url,
             queue_name="test-queue",
             dlq_name="test-dlq",
+            credential=MagicMock(),
         )
-        mock_dlq = MagicMock()
-        queue._queue_client = mock_instance
-        queue._dlq_client = mock_dlq
-    return queue, mock_instance, mock_dlq
+    return queue, mock_queue_client, mock_dlq_client
+
+
+def test_constructor_requires_account_url() -> None:
+    with pytest.raises(ValueError, match="account_url"):
+        AzureStorageQueueTaskQueue(
+            account_url="",
+            queue_name="q",
+            dlq_name="dlq",
+            credential=MagicMock(),
+        )
+
+
+def test_constructor_is_idempotent_when_queue_already_exists() -> None:
+    """Existing queues must not cause AzureStorageQueueTaskQueue to fail.
+
+    The Azure Storage SDK raises ``ResourceExistsError`` from ``create_queue``
+    when the queue already exists; the constructor must swallow it so that
+    repeated startups remain idempotent.
+    """
+    mock_queue_client = MagicMock()
+    mock_dlq_client = MagicMock()
+    mock_queue_client.create_queue.side_effect = ResourceExistsError("queue exists")
+    mock_dlq_client.create_queue.side_effect = ResourceExistsError("dlq exists")
+
+    def _client_factory(*_args, queue_name: str, **_kwargs):
+        return mock_queue_client if queue_name == "test-queue" else mock_dlq_client
+
+    with patch(
+        "concierge.cloud_agent.infrastructure.queue.azure_storage_queue.QueueClient",
+        side_effect=_client_factory,
+    ):
+        AzureStorageQueueTaskQueue(
+            account_url="https://devstoreaccount1.queue.core.windows.net",
+            queue_name="test-queue",
+            dlq_name="test-dlq",
+            credential=MagicMock(),
+        )
+
+    mock_queue_client.create_queue.assert_called_once()
+    mock_dlq_client.create_queue.assert_called_once()
 
 
 @pytest.mark.anyio

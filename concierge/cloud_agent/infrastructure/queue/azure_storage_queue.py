@@ -1,7 +1,11 @@
 """Azure Storage Queue-based task queue implementation.
 
-Uses the ``azure-storage-queue`` SDK. The DLQ is a separate queue with the
-name configured via ``CLOUD_AGENT_DLQ_NAME``.
+Uses the ``azure-storage-queue`` SDK. Authentication is performed exclusively
+via Microsoft Entra ID using ``DefaultAzureCredential``; account keys and
+connection strings are intentionally not supported.
+
+The DLQ is a separate queue with the name configured via
+``CLOUD_AGENT_DLQ_NAME``.
 """
 
 from __future__ import annotations
@@ -10,25 +14,61 @@ import base64
 import json
 import uuid
 
+from azure.core.credentials import TokenCredential
+from azure.core.exceptions import ResourceExistsError
+from azure.identity import DefaultAzureCredential
 from azure.storage.queue import QueueClient
 
 from concierge.cloud_agent.application.queues import QueueMessage
+from concierge.loggers import get_logger
+
+logger = get_logger("concierge.cloud_agent.queue.azure_storage_queue")
+
+
+def _ensure_queue_exists(client: QueueClient) -> None:
+    """Create the queue if it doesn't exist yet (idempotent)."""
+    try:
+        client.create_queue()
+    except ResourceExistsError:
+        logger.debug("Queue %r already exists; skipping creation.", client.queue_name)
 
 
 class AzureStorageQueueTaskQueue:
-    """TaskQueue backed by Azure Storage Queue.
+    """TaskQueue backed by Azure Storage Queue with Entra ID authentication.
 
     Args:
-        connection_string: Azure Storage connection string.
+        account_url: Azure Storage queue service endpoint
+            (e.g. ``https://<account>.queue.core.windows.net``).
         queue_name: Main task queue name.
         dlq_name: Dead letter queue name.
+        credential: Token credential used to authenticate every request.
+            Defaults to :class:`azure.identity.DefaultAzureCredential`, which
+            resolves Entra ID identities from the environment (``az login``,
+            managed identity, workload identity, etc.).
     """
 
-    def __init__(self, connection_string: str, queue_name: str, dlq_name: str) -> None:
-        self._queue_client = QueueClient.from_connection_string(connection_string, queue_name)
-        self._dlq_client = QueueClient.from_connection_string(connection_string, dlq_name)
-        self._queue_client.create_queue()
-        self._dlq_client.create_queue()
+    def __init__(
+        self,
+        account_url: str,
+        queue_name: str,
+        dlq_name: str,
+        credential: TokenCredential | None = None,
+    ) -> None:
+        if not account_url:
+            raise ValueError("account_url must be a non-empty Azure Storage queue service endpoint.")
+        self._credential: TokenCredential = credential or DefaultAzureCredential()
+        self._queue_client = QueueClient(
+            account_url=account_url,
+            queue_name=queue_name,
+            credential=self._credential,
+        )
+        self._dlq_client = QueueClient(
+            account_url=account_url,
+            queue_name=dlq_name,
+            credential=self._credential,
+        )
+        _ensure_queue_exists(self._queue_client)
+        _ensure_queue_exists(self._dlq_client)
 
     async def enqueue(self, task_id: uuid.UUID) -> None:
         message = json.dumps({"task_id": str(task_id)})

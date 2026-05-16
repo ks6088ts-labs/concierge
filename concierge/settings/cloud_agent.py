@@ -38,7 +38,10 @@ class CloudAgentSettings(BaseSettings):
         queue_backend: Which queue backend to use.
         queue_name: Queue name for the main task queue.
         dlq_name: Queue name for the dead letter queue.
-        azure_storage_connection_string: Azure Storage connection string.
+        azure_storage_account_url: Azure Storage queue service endpoint
+            (e.g. ``https://<account>.queue.core.windows.net``). Authentication
+            is performed exclusively via Microsoft Entra ID
+            (``DefaultAzureCredential``); connection strings are not supported.
         visibility_timeout_seconds: Queue message visibility timeout.
         max_retries: Default maximum retry count for tasks.
         worker_concurrency: Number of concurrent task processors per worker.
@@ -50,7 +53,7 @@ class CloudAgentSettings(BaseSettings):
     queue_backend: CloudAgentQueueBackend = CloudAgentQueueBackend.MEMORY
     queue_name: str = "cloud-agent-tasks"
     dlq_name: str = "cloud-agent-dlq"
-    azure_storage_connection_string: str = ""
+    azure_storage_account_url: str = ""
     visibility_timeout_seconds: int = 60
     max_retries: int = 3
     worker_concurrency: int = 1

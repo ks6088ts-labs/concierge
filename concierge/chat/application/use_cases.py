@@ -243,7 +243,9 @@ class StreamRealtimeVoiceUseCase:
                         yield RealtimeMessagePersisted(message=saved)
 
                 # Persist AGENT transcript
-                elif event_type == "response.audio_transcript.done":
+                # Note: GA endpoint emits ``response.output_audio_transcript.done``
+                # (the preview endpoint used ``response.audio_transcript.done``).
+                elif event_type == "response.output_audio_transcript.done":
                     transcript = server_event.get("transcript", "")
                     if transcript:
                         msg = Message(

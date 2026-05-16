@@ -10,12 +10,79 @@ description: Foundry GPT Realtime API を使った WebSocket ベースのリア�
 Foundry の資格情報はサーバ外に出ません。
 
 ```
-ブラウザ ⇄ FastAPI (chat-web) ⇄ Foundry /openai/realtime
+ブラウザ ⇄ FastAPI (chat-web) ⇄ Foundry /openai/v1/realtime
 ```
 
 ユーザーと AI エージェントの音声テキスト (transcript) は通常の `Message` として
 テキストチャットと同じストアに保存されるため、`/conversations/{id}/messages` で
 一覧できます。
+
+---
+
+## クイックスタート
+
+```bash
+# 1. .env にリアルタイム用エンドポイントを設定（詳細は「設定」セクション参照）。
+echo "AZURE_AI_PROJECT_ENDPOINT_REALTIME=https://<resource>.openai.azure.com/" >> .env
+
+# 2. 設定が読み込めるか確認（実際の接続は行わない）。
+uv run chat-cli realtime status
+# → ステータス: ✅ 設定済み
+
+# 3. API サーバを起動。
+uv run chat-web
+```
+
+Chromium 系か Firefox 系ブラウザで <http://localhost:8080/realtime> を開き、
+サイドバーで会話を作成 → ツールバーの **通話開始** をクリックして話します。
+初回はマイクの利用許可ダイアログが表示されます。
+
+> **メモ** — テキストチャットはリアルタイム用エンドポイントを必要としません。
+> `AZURE_AI_PROJECT_ENDPOINT_REALTIME` 未設定で失敗するのはリアルタイム
+> WebSocket だけ（クローズコード `4503`）です。
+
+---
+
+## Web UI の使い方
+
+同梱のフロントエンドは <http://localhost:8080/realtime>
+（実体は [`concierge/chat/infrastructure/web/static_realtime/index.html`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/chat/infrastructure/web/static_realtime/index.html)）
+にあり、ビルド不要の単一 HTML です。
+
+### 画面構成
+
+| 領域 | 機能 |
+|---|---|
+| サイドバー：**表示名 / ユーザー ID** | `display_name` と `user_id` (UUID) を `localStorage` (`chat_rt_display_name`, `chat_rt_user_id`) に保存。UUID は初回ロード時に自動生成され、`X-User-Id` ヘッダと `?user_id=` クエリの両方に使われる |
+| サイドバー：**＋ 新しい会話** | `POST /conversations` を呼んで一覧を更新 |
+| サイドバー：会話リスト | `GET /conversations` の結果を表示。クリックで `GET /conversations/{id}/messages` を呼び履歴をロード |
+| ツールバー：**通話開始 / 通話終了** | リアルタイム WebSocket を開始 / 終了。会話を選択するまで無効。通話中は赤いボタンになる |
+| ツールバー：ステータス表示 | 接続 / セッション状態（例：`通話中 🔴`、クローズコードに対応した日本語ラベル） |
+| メッセージ一覧 | ユーザー / AI の transcript を吹き出し表示。`concierge.message.persisted` を受信するたび追記 |
+| 仮文字起こし行 | AI 側の部分 transcript（`response.audio_transcript.delta`）をリアルタイム表示。確定時に消える |
+
+### ブラウザ → サーバのデータフロー
+
+1. `getUserMedia({ audio: true })` でマイク権限をリクエスト。
+2. `AudioWorklet` で 24 kHz モノラル PCM16（`CHAT_REALTIME_AUDIO_SAMPLE_RATE_HZ` の値）に変換し、200 ms 単位で分割。
+3. 各チャンクを base64 エンコードし、`{"type":"oai-event","payload":{"type":"input_audio_buffer.append","audio":"<b64>"}}` として送信。
+4. Foundry が返す `response.audio.delta` イベントを PCM16 にデコードし、キュー付き `AudioBufferSource` で順次再生。
+
+### 対応ブラウザ
+
+`AudioWorklet` / `WebSocket` / `MediaDevices.getUserMedia` / `crypto.randomUUID`
+を利用しています。最近の Chrome、Edge、Firefox、Safari で動作します。Safari は
+セキュリティ仕様上、`AudioContext` の音声出力にユーザー操作（**通話開始**
+ボタンのクリック）が必要です。
+
+### UI に現れるエラー
+
+| 症状 | 原因 | 対処 |
+|---|---|---|
+| 赤バナー：`マイクへのアクセスが拒否されました` | ブラウザがマイクをブロック | ブラウザ設定で `localhost:8080` のマイクを許可 |
+| ステータス：`リアルタイム機能が未設定です` | WebSocket が `4503` で切断 | `AZURE_AI_PROJECT_ENDPOINT_REALTIME` を設定し `chat-web` を再起動 |
+| ステータス：`会話が見つかりません` | WebSocket が `4404` で切断 | 会話を再選択するか作り直す |
+| ステータス：`不正なリクエスト` | WebSocket が `4400` で切断 | `localStorage` を削除してユーザー UUID を再生成 |
 
 ---
 
@@ -71,7 +138,7 @@ CHAT_REALTIME_MAX_SESSION_SECONDS=600
 | `AZURE_AI_PROJECT_ENDPOINT_REALTIME` | `""` (無効) | リアルタイムモデル用 Foundry エンドポイント |
 | `CHAT_REALTIME_MODEL` | `gpt-realtime-1.5` | リアルタイムモデルのデプロイ名 |
 | `CHAT_REALTIME_VOICE` | `alloy` | ボイス識別子 |
-| `CHAT_REALTIME_LOCALE` | `ja-JP` | 文字起こし言語 |
+| `CHAT_REALTIME_LOCALE` | `ja-JP` | 文字起こし言語。Foundry GA は ISO 639-1（`ja`、`en` など）を要求するため、`ja-JP` のような BCP-47 形式は自動的に主言語サブタグへ変換されます |
 | `CHAT_REALTIME_AUDIO_SAMPLE_RATE_HZ` | `24000` | PCM16 サンプルレート (Foundry 固定値) |
 | `CHAT_REALTIME_MAX_SESSION_SECONDS` | `600` | サーバ側セッションタイムアウト |
 
@@ -135,7 +202,7 @@ uv run chat-cli realtime status
 AZURE_AI_PROJECT_ENDPOINT_REALTIME : https://myresource.openai.azure.com/
 CHAT_REALTIME_MODEL               : gpt-realtime-1.5
 CHAT_REALTIME_VOICE               : alloy
-導出 WSS ホスト                   : wss://myre****azure.com/openai/realtime
+導出 WSS ホスト                   : wss://myre****azure.com/openai/v1/realtime
 ステータス: ✅ 設定済み
 ```
 

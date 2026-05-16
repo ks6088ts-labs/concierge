@@ -10,11 +10,81 @@ and Microsoft Foundry's GPT Realtime API. All audio is processed server-side —
 credentials never leave the server.
 
 ```
-Browser ⇄ FastAPI (chat-web) ⇄ Foundry /openai/realtime
+Browser ⇄ FastAPI (chat-web) ⇄ Foundry /openai/v1/realtime
 ```
 
 Transcripts from both the user and the AI agent are persisted as regular `Message`
 objects in the same store as text chat, so they appear in `/conversations/{id}/messages`.
+
+---
+
+## Quick start
+
+```bash
+# 1. Configure the realtime endpoint in .env (see "Configuration" below).
+echo "AZURE_AI_PROJECT_ENDPOINT_REALTIME=https://<resource>.openai.azure.com/" >> .env
+
+# 2. Confirm the configuration is picked up (no live call).
+uv run chat-cli realtime status
+# → ステータス: ✅ 設定済み
+
+# 3. Start the API server.
+uv run chat-web
+```
+
+Then open <http://localhost:8080/realtime> in a Chromium/Firefox-based browser,
+create a conversation from the sidebar, click **通話開始 (Start call)**, and
+talk. Microphone permission is requested on the first call.
+
+> **Tip** — text chat does **not** require the realtime endpoint. The realtime
+> WebSocket is the only thing that fails with close code `4503` when
+> `AZURE_AI_PROJECT_ENDPOINT_REALTIME` is empty.
+
+---
+
+## Web UI walkthrough
+
+The bundled frontend lives at <http://localhost:8080/realtime> (served from
+[`concierge/chat/infrastructure/web/static_realtime/index.html`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/chat/infrastructure/web/static_realtime/index.html))
+and is a zero-build single HTML file.
+
+### Layout
+
+| Area | What it does |
+|---|---|
+| Sidebar — **表示名 / ユーザー ID** | Persists `display_name` and `user_id` (UUID) in `localStorage` (`chat_rt_display_name`, `chat_rt_user_id`). The UUID is auto-generated on first load and sent as the `X-User-Id` header and `?user_id=` query parameter. |
+| Sidebar — **＋ 新しい会話** | Calls `POST /conversations` and refreshes the list. |
+| Sidebar — Conversation list | Calls `GET /conversations`. Click an entry to load its message history (`GET /conversations/{id}/messages`). |
+| Toolbar — **通話開始 / 通話終了** | Opens / closes the realtime WebSocket. Disabled until a conversation is selected. Turns red while a call is active. |
+| Toolbar — call status | Shows connection / session state (例: `通話中 🔴`, close-code error labels). |
+| Message log | User and AI transcripts as bubbles. Updated on every `concierge.message.persisted` event from the server. |
+| Interim transcript line | Streams the AI's partial transcript (`response.audio_transcript.delta`) live before the final message is persisted. |
+
+### Browser → server data flow
+
+1. `getUserMedia({ audio: true })` requests microphone permission.
+2. An `AudioWorklet` resamples to 24 kHz mono PCM16 (the value of
+   `CHAT_REALTIME_AUDIO_SAMPLE_RATE_HZ`) in 200 ms chunks.
+3. Each chunk is base64-encoded and sent as
+   `{"type":"oai-event","payload":{"type":"input_audio_buffer.append","audio":"<b64>"}}`.
+4. Foundry-emitted `response.audio.delta` events are decoded back to PCM16
+   and played through a queued `AudioBufferSource` graph.
+
+### Browser support
+
+The UI relies on `AudioWorklet`, `WebSocket`, `MediaDevices.getUserMedia`, and
+`crypto.randomUUID`. Recent Chrome, Edge, Firefox, and Safari all work. Safari
+requires a user gesture (the **通話開始** button click) before the
+`AudioContext` can start producing audio.
+
+### Error surfaces in the UI
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Red banner: `マイクへのアクセスが拒否されました` | Browser blocked microphone | Allow microphone for `localhost:8080` in browser settings |
+| Status: `リアルタイム機能が未設定です` | WebSocket closed with `4503` | Set `AZURE_AI_PROJECT_ENDPOINT_REALTIME` and restart `chat-web` |
+| Status: `会話が見つかりません` | WebSocket closed with `4404` | Reselect or recreate the conversation |
+| Status: `不正なリクエスト` | WebSocket closed with `4400` | Clear `localStorage` to regenerate the user UUID |
 
 ---
 
@@ -70,7 +140,7 @@ All realtime settings use the `CHAT_` prefix.
 | `AZURE_AI_PROJECT_ENDPOINT_REALTIME` | `""` (disabled) | Foundry endpoint for the realtime model |
 | `CHAT_REALTIME_MODEL` | `gpt-realtime-1.5` | Realtime model deployment name |
 | `CHAT_REALTIME_VOICE` | `alloy` | Voice identifier |
-| `CHAT_REALTIME_LOCALE` | `ja-JP` | Transcription language |
+| `CHAT_REALTIME_LOCALE` | `ja-JP` | Transcription language. Foundry GA accepts ISO 639-1 (`ja`, `en`, …); BCP-47 values like `ja-JP` are automatically reduced to the primary subtag. |
 | `CHAT_REALTIME_AUDIO_SAMPLE_RATE_HZ` | `24000` | PCM16 sample rate (Foundry fixed value) |
 | `CHAT_REALTIME_MAX_SESSION_SECONDS` | `600` | Server-side session timeout |
 
@@ -134,7 +204,7 @@ Example output (configured):
 AZURE_AI_PROJECT_ENDPOINT_REALTIME : https://myresource.openai.azure.com/
 CHAT_REALTIME_MODEL               : gpt-realtime-1.5
 CHAT_REALTIME_VOICE               : alloy
-導出 WSS ホスト                   : wss://myre****azure.com/openai/realtime
+導出 WSS ホスト                   : wss://myre****azure.com/openai/v1/realtime
 ステータス: ✅ 設定済み
 ```
 

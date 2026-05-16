@@ -483,7 +483,15 @@ async function startMic() {
     }
   };
   source.connect(workletNode);
-  workletNode.connect(audioCtx.destination);
+  // Connect the worklet to the destination via a *silent* gain node so the
+  // AudioWorkletProcessor keeps receiving ``process()`` callbacks (some browsers
+  // disable processing for fully disconnected graphs) without routing the
+  // microphone signal back to the speakers and creating an audible feedback
+  // loop.
+  const silent = audioCtx.createGain();
+  silent.gain.value = 0;
+  workletNode.connect(silent);
+  silent.connect(audioCtx.destination);
 }
 
 function stopMic() {
@@ -563,12 +571,13 @@ async function handleServerMessage(msg) {
     const payload = msg.payload || {};
     const evType = payload.type || '';
 
-    if (evType === 'response.audio.delta' && payload.delta) {
+    // GA endpoint emits ``response.output_audio.*`` (the preview endpoint used ``response.audio.*``).
+    if (evType === 'response.output_audio.delta' && payload.delta) {
       scheduleAudio(payload.delta);
-    } else if (evType === 'response.audio_transcript.delta' && payload.delta) {
+    } else if (evType === 'response.output_audio_transcript.delta' && payload.delta) {
       interimText += payload.delta;
       $id('interim-transcript').textContent = '🤖 ' + interimText;
-    } else if (evType === 'response.audio_transcript.done') {
+    } else if (evType === 'response.output_audio_transcript.done') {
       interimText = '';
       $id('interim-transcript').textContent = '';
     }

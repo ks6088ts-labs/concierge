@@ -1,7 +1,8 @@
 """Foundry Realtime WebSocket client.
 
-Connects to ``wss://<host>/openai/v1/realtime?model=<deployment>`` using the
-``websockets`` library (sync client) and ``DefaultAzureCredential`` for auth.
+Connects to ``wss://<host>/openai/v1/realtime?model=<deployment>`` (GA URL
+format) using the ``websockets`` library (sync client) and
+``DefaultAzureCredential`` for auth.
 """
 
 from __future__ import annotations
@@ -73,6 +74,7 @@ class _FoundryRealtimeSession:
         wss_url: str,
         extra_headers: dict[str, str],
         session_config: dict[str, Any],
+        initial_items: list[dict[str, Any]] | None = None,
     ) -> None:
         self._wss_url = wss_url
         self._extra_headers = extra_headers
@@ -83,6 +85,9 @@ class _FoundryRealtimeSession:
         self._thread.start()
         # Send the initial session.update event
         self.send_client_event({"type": "session.update", "session": session_config})
+        # Seed history as separate conversation.item.create events
+        for item in initial_items or []:
+            self.send_client_event({"type": "conversation.item.create", "item": item})
 
     # ------------------------------------------------------------------
     # RealtimeVoiceSession protocol
@@ -117,6 +122,24 @@ class _FoundryRealtimeSession:
                 except json.JSONDecodeError:
                     logger.warning("Received non-JSON frame from Foundry, skipping")
                     continue
+                # Log key lifecycle / VAD / transcription events at INFO so we
+                # can diagnose "voice not recognized" issues without enabling
+                # DEBUG (which would dump every audio delta).
+                ev_type = event.get("type", "")
+                if ev_type in {
+                    "session.created",
+                    "session.updated",
+                    "error",
+                    "input_audio_buffer.speech_started",
+                    "input_audio_buffer.speech_stopped",
+                    "input_audio_buffer.committed",
+                    "input_audio_buffer.cleared",
+                    "conversation.item.input_audio_transcription.completed",
+                    "conversation.item.input_audio_transcription.failed",
+                    "response.output_audio_transcript.done",
+                    "response.done",
+                }:
+                    logger.info("Foundry event: %s", ev_type)
                 self._event_queue.put(event)
         except Exception:  # noqa: BLE001
             logger.exception("Foundry WS receive loop terminated")
@@ -134,37 +157,64 @@ class FoundryRealtimeResponder:
         voice: str,
         locale: str,
         system_prompt: str,
+        transcription_model: str = "",
     ) -> None:
         self._host = _derive_wss_host(endpoint_realtime)
         self._deployment = deployment
         self._voice = voice
         self._locale = locale
         self._system_prompt = system_prompt
+        self._transcription_model = transcription_model
 
     def open(self, conversation: Conversation, history: list[Message]) -> RealtimeVoiceSession:
         token = DefaultAzureCredential().get_token(_COGNITIVE_SERVICES_SCOPE).token
-        wss_url = f"wss://{self._host}/openai/realtime?model={self._deployment}&api-version=2025-04-01-preview"
+        # GA URL format: /openai/v1/realtime?model=<deployment>
+        # (preview format would be /openai/realtime?api-version=...&deployment=<deployment>;
+        # mixing the two causes HTTP 400/404 at the WebSocket handshake.)
+        # See: https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/realtime-audio-websockets
+        wss_url = f"wss://{self._host}/openai/v1/realtime?model={self._deployment}"
         headers = {
             "Authorization": f"Bearer {token}",
-            "OpenAI-Beta": "realtime=v1",
         }
-        session_config: dict[str, Any] = {
-            "voice": self._voice,
-            "instructions": self._system_prompt,
-            "input_audio_format": "pcm16",
-            "output_audio_format": "pcm16",
+        # Foundry GA endpoint (``/openai/v1/realtime``) requires ``session.type``
+        # and uses a nested ``audio.input`` / ``audio.output`` schema. The flat
+        # ``voice`` / ``input_audio_format`` / ``turn_detection`` keys accepted
+        # by the preview API are rejected with ``invalid_request_error /
+        # unknown_parameter`` on GA.
+        input_audio: dict[str, Any] = {
+            "format": {"type": "audio/pcm", "rate": 24000},
             "turn_detection": {"type": "server_vad"},
-            "input_audio_transcription": {
-                "model": "gpt-4o-mini-transcribe",
-                "language": self._locale,
+        }
+        if self._transcription_model:
+            # On Azure the ``model`` field must be a deployment name in the same
+            # resource. Omit the block entirely when no deployment is configured
+            # — Foundry will then skip user-side transcription instead of
+            # silently failing.
+            input_audio["transcription"] = {
+                "model": self._transcription_model,
+                # Foundry GA accepts ISO 639-1 (``ja``), not BCP-47 (``ja-JP``).
+                # Strip the region subtag so ``.env`` can keep using either form.
+                "language": self._locale.replace("_", "-").split("-", 1)[0].lower(),
+            }
+        session_config: dict[str, Any] = {
+            "type": "realtime",
+            "instructions": self._system_prompt,
+            "audio": {
+                "input": input_audio,
+                "output": {
+                    "format": {"type": "audio/pcm", "rate": 24000},
+                    "voice": self._voice,
+                },
             },
         }
-        # Build initial context from history as a list of conversation items
-        # (newest-first → reverse for chronological order)
-        input_items = []
+        # Build initial conversation items from history (newest-first → reverse for
+        # chronological order). These must be sent as separate ``conversation.item.create``
+        # events *after* the ``session.update`` event — they are not valid fields inside
+        # ``session.update`` itself.
+        initial_items: list[dict[str, Any]] = []
         for msg in reversed(history):
             if msg.role == MessageRole.USER:
-                input_items.append(
+                initial_items.append(
                     {
                         "type": "message",
                         "role": "user",
@@ -172,14 +222,12 @@ class FoundryRealtimeResponder:
                     }
                 )
             elif msg.role == MessageRole.AGENT:
-                input_items.append(
+                initial_items.append(
                     {
                         "type": "message",
                         "role": "assistant",
                         "content": [{"type": "text", "text": msg.content}],
                     }
                 )
-        if input_items:
-            session_config["input"] = input_items
 
-        return _FoundryRealtimeSession(wss_url, headers, session_config)
+        return _FoundryRealtimeSession(wss_url, headers, session_config, initial_items)

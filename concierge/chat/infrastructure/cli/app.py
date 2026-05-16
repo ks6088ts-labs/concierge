@@ -325,7 +325,7 @@ def realtime_status() -> None:
         host = _derive_wss_host(endpoint)
         # Mask the hostname partially for display
         masked = host[:4] + "****" + host[-10:] if len(host) > 14 else "****"
-        typer.echo(f"導出 WSS ホスト                   : wss://{masked}/openai/realtime")
+        typer.echo(f"導出 WSS ホスト                   : wss://{masked}/openai/v1/realtime")
         typer.echo("ステータス: ✅ 設定済み")
     except ChatbotNotConfiguredError as exc:
         typer.echo(f"ステータス: ❌ エラー — {exc}", err=True)

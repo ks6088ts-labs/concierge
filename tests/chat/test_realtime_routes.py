@@ -143,7 +143,7 @@ def test_session_ready_event_sent() -> None:
 def test_persisted_message_event_for_agent_transcript() -> None:
     """AGENT transcript causes a concierge.message.persisted event."""
     transcript_event = {
-        "type": "response.audio_transcript.done",
+        "type": "response.output_audio_transcript.done",
         "transcript": "こんにちは",
     }
     responder = FakeRealtimeResponder(server_events=[transcript_event])

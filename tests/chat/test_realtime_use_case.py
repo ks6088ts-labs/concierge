@@ -142,9 +142,9 @@ def test_user_transcript_persisted() -> None:
 
 
 def test_agent_transcript_persisted() -> None:
-    """AGENT transcript is saved when response.audio_transcript.done arrives."""
+    """AGENT transcript is saved when response.output_audio_transcript.done arrives."""
     transcript_event = {
-        "type": "response.audio_transcript.done",
+        "type": "response.output_audio_transcript.done",
         "transcript": "はい、承知しました。",
     }
     uc, _, conv_repo, msg_repo = _make_use_case([transcript_event])
@@ -163,8 +163,8 @@ def test_agent_transcript_persisted() -> None:
 def test_server_events_relayed_in_order() -> None:
     """All server events produce RealtimeServerEvent entries in the same order."""
     raw_events = [
-        {"type": "response.audio.delta", "delta": "abc"},
-        {"type": "response.audio.delta", "delta": "def"},
+        {"type": "response.output_audio.delta", "delta": "abc"},
+        {"type": "response.output_audio.delta", "delta": "def"},
     ]
     uc, _, conv_repo, _ = _make_use_case(raw_events)
     from concierge.chat.application.use_cases import CreateConversationUseCase  # noqa: PLC0415
@@ -212,7 +212,7 @@ def test_empty_transcript_not_persisted() -> None:
     """Events with an empty transcript string do not create messages."""
     events_in = [
         {"type": "conversation.item.input_audio_transcription.completed", "transcript": ""},
-        {"type": "response.audio_transcript.done", "transcript": ""},
+        {"type": "response.output_audio_transcript.done", "transcript": ""},
     ]
     uc, _, conv_repo, msg_repo = _make_use_case(events_in)
     from concierge.chat.application.use_cases import CreateConversationUseCase  # noqa: PLC0415

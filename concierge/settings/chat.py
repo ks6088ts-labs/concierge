@@ -33,7 +33,13 @@ class ChatSettings(BaseSettings):
     realtime_system_prompt: str = "あなたは Concierge Chat のアシスタントです。日本語で簡潔に応答してください。"
     realtime_audio_sample_rate_hz: int = 24000
     realtime_max_session_seconds: int = 600
-
+    # Optional Azure deployment name used for input-audio transcription. When
+    # empty (default), the ``transcription`` block is omitted from
+    # ``session.update`` and Foundry will not transcribe the user's audio
+    # (assistant speech still works). The default OpenAI model id
+    # ``gpt-4o-mini-transcribe`` does not correspond to an Azure deployment in
+    # most resources, so leaving this empty avoids silent failures.
+    realtime_transcription_model: str = ""
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

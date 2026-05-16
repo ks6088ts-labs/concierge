@@ -46,4 +46,5 @@ def create_realtime_responder() -> RealtimeVoiceResponder:
         voice=settings.realtime_voice,
         locale=settings.realtime_locale,
         system_prompt=settings.realtime_system_prompt,
+        transcription_model=settings.realtime_transcription_model,
     )

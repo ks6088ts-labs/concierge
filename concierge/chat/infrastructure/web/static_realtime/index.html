@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Concierge リアルタイム音声会話</title>
+  <style>
+    :root {
+      --color-primary: #0078d4;
+      --color-primary-hover: #005a9e;
+      --color-danger: #c42b1c;
+      --color-success: #107c10;
+      --color-bg: #f3f3f3;
+      --color-surface: #ffffff;
+      --color-border: #d1d1d1;
+      --color-text: #1a1a1a;
+      --color-text-muted: #616161;
+      --color-user-bubble: #dce9f5;
+      --color-agent-bubble: #f0f0f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", "Noto Sans JP", sans-serif;
+      background: var(--color-bg);
+      color: var(--color-text);
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: var(--color-primary);
+      color: #fff;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    header h1 { font-size: 1.1rem; }
+    #error-banner {
+      display: none;
+      background: #fde7e9;
+      color: var(--color-danger);
+      border-bottom: 2px solid var(--color-danger);
+      padding: 8px 16px;
+      font-size: 0.9rem;
+    }
+    #main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+    /* ---- Sidebar ---- */
+    #sidebar {
+      width: 260px;
+      min-width: 180px;
+      background: var(--color-surface);
+      border-right: 1px solid var(--color-border);
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+      gap: 10px;
+      overflow-y: auto;
+    }
+    #sidebar label { font-size: 0.8rem; color: var(--color-text-muted); }
+    #sidebar input {
+      width: 100%;
+      padding: 6px 8px;
+      border: 1px solid var(--color-border);
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    #sidebar button {
+      padding: 8px;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    #btn-save-profile { background: var(--color-primary); color: #fff; }
+    #btn-save-profile:hover { background: var(--color-primary-hover); }
+    #btn-new-conv { background: var(--color-success); color: #fff; }
+    #btn-new-conv:hover { background: #0a5c0a; }
+    #conv-list { flex: 1; overflow-y: auto; }
+    .conv-item {
+      padding: 8px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      border: 1px solid transparent;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .conv-item:hover { background: #eef4fb; }
+    .conv-item.active { background: var(--color-user-bubble); border-color: var(--color-primary); font-weight: 600; }
+    .conv-item-title {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .conv-item-delete {
+      flex: 0 0 auto;
+      background: transparent;
+      border: none;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 2px 6px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.15s, background 0.15s, color 0.15s;
+    }
+    .conv-item:hover .conv-item-delete,
+    .conv-item.active .conv-item-delete,
+    .conv-item-delete:focus { opacity: 1; }
+    .conv-item-delete:hover { background: #fde7e9; color: var(--color-danger); }
+    .conv-item-delete:focus-visible { outline: 2px solid var(--color-danger); outline-offset: 1px; }
+    /* ---- Chat area ---- */
+    #chat-area {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #chat-toolbar {
+      background: var(--color-surface);
+      border-bottom: 1px solid var(--color-border);
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #chat-title { font-size: 1rem; font-weight: 600; flex: 1; }
+    #call-status { font-size: 0.8rem; color: var(--color-text-muted); }
+    #btn-call {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      background: var(--color-success);
+      color: #fff;
+      transition: background 0.2s;
+    }
+    #btn-call:hover { filter: brightness(0.9); }
+    #btn-call.active { background: var(--color-danger); }
+    #btn-call:disabled { background: var(--color-border); color: var(--color-text-muted); cursor: not-allowed; }
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .msg {
+      max-width: 72%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 0.92rem;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+    .msg.user { background: var(--color-user-bubble); align-self: flex-end; border-bottom-right-radius: 2px; }
+    .msg.agent { background: var(--color-agent-bubble); align-self: flex-start; border-bottom-left-radius: 2px; }
+    .msg .sender { font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 4px; }
+    #interim-transcript {
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      color: var(--color-text-muted);
+      font-style: italic;
+      min-height: 28px;
+    }
+    /* New conversation modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--color-surface);
+      border-radius: 8px;
+      padding: 24px;
+      width: 340px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .modal h2 { font-size: 1rem; }
+    .modal input { width: 100%; padding: 8px; border: 1px solid var(--color-border); border-radius: 4px; }
+    #modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+    #modal-actions button { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
+    #btn-modal-ok { background: var(--color-primary); color: #fff; }
+    #btn-modal-cancel { background: var(--color-border); }
+    #btn-delete-ok { background: var(--color-danger); color: #fff; }
+    #btn-delete-ok:hover { filter: brightness(0.9); }
+    #btn-delete-cancel { background: var(--color-border); }
+    #delete-target-title {
+      font-weight: 600;
+      word-break: break-word;
+    }
+    #delete-modal p { font-size: 0.9rem; line-height: 1.5; }
+    #btn-delete-ok { background: var(--color-danger); color: #fff; }
+    #btn-delete-ok:hover { filter: brightness(0.9); }
+    #btn-delete-cancel { background: var(--color-border); }
+    #delete-target-title {
+      font-weight: 600;
+      word-break: break-word;
+    }
+    #delete-modal p { font-size: 0.9rem; line-height: 1.5; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🎙 Concierge リアルタイム音声会話</h1>
+</header>
+<div id="error-banner"></div>
+
+<div id="main">
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <div>
+      <label for="inp-display-name">表示名</label>
+      <input id="inp-display-name" type="text" placeholder="あなたの名前" />
+    </div>
+    <div>
+      <label for="inp-user-id">ユーザー ID (UUID)</label>
+      <input id="inp-user-id" type="text" placeholder="自動生成" />
+    </div>
+    <button id="btn-save-profile">プロフィールを保存</button>
+    <hr />
+    <button id="btn-new-conv">＋ 新しい会話</button>
+    <div id="conv-list"></div>
+  </aside>
+
+  <!-- Chat area -->
+  <main id="chat-area">
+    <div id="chat-toolbar">
+      <span id="chat-title">会話を選択してください</span>
+      <span id="call-status"></span>
+      <button id="btn-call" disabled>通話開始</button>
+    </div>
+    <div id="messages"></div>
+    <div id="interim-transcript"></div>
+  </main>
+</div>
+
+<!-- New conversation modal -->
+<div id="modal-overlay" class="modal-overlay">
+  <div id="modal" class="modal">
+    <h2>新しい会話を作成</h2>
+    <input id="inp-conv-title" type="text" placeholder="会話のタイトル" maxlength="200" />
+    <div id="modal-actions">
+      <button id="btn-modal-cancel">キャンセル</button>
+      <button id="btn-modal-ok">作成</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirmation modal -->
+<div id="delete-modal-overlay" class="modal-overlay">
+  <div id="delete-modal" class="modal">
+    <h2>会話を削除しますか？</h2>
+    <p>
+      <span id="delete-target-title"></span>
+      <br />
+      この会話とすべてのメッセージが完全に削除されます。この操作は元に戻せません。
+    </p>
+    <div id="modal-actions">
+      <button id="btn-delete-cancel">キャンセル</button>
+      <button id="btn-delete-ok">削除する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  Constants & State
+// ============================================================
+const LS_USER_ID = 'chat_rt_user_id';
+const LS_DISPLAY_NAME = 'chat_rt_display_name';
+const SAMPLE_RATE = 24000;
+
+let userId = localStorage.getItem(LS_USER_ID) || crypto.randomUUID();
+let displayName = localStorage.getItem(LS_DISPLAY_NAME) || '';
+let currentConvId = null;
+let ws = null;
+let audioCtx = null;
+let mediaStream = null;
+let workletNode = null;
+
+// ============================================================
+//  DOM helpers
+// ============================================================
+const $id = id => document.getElementById(id);
+
+function showError(msg) {
+  const banner = $id('error-banner');
+  banner.textContent = msg;
+  banner.style.display = 'block';
+  setTimeout(() => { banner.style.display = 'none'; }, 6000);
+}
+
+function appendMessage(role, content, senderName) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + (role === 'USER' ? 'user' : 'agent');
+  const senderEl = document.createElement('div');
+  senderEl.className = 'sender';
+  senderEl.textContent = senderName || (role === 'USER' ? 'あなた' : 'AI');
+  div.appendChild(senderEl);
+  const text = document.createElement('div');
+  text.textContent = content;
+  div.appendChild(text);
+  $id('messages').appendChild(div);
+  $id('messages').scrollTop = $id('messages').scrollHeight;
+}
+
+// ============================================================
+//  Profile
+// ============================================================
+$id('inp-user-id').value = userId;
+$id('inp-display-name').value = displayName;
+
+$id('btn-save-profile').addEventListener('click', () => {
+  const newId = $id('inp-user-id').value.trim();
+  try { new crypto.randomUUID && UUID(newId); } catch(_) { /* ok */ }
+  userId = newId || userId;
+  displayName = $id('inp-display-name').value.trim();
+  localStorage.setItem(LS_USER_ID, userId);
+  localStorage.setItem(LS_DISPLAY_NAME, displayName);
+  alert('保存しました');
+});
+
+// ============================================================
+//  Conversations
+// ============================================================
+async function fetchConversations() {
+  try {
+    const resp = await fetch('/conversations', {
+      headers: { 'X-User-Id': userId }
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const list = await resp.json();
+    renderConvList(list);
+  } catch (e) {
+    showError('会話一覧の取得に失敗しました: ' + e.message);
+  }
+}
+
+function renderConvList(list) {
+  const el = $id('conv-list');
+  el.innerHTML = '';
+  list.forEach(conv => {
+    const item = document.createElement('div');
+    item.className = 'conv-item' + (conv.id === currentConvId ? ' active' : '');
+    item.title = conv.id;
+    item.addEventListener('click', () => selectConversation(conv));
+
+    const titleEl = document.createElement('span');
+    titleEl.className = 'conv-item-title';
+    titleEl.textContent = conv.title;
+    item.appendChild(titleEl);
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'conv-item-delete';
+    delBtn.title = '会話を削除';
+    delBtn.setAttribute('aria-label', `会話「${conv.title}」を削除`);
+    delBtn.textContent = '🗑';
+    delBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      openDeleteModal(conv);
+    });
+    item.appendChild(delBtn);
+
+    el.appendChild(item);
+  });
+}
+
+async function selectConversation(conv) {
+  if (ws) await endCall();
+  currentConvId = conv.id;
+  $id('chat-title').textContent = conv.title;
+  $id('btn-call').disabled = false;
+  $id('messages').innerHTML = '';
+  $id('interim-transcript').textContent = '';
+  await fetchMessages();
+  await fetchConversations(); // refresh active state
+}
+
+async function fetchMessages() {
+  if (!currentConvId) return;
+  try {
+    const resp = await fetch(`/conversations/${currentConvId}/messages`, {
+      headers: { 'X-User-Id': userId }
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const messages = await resp.json();
+    $id('messages').innerHTML = '';
+    messages.forEach(m => appendMessage(m.role, m.content, m.sender?.display_name));
+  } catch (e) {
+    showError('メッセージ取得に失敗しました: ' + e.message);
+  }
+}
+
+// New conversation modal
+$id('btn-new-conv').addEventListener('click', () => {
+  $id('inp-conv-title').value = '';
+  $id('modal-overlay').classList.add('open');
+  $id('inp-conv-title').focus();
+});
+$id('btn-modal-cancel').addEventListener('click', () => $id('modal-overlay').classList.remove('open'));
+$id('btn-modal-ok').addEventListener('click', createConversation);
+$id('inp-conv-title').addEventListener('keydown', e => { if (e.key === 'Enter') createConversation(); });
+
+async function createConversation() {
+  const title = $id('inp-conv-title').value.trim();
+  if (!title) { showError('タイトルを入力してください'); return; }
+  $id('modal-overlay').classList.remove('open');
+  try {
+    const resp = await fetch('/conversations', {
+      method: 'POST',
+      headers: { 'X-User-Id': userId, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, display_name: displayName || undefined })
+    });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const conv = await resp.json();
+    await fetchConversations();
+    await selectConversation(conv);
+  } catch (e) {
+    showError('会話の作成に失敗しました: ' + e.message);
+  }
+}
+
+// Delete conversation modal
+let pendingDeleteConv = null;
+
+function openDeleteModal(conv) {
+  pendingDeleteConv = conv;
+  $id('delete-target-title').textContent = `「${conv.title}」`;
+  $id('delete-modal-overlay').classList.add('open');
+  $id('btn-delete-ok').focus();
+}
+
+function closeDeleteModal() {
+  pendingDeleteConv = null;
+  $id('delete-modal-overlay').classList.remove('open');
+}
+
+$id('btn-delete-cancel').addEventListener('click', closeDeleteModal);
+$id('delete-modal-overlay').addEventListener('click', (ev) => {
+  if (ev.target === $id('delete-modal-overlay')) closeDeleteModal();
+});
+$id('btn-delete-ok').addEventListener('click', () => deleteConversation());
+
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape' && $id('delete-modal-overlay').classList.contains('open')) {
+    closeDeleteModal();
+  }
+});
+
+async function deleteConversation() {
+  if (!pendingDeleteConv) return;
+  const target = pendingDeleteConv;
+  const btn = $id('btn-delete-ok');
+  btn.disabled = true;
+  try {
+    const resp = await fetch(`/conversations/${target.id}`, {
+      method: 'DELETE',
+      headers: { 'X-User-Id': userId }
+    });
+    if (!resp.ok && resp.status !== 204) throw new Error(`HTTP ${resp.status}`);
+
+    // If the deleted conversation is the one currently displayed, reset UI state
+    // and tear down any active call so the WebSocket isn't left dangling.
+    if (target.id === currentConvId) {
+      if (ws) {
+        try { await endCall(); } catch (_) { /* swallow */ }
+      }
+      currentConvId = null;
+      $id('chat-title').textContent = '会話を選択してください';
+      $id('btn-call').disabled = true;
+      $id('messages').innerHTML = '';
+      $id('interim-transcript').textContent = '';
+    }
+  } catch (e) {
+    showError('会話の削除に失敗しました: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    closeDeleteModal();
+    await fetchConversations();
+  }
+}
+
+// ============================================================
+//  WebSocket / Realtime
+// ============================================================
+$id('btn-call').addEventListener('click', async () => {
+  if (ws) { await endCall(); return; }
+  await startCall();
+});
+
+function setCallStatus(text, active) {
+  $id('call-status').textContent = text;
+  const btn = $id('btn-call');
+  btn.textContent = active ? '通話終了' : '通話開始';
+  btn.className = active ? 'active' : '';
+}
+
+async function startCall() {
+  if (!currentConvId) { showError('会話を選択してください'); return; }
+
+  // Request microphone
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    showError('マイクへのアクセスが拒否されました: ' + e.message);
+    return;
+  }
+
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const dn = displayName ? `&display_name=${encodeURIComponent(displayName)}` : '';
+  const wsUrl = `${proto}://${location.host}/conversations/${currentConvId}/realtime?user_id=${encodeURIComponent(userId)}${dn}`;
+
+  try {
+    ws = new WebSocket(wsUrl);
+  } catch (e) {
+    showError('WebSocket 接続に失敗しました: ' + e.message);
+    stopMic();
+    return;
+  }
+
+  ws.addEventListener('open', () => {
+    setCallStatus('接続中…', false);
+  });
+
+  ws.addEventListener('message', (ev) => {
+    let msg;
+    try { msg = JSON.parse(ev.data); } catch(_) { return; }
+    handleServerMessage(msg);
+  });
+
+  ws.addEventListener('close', (ev) => {
+    const codeMap = { 4400: '不正なリクエスト', 4404: '会話が見つかりません', 4503: 'リアルタイム機能が未設定です' };
+    const reason = codeMap[ev.code] || (ev.reason || `切断されました (code=${ev.code})`);
+    setCallStatus(reason, false);
+    if (ev.code >= 4000) showError(`接続エラー: ${reason}`);
+    cleanupCall();
+  });
+
+  ws.addEventListener('error', () => {
+    showError('WebSocket エラーが発生しました');
+    cleanupCall();
+  });
+}
+
+async function endCall() {
+  if (ws && ws.readyState === WebSocket.OPEN) ws.close(1000, 'user ended call');
+  cleanupCall();
+}
+
+function cleanupCall() {
+  stopMic();
+  ws = null;
+  setCallStatus('', false);
+  $id('interim-transcript').textContent = '';
+}
+
+// ------------ AudioWorklet for PCM16 capture ------------
+const WORKLET_SRC = `
+class PCM16Processor extends AudioWorkletProcessor {
+  constructor() { super(); this._buf = []; }
+  process(inputs) {
+    const ch = inputs[0]?.[0];
+    if (!ch) return true;
+    for (let i = 0; i < ch.length; i++) {
+      this._buf.push(Math.max(-1, Math.min(1, ch[i])));
+      if (this._buf.length >= 4800) {
+        const pcm = new Int16Array(this._buf.length);
+        for (let j = 0; j < this._buf.length; j++)
+          pcm[j] = this._buf[j] < 0 ? this._buf[j] * 32768 : this._buf[j] * 32767;
+        this.port.postMessage({ pcm: pcm.buffer }, [pcm.buffer]);
+        this._buf = [];
+      }
+    }
+    return true;
+  }
+}
+registerProcessor('pcm16-processor', PCM16Processor);
+`;
+
+async function startMic() {
+  audioCtx = new AudioContext({ sampleRate: SAMPLE_RATE });
+  const blob = new Blob([WORKLET_SRC], { type: 'application/javascript' });
+  const url = URL.createObjectURL(blob);
+  await audioCtx.audioWorklet.addModule(url);
+  URL.revokeObjectURL(url);
+
+  const source = audioCtx.createMediaStreamSource(mediaStream);
+  workletNode = new AudioWorkletNode(audioCtx, 'pcm16-processor');
+  workletNode.port.onmessage = (ev) => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      const b64 = arrayBufferToBase64(ev.data.pcm);
+      ws.send(JSON.stringify({
+        type: 'oai-event',
+        payload: { type: 'input_audio_buffer.append', audio: b64 }
+      }));
+    }
+  };
+  source.connect(workletNode);
+  // Connect the worklet to the destination via a *silent* gain node so the
+  // AudioWorkletProcessor keeps receiving ``process()`` callbacks (some browsers
+  // disable processing for fully disconnected graphs) without routing the
+  // microphone signal back to the speakers and creating an audible feedback
+  // loop.
+  const silent = audioCtx.createGain();
+  silent.gain.value = 0;
+  workletNode.connect(silent);
+  silent.connect(audioCtx.destination);
+}
+
+function stopMic() {
+  if (workletNode) { workletNode.disconnect(); workletNode = null; }
+  if (audioCtx) { audioCtx.close(); audioCtx = null; }
+  if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
+}
+
+function arrayBufferToBase64(buf) {
+  const bytes = new Uint8Array(buf);
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
+// ------------ Audio playback for PCM16 from server ------------
+let playbackCtx = null;
+let playbackQueue = [];
+let isPlaying = false;
+
+function ensurePlaybackCtx() {
+  if (!playbackCtx) playbackCtx = new AudioContext({ sampleRate: SAMPLE_RATE });
+}
+
+function scheduleAudio(b64) {
+  ensurePlaybackCtx();
+  const raw = atob(b64);
+  const buf = new Int16Array(raw.length / 2);
+  for (let i = 0; i < buf.length; i++) {
+    buf[i] = (raw.charCodeAt(i * 2)) | (raw.charCodeAt(i * 2 + 1) << 8);
+  }
+  const float32 = new Float32Array(buf.length);
+  for (let i = 0; i < buf.length; i++) float32[i] = buf[i] / 32768;
+  const audioBuf = playbackCtx.createBuffer(1, float32.length, SAMPLE_RATE);
+  audioBuf.getChannelData(0).set(float32);
+  playbackQueue.push(audioBuf);
+  if (!isPlaying) drainQueue();
+}
+
+function drainQueue() {
+  if (!playbackQueue.length) { isPlaying = false; return; }
+  isPlaying = true;
+  const buf = playbackQueue.shift();
+  const src = playbackCtx.createBufferSource();
+  src.buffer = buf;
+  src.connect(playbackCtx.destination);
+  src.onended = drainQueue;
+  src.start();
+}
+
+// ------------ Server message handler ------------
+let interimText = '';
+
+async function handleServerMessage(msg) {
+  const type = msg.type;
+
+  if (type === 'concierge.session.ready') {
+    setCallStatus('通話中 🔴', true);
+    try { await startMic(); } catch (e) { showError('マイク開始エラー: ' + e.message); }
+    return;
+  }
+
+  if (type === 'concierge.message.persisted') {
+    const m = msg.message;
+    appendMessage(m.role, m.content, m.sender?.display_name);
+    interimText = '';
+    $id('interim-transcript').textContent = '';
+    return;
+  }
+
+  if (type === 'concierge.error') {
+    showError('サーバーエラー: ' + msg.detail);
+    return;
+  }
+
+  if (type === 'oai-event') {
+    const payload = msg.payload || {};
+    const evType = payload.type || '';
+
+    // GA endpoint emits ``response.output_audio.*`` (the preview endpoint used ``response.audio.*``).
+    if (evType === 'response.output_audio.delta' && payload.delta) {
+      scheduleAudio(payload.delta);
+    } else if (evType === 'response.output_audio_transcript.delta' && payload.delta) {
+      interimText += payload.delta;
+      $id('interim-transcript').textContent = '🤖 ' + interimText;
+    } else if (evType === 'response.output_audio_transcript.done') {
+      interimText = '';
+      $id('interim-transcript').textContent = '';
+    }
+  }
+}
+
+// ============================================================
+//  Init
+// ============================================================
+fetchConversations();
+</script>
+</body>
+</html>

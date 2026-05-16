@@ -20,3 +20,23 @@ class ChatbotResponder(Protocol):
         conversation: Conversation,
         history: list[Message],
     ) -> Iterator[str]: ...
+
+
+class RealtimeVoiceSession(Protocol):
+    """A single open realtime session against the upstream model."""
+
+    def send_client_event(self, event: dict) -> None: ...  # type: ignore[type-arg]
+
+    def iter_server_events(self) -> Iterator[dict]: ...  # type: ignore[type-arg]
+
+    def close(self) -> None: ...
+
+
+class RealtimeVoiceResponder(Protocol):
+    """Bidirectional streaming responder for realtime voice conversations."""
+
+    def open(
+        self,
+        conversation: Conversation,
+        history: list[Message],
+    ) -> RealtimeVoiceSession: ...

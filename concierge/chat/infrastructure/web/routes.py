@@ -6,11 +6,11 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, Response, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import StreamingResponse
 
 from concierge.chat.application.repositories import ConversationRepository, MessageRepository
-from concierge.chat.application.responders import ChatbotResponder
+from concierge.chat.application.responders import ChatbotResponder, RealtimeVoiceResponder
 from concierge.chat.application.use_cases import (
     BotReplyComplete,
     BotReplyDelta,
@@ -22,13 +22,19 @@ from concierge.chat.application.use_cases import (
     ListConversationsUseCase,
     ListMessagesUseCase,
     PostMessageUseCase,
+    RealtimeError,
+    RealtimeMessagePersisted,
+    RealtimeServerEvent,
+    StreamRealtimeVoiceUseCase,
 )
+from concierge.chat.domain.exceptions import ConversationNotFoundError
 from concierge.chat.domain.value_objects import Participant, ParticipantKind
 from concierge.chat.infrastructure.web.dependencies import (
     get_chatbot_responder,
     get_conversation_repository,
     get_current_participant,
     get_message_repository,
+    get_realtime_responder_optional,
 )
 from concierge.chat.infrastructure.web.schemas import (
     ConversationResponse,
@@ -219,3 +225,129 @@ def stream_agent_reply(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# ---------------------------------------------------------------------------
+# WebSocket: Realtime voice relay
+# ---------------------------------------------------------------------------
+
+# Custom WS close codes
+_WS_CLOSE_BAD_REQUEST = 4400
+_WS_CLOSE_NOT_FOUND = 4404
+_WS_CLOSE_SERVICE_UNAVAILABLE = 4503
+
+
+@router.websocket("/conversations/{conversation_id}/realtime")
+async def realtime_voice(
+    websocket: WebSocket,
+    conversation_id: uuid.UUID,
+    user_id: str,
+    display_name: str | None = None,
+    realtime_responder: RealtimeVoiceResponder | None = Depends(get_realtime_responder_optional),
+    conversation_repo: ConversationRepository = Depends(get_conversation_repository),
+    message_repo: MessageRepository = Depends(get_message_repository),
+) -> None:
+    """WebSocket endpoint that proxies audio events between the browser and Foundry.
+
+    Query parameters:
+    - ``user_id`` (required): UUID of the calling user.
+    - ``display_name`` (optional): display name for the participant.
+
+    Close codes:
+    - ``4400`` — ``user_id`` is missing or not a valid UUID.
+    - ``4404`` — ``conversation_id`` does not exist.
+    - ``4503`` — ``AZURE_AI_PROJECT_ENDPOINT_REALTIME`` is not configured.
+    """
+    import asyncio
+    import threading
+
+    # --- validate realtime responder availability ---
+    if realtime_responder is None:
+        await websocket.close(
+            code=_WS_CLOSE_SERVICE_UNAVAILABLE,
+            reason="AZURE_AI_PROJECT_ENDPOINT_REALTIME is not configured",
+        )
+        return
+
+    # --- validate user_id before accepting ---
+    try:
+        parsed_user_id = uuid.UUID(user_id)
+    except (ValueError, AttributeError):
+        await websocket.close(code=_WS_CLOSE_BAD_REQUEST, reason="user_id must be a valid UUID")
+        return
+
+    # --- resolve participant ---
+    resolved_display_name = display_name or f"user-{str(parsed_user_id)[:8]}"
+    current_participant = Participant(id=parsed_user_id, kind=ParticipantKind.USER, display_name=resolved_display_name)
+
+    # --- validate conversation existence before accepting ---
+    chat_settings = get_chat_settings()
+    bot_participant = _bot_participant(chat_settings)
+
+    if conversation_repo.find_by_id(conversation_id) is None:
+        await websocket.close(code=_WS_CLOSE_NOT_FOUND, reason=f"Conversation {conversation_id} not found")
+        return
+
+    # --- accept the connection ---
+    await websocket.accept()
+    await websocket.send_json({"type": "concierge.session.ready", "conversation_id": str(conversation_id)})
+
+    use_case = StreamRealtimeVoiceUseCase(
+        conversation_repository=conversation_repo,
+        message_repository=message_repo,
+        responder=realtime_responder,
+        bot_participant=bot_participant,
+        current_participant=current_participant,
+        history_limit=chat_settings.bot_history_limit,
+    )
+
+    try:
+        events = use_case.execute(conversation_id)
+    except ConversationNotFoundError:
+        await websocket.send_json({"type": "concierge.error", "detail": f"Conversation {conversation_id} not found"})
+        await websocket.close()
+        return
+
+    loop = asyncio.get_running_loop()
+
+    # Server→Client relay runs in a background thread (session.iter_server_events is sync)
+    def _run_relay() -> None:
+        try:
+            for event in events:
+                if isinstance(event, RealtimeServerEvent):
+                    asyncio.run_coroutine_threadsafe(
+                        websocket.send_json({"type": "oai-event", "payload": event.payload}),
+                        loop,
+                    )
+                elif isinstance(event, RealtimeMessagePersisted):
+                    payload = MessageResponse.model_validate(event.message).model_dump(mode="json")
+                    asyncio.run_coroutine_threadsafe(
+                        websocket.send_json({"type": "concierge.message.persisted", "message": payload}),
+                        loop,
+                    )
+                elif isinstance(event, RealtimeError):
+                    asyncio.run_coroutine_threadsafe(
+                        websocket.send_json({"type": "concierge.error", "detail": event.detail}),
+                        loop,
+                    )
+        except Exception:  # noqa: BLE001
+            pass
+
+    relay_thread = threading.Thread(target=_run_relay, daemon=True)
+    relay_thread.start()
+
+    # Client→Server: receive from browser and forward to the upstream session
+    try:
+        while True:
+            try:
+                data = await websocket.receive_json()
+                if isinstance(data, dict) and data.get("type") == "oai-event":
+                    payload = data.get("payload")
+                    if isinstance(payload, dict):
+                        use_case.send_client_event(payload)
+            except WebSocketDisconnect:
+                break
+    except Exception:  # noqa: BLE001
+        pass
+    finally:
+        relay_thread.join(timeout=2)

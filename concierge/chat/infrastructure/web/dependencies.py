@@ -5,10 +5,14 @@ import uuid
 from fastapi import Header, HTTPException, Query, status
 
 from concierge.chat.application.repositories import ConversationRepository, MessageRepository
-from concierge.chat.application.responders import ChatbotResponder
+from concierge.chat.application.responders import ChatbotResponder, RealtimeVoiceResponder
 from concierge.chat.domain.exceptions import ParticipantValidationError
 from concierge.chat.domain.value_objects import Participant, ParticipantKind
-from concierge.chat.infrastructure.ai.factory import ChatbotNotConfiguredError, create_chatbot_responder
+from concierge.chat.infrastructure.ai.factory import (
+    ChatbotNotConfiguredError,
+    create_chatbot_responder,
+    create_realtime_responder,
+)
 from concierge.chat.infrastructure.persistence.factory import (
     get_conversation_repository as _factory_get_conversation_repository,
 )
@@ -31,6 +35,28 @@ def get_chatbot_responder() -> ChatbotResponder:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=str(exc),
         ) from exc
+
+
+def get_realtime_responder() -> RealtimeVoiceResponder:
+    try:
+        return create_realtime_responder()
+    except ChatbotNotConfiguredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+
+
+def get_realtime_responder_optional() -> RealtimeVoiceResponder | None:
+    """Like :func:`get_realtime_responder` but returns ``None`` on misconfiguration.
+
+    Used by WebSocket handlers that must close with a custom close code (4503)
+    rather than an HTTP 503 response.
+    """
+    try:
+        return create_realtime_responder()
+    except ChatbotNotConfiguredError:
+        return None
 
 
 def get_current_participant(

@@ -12,7 +12,7 @@ without touching the use cases.
 | Entry point | What it is | Use it when |
 |---|---|---|
 | **`chat-web`** | FastAPI server on `:8080` with REST + a built-in browser UI | You want Swagger UI, curl, or the bundled web client |
-| **`chat-cli`** | Typer CLI (`conversation`, `message`, `db` sub-commands) | You want JSON output for scripts or quick local checks |
+| **`chat-cli`** | Typer CLI (`conversation`, `message`, `db`, `realtime` sub-commands) | You want JSON output for scripts or quick local checks |
 
 Both call into the same `concierge.chat.application.use_cases` module, so
 features added in either surface show up in both.
@@ -31,6 +31,7 @@ Where to go next:
 - **Just trying it out?** → [5-minute smoke test](#5-minute-smoke-test-rest-only) below.
 - **REST reference** → [REST API Reference](api.md).
 - **CLI reference** → [CLI Reference](cli.md).
+- **Realtime voice** → [Realtime Voice Chat](realtime.md).
 
 ---
 

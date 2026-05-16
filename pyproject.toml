@@ -19,6 +19,7 @@ dependencies = [
     "sqlalchemy>=2.0",
     "typer>=0.16.0",
     "uvicorn[standard]>=0.34.0",
+    "websockets>=13",
 ]
 
 [dependency-groups]
@@ -177,6 +178,7 @@ forbidden_modules = [
     "sqlalchemy",
     "psycopg",
     "azure",
+    "websockets",
 ]
 
 [[tool.importlinter.contracts]]

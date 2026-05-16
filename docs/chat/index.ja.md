@@ -28,6 +28,7 @@ flowchart LR
 - **まず触ってみたい** → 下の [5 分で動作確認（REST のみ）](#5-rest)
 - **REST API リファレンス** → [REST API リファレンス](api.ja.md)
 - **CLI リファレンス** → [CLI リファレンス](cli.ja.md)
+- **音声会話（Realtime）** → [リアルタイム音声会話](realtime.ja.md)
 
 ---
 

@@ -5,6 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class MicrosoftFoundrySettings(BaseSettings):
     azure_ai_project_endpoint: str = ""
+    azure_ai_project_endpoint_realtime: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",

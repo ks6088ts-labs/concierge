@@ -44,8 +44,10 @@ export USER_ID=$(python -c 'import uuid; print(uuid.uuid4())')
 | POST | `/conversations/{conversation_id}/messages` | Post a user message (no bot reply; agent reply is a separate request) |
 | GET | `/conversations/{conversation_id}/messages` | List messages |
 | POST | `/conversations/{conversation_id}/agent-replies` | Stream an AI agent reply over Server-Sent Events |
+| WS | `/conversations/{conversation_id}/realtime` | Realtime voice session (WebSocket proxy to Foundry) |
 | GET | `/healthz` | Health check |
 | GET | `/` | Static HTML front-end |
+| GET | `/realtime` | Realtime voice HTML front-end |
 
 ## End-to-end curl walkthrough
 

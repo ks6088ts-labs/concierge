@@ -25,10 +25,13 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title="Chat API", version="0.1.0")
     static_dir = Path(__file__).parent / "static"
+    static_realtime_dir = Path(__file__).parent / "static_realtime"
 
     register_exception_handlers(app)
     app.include_router(router)
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
+    if static_realtime_dir.is_dir():
+        app.mount("/realtime-static", StaticFiles(directory=static_realtime_dir), name="static_realtime")
 
     @app.get("/healthz", tags=["health"])
     def healthz() -> dict[str, str]:
@@ -37,6 +40,10 @@ def create_app() -> FastAPI:
     @app.get("/", include_in_schema=False)
     def index() -> FileResponse:
         return FileResponse(static_dir / "index.html")
+
+    @app.get("/realtime", include_in_schema=False)
+    def realtime_index() -> FileResponse:
+        return FileResponse(static_realtime_dir / "index.html")
 
     logger.info("Initialized Chat FastAPI app")
     return app

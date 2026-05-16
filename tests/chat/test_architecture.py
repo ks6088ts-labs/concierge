@@ -3,7 +3,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-FRAMEWORK_IMPORTS = {"fastapi", "pydantic", "typer", "uvicorn", "httpx", "sqlalchemy", "psycopg", "azure"}
+FRAMEWORK_IMPORTS = {"fastapi", "pydantic", "typer", "uvicorn", "httpx", "sqlalchemy", "psycopg", "azure", "websockets"}
 BASE_PATH = Path("concierge/chat")
 
 
@@ -37,3 +37,10 @@ def test_application_has_no_framework_or_infrastructure_imports() -> None:
         imports = _imported_modules(file)
         assert not any(module.split(".")[0] in FRAMEWORK_IMPORTS for module in imports), file
         assert not any(module.startswith("concierge.chat.infrastructure") for module in imports), file
+
+
+def test_foundry_realtime_does_not_import_web() -> None:
+    """foundry_realtime.py must not import from the web infrastructure layer."""
+    realtime_file = BASE_PATH / "infrastructure" / "ai" / "foundry_realtime.py"
+    imports = _imported_modules(realtime_file)
+    assert not any(module.startswith("concierge.chat.infrastructure.web") for module in imports), realtime_file

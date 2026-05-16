@@ -28,7 +28,10 @@ from concierge.chat.domain.exceptions import (
     ParticipantValidationError,
 )
 from concierge.chat.domain.value_objects import Participant, ParticipantKind
-from concierge.chat.infrastructure.ai.factory import ChatbotNotConfiguredError, create_chatbot_responder
+from concierge.chat.infrastructure.ai.factory import (
+    ChatbotNotConfiguredError,
+    create_chatbot_responder,
+)
 from concierge.chat.infrastructure.persistence.factory import get_conversation_repository, get_message_repository
 from concierge.chat.infrastructure.persistence.postgres import (
     SqlAlchemyConversationRepository,
@@ -40,9 +43,11 @@ app = typer.Typer(add_completion=False, help="Chat CLI")
 conversation_app = typer.Typer(help="Conversation commands")
 message_app = typer.Typer(help="Message commands")
 db_app = typer.Typer(help="Database management commands")
+realtime_app = typer.Typer(help="Realtime voice commands")
 app.add_typer(conversation_app, name="conversation")
 app.add_typer(message_app, name="message")
 app.add_typer(db_app, name="db")
+app.add_typer(realtime_app, name="realtime")
 
 
 @app.callback()
@@ -288,6 +293,43 @@ def message_reply(conversation_id: uuid.UUID) -> None:
     typer.echo()  # newline after streamed content
     if final_message is not None:
         _print_json(_message_to_dict(final_message))
+
+
+@realtime_app.command("status")
+def realtime_status() -> None:
+    """Show the realtime voice configuration status.
+
+    Checks ``AZURE_AI_PROJECT_ENDPOINT_REALTIME``, ``CHAT_REALTIME_MODEL``, and
+    ``CHAT_REALTIME_VOICE`` without attempting a live WebSocket connection.
+    Exits with code ``1`` when the endpoint is not configured.
+    """
+    from concierge.chat.infrastructure.ai.foundry_realtime import _derive_wss_host  # noqa: PLC0415
+    from concierge.settings import get_microsoft_foundry_settings  # noqa: PLC0415
+
+    foundry_settings = get_microsoft_foundry_settings()
+    chat_settings = get_chat_settings()
+
+    endpoint = foundry_settings.azure_ai_project_endpoint_realtime
+    model = chat_settings.realtime_model
+    voice = chat_settings.realtime_voice
+
+    typer.echo(f"AZURE_AI_PROJECT_ENDPOINT_REALTIME : {endpoint or '(未設定)'}")
+    typer.echo(f"CHAT_REALTIME_MODEL               : {model}")
+    typer.echo(f"CHAT_REALTIME_VOICE               : {voice}")
+
+    if not endpoint:
+        typer.echo("ステータス: ❌ 未設定 — リアルタイム機能は無効です", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        host = _derive_wss_host(endpoint)
+        # Mask the hostname partially for display
+        masked = host[:4] + "****" + host[-10:] if len(host) > 14 else "****"
+        typer.echo(f"導出 WSS ホスト                   : wss://{masked}/openai/realtime")
+        typer.echo("ステータス: ✅ 設定済み")
+    except ChatbotNotConfiguredError as exc:
+        typer.echo(f"ステータス: ❌ エラー — {exc}", err=True)
+        raise typer.Exit(code=1) from exc
 
 
 if __name__ == "__main__":

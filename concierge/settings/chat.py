@@ -27,6 +27,13 @@ class ChatSettings(BaseSettings):
     bot_system_prompt: str = "あなたは Concierge Chat のアシスタントです。日本語で簡潔に応答してください。"
     bot_model: str = "azure_ai:gpt-5"
 
+    realtime_model: str = "gpt-realtime-1.5"
+    realtime_voice: str = "alloy"
+    realtime_locale: str = "ja-JP"
+    realtime_system_prompt: str = "あなたは Concierge Chat のアシスタントです。日本語で簡潔に応答してください。"
+    realtime_audio_sample_rate_hz: int = 24000
+    realtime_max_session_seconds: int = 600
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

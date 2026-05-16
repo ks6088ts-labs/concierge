@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from concierge.chat.application.repositories import ConversationRepository, MessageRepository
-from concierge.chat.application.responders import ChatbotResponder
+from concierge.chat.application.responders import ChatbotResponder, RealtimeVoiceResponder
 from concierge.chat.domain.entities import Conversation, Message
 from concierge.chat.domain.exceptions import ConversationNotFoundError, MessageValidationError
 from concierge.chat.domain.value_objects import MessageRole, Participant
@@ -176,3 +176,119 @@ class BotReplyComplete:
 
 
 BotReplyEvent = BotReplyDelta | BotReplyComplete
+
+
+class StreamRealtimeVoiceUseCase:
+    """Relay bidirectional voice events between a browser client and the upstream model.
+
+    Responsibilities:
+    1. Validate ``conversation_id`` existence.
+    2. Load history and ensure the bot participant is joined.
+    3. Open a :class:`RealtimeVoiceSession` and relay events transparently.
+    4. Capture ``conversation.item.input_audio_transcription.completed`` and
+       ``response.audio_transcript.done`` server events to persist transcripts
+       as :class:`Message` objects.
+    5. Yield :class:`RealtimeServerEvent`, :class:`RealtimeMessagePersisted`,
+       and :class:`RealtimeError` to the caller (web route).
+    """
+
+    def __init__(
+        self,
+        conversation_repository: ConversationRepository,
+        message_repository: MessageRepository,
+        responder: RealtimeVoiceResponder,
+        bot_participant: Participant,
+        current_participant: Participant,
+        history_limit: int = 20,
+    ):
+        self.conversation_repository = conversation_repository
+        self.message_repository = message_repository
+        self.responder = responder
+        self.bot_participant = bot_participant
+        self.current_participant = current_participant
+        self.history_limit = history_limit
+
+    def execute(self, conversation_id: uuid.UUID) -> Iterator[RealtimeEvent]:
+        conversation = self.conversation_repository.find_by_id(conversation_id)
+        if conversation is None:
+            raise ConversationNotFoundError(conversation_id)
+        history = self.message_repository.find_by_conversation(conversation_id, limit=self.history_limit)
+        conversation.add_participant(self.bot_participant)
+        self.conversation_repository.save(conversation)
+        self._session = self.responder.open(conversation, history)
+        return self._relay(self._session, conversation_id)
+
+    def send_client_event(self, event: dict) -> None:  # type: ignore[type-arg]
+        """Forward a client event to the upstream session."""
+        if hasattr(self, "_session") and self._session is not None:
+            self._session.send_client_event(event)
+
+    def _relay(self, session, conversation_id: uuid.UUID) -> Iterator[RealtimeEvent]:  # type: ignore[type-arg]
+        try:
+            for server_event in session.iter_server_events():
+                event_type = server_event.get("type", "")
+
+                # Persist USER transcript
+                if event_type == "conversation.item.input_audio_transcription.completed":
+                    transcript = server_event.get("transcript", "")
+                    if transcript:
+                        msg = Message(
+                            conversation_id=conversation_id,
+                            sender=self.current_participant,
+                            content=transcript,
+                            role=MessageRole.USER,
+                        )
+                        saved = self.message_repository.save(msg)
+                        logger.info("Persisted USER transcript id=%s", saved.id)
+                        yield RealtimeMessagePersisted(message=saved)
+
+                # Persist AGENT transcript
+                elif event_type == "response.audio_transcript.done":
+                    transcript = server_event.get("transcript", "")
+                    if transcript:
+                        msg = Message(
+                            conversation_id=conversation_id,
+                            sender=self.bot_participant,
+                            content=transcript,
+                            role=MessageRole.AGENT,
+                        )
+                        saved = self.message_repository.save(msg)
+                        logger.info("Persisted AGENT transcript id=%s", saved.id)
+                        yield RealtimeMessagePersisted(message=saved)
+
+                # Always relay the raw server event to the browser
+                yield RealtimeServerEvent(payload=server_event)
+        except Exception as exc:  # noqa: BLE001
+            logger.exception("Realtime relay error in conversation %s", conversation_id)
+            yield RealtimeError(detail=str(exc))
+        finally:
+            session.close()
+
+
+# ---------------------------------------------------------------------------
+# Realtime event types
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class RealtimeServerEvent:
+    """Raw JSON event from Foundry to be forwarded to the browser."""
+
+    payload: dict  # type: ignore[type-arg]
+
+
+@dataclass(frozen=True)
+class RealtimeMessagePersisted:
+    """Emitted after a transcript has been saved to the message repository."""
+
+    message: Message
+
+
+@dataclass(frozen=True)
+class RealtimeError:
+    """Emitted when the relay encounters an unhandled exception."""
+
+    detail: str
+
+
+RealtimeEvent = RealtimeServerEvent | RealtimeMessagePersisted | RealtimeError

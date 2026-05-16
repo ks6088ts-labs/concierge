@@ -7,10 +7,14 @@ from datetime import datetime
 from typing import Annotated
 
 import typer
+from dotenv import load_dotenv
 
 from concierge.chat.application.use_cases import (
+    BotReplyComplete,
+    BotReplyDelta,
     CreateConversationUseCase,
     DeleteConversationUseCase,
+    GenerateBotReplyUseCase,
     GetConversationUseCase,
     JoinConversationUseCase,
     ListConversationsUseCase,
@@ -24,6 +28,7 @@ from concierge.chat.domain.exceptions import (
     ParticipantValidationError,
 )
 from concierge.chat.domain.value_objects import Participant, ParticipantKind
+from concierge.chat.infrastructure.ai.factory import ChatbotNotConfiguredError, create_chatbot_responder
 from concierge.chat.infrastructure.persistence.factory import get_conversation_repository, get_message_repository
 from concierge.chat.infrastructure.persistence.postgres import (
     SqlAlchemyConversationRepository,
@@ -38,6 +43,17 @@ db_app = typer.Typer(help="Database management commands")
 app.add_typer(conversation_app, name="conversation")
 app.add_typer(message_app, name="message")
 app.add_typer(db_app, name="db")
+
+
+@app.callback()
+def _bootstrap() -> None:
+    """Load ``.env`` so libraries that read ``os.environ`` (e.g. ``langchain-azure-ai``) see the values.
+
+    ``pydantic-settings`` reads ``.env`` directly for our own settings classes,
+    but third-party libraries look up configuration via ``os.environ``.
+    Existing process env vars take precedence (``override=False`` by default).
+    """
+    load_dotenv()
 
 
 def _conversation_to_dict(conversation: Conversation) -> dict[str, object]:
@@ -235,6 +251,43 @@ def db_ping() -> None:
         raise typer.Exit(code=1)
     conversation_repository.ping()
     typer.echo("Connection OK.")
+
+
+@message_app.command("reply")
+def message_reply(conversation_id: uuid.UUID) -> None:
+    """Stream an AI agent reply and print the final ``MessageResponse`` JSON."""
+    settings = get_chat_settings()
+    try:
+        responder = create_chatbot_responder()
+    except ChatbotNotConfiguredError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+    bot_participant = Participant(
+        id=settings.bot_participant_id,
+        kind=ParticipantKind.AGENT,
+        display_name=settings.bot_display_name,
+    )
+    try:
+        events = GenerateBotReplyUseCase(
+            get_conversation_repository(),
+            get_message_repository(),
+            responder,
+            bot_participant,
+            settings.bot_history_limit,
+        ).execute(conversation_id)
+    except ConversationNotFoundError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(code=1) from exc
+
+    final_message: Message | None = None
+    for event in events:
+        if isinstance(event, BotReplyDelta):
+            typer.echo(event.content, nl=False)
+        elif isinstance(event, BotReplyComplete):
+            final_message = event.message
+    typer.echo()  # newline after streamed content
+    if final_message is not None:
+        _print_json(_message_to_dict(final_message))
 
 
 if __name__ == "__main__":

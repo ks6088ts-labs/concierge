@@ -7,7 +7,10 @@ from httpx import ASGITransport, AsyncClient
 
 from concierge.chat.infrastructure.persistence.memory import InMemoryConversationRepository, InMemoryMessageRepository
 from concierge.chat.infrastructure.web.app import create_app
-from concierge.chat.infrastructure.web.dependencies import get_conversation_repository, get_message_repository
+from concierge.chat.infrastructure.web.dependencies import (
+    get_conversation_repository,
+    get_message_repository,
+)
 
 
 @pytest.fixture

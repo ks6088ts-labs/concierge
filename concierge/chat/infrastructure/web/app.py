@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import uvicorn
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -15,6 +16,13 @@ logger = get_logger("concierge.chat")
 
 
 def create_app() -> FastAPI:
+    # Populate ``os.environ`` from a local ``.env`` file. ``pydantic-settings``
+    # reads ``.env`` directly for our own settings classes, but third-party
+    # libraries such as ``langchain-azure-ai`` look up configuration (for
+    # example ``AZURE_AI_PROJECT_ENDPOINT``) via ``os.environ``. Existing
+    # process env vars take precedence (``override=False`` by default).
+    load_dotenv()
+
     app = FastAPI(title="Chat API", version="0.1.0")
     static_dir = Path(__file__).parent / "static"
 

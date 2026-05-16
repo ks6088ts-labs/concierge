@@ -70,3 +70,4 @@ grouped by topic, so you have a single place to bookmark.
 - [`concierge/settings/azure_postgres.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/azure_postgres.py)
 - [`concierge/settings/project.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/project.py)
 - [`concierge/loggers.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/loggers.py)
+- [`concierge/observability.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/observability.py)

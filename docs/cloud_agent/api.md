@@ -13,6 +13,27 @@ The server listens on `http://localhost:8081`. Open
 [`http://localhost:8081/docs`](http://localhost:8081/docs) for the interactive
 Swagger UI.
 
+## Observability wiring
+
+`cloud-agent-web` and worker processes use env-based bootstrap:
+
+```bash
+CONCIERGE_TRACING_ENABLED=true CONCIERGE_MLFLOW_ENABLED=true uv run cloud-agent-web
+```
+
+```mermaid
+flowchart LR
+    REQ["HTTP request / worker poll"]
+    APP["cloud-agent app / worker"]
+    OBS["bootstrap_from_env('concierge-cloud-agent')"]
+    FUTURE["Future LangChain agent.invoke(..., config=trace_config(...))"]
+    F["Foundry tracing UI"]
+    M["MLflow UI :5000"]
+    REQ --> APP --> OBS --> FUTURE
+    FUTURE --> F
+    FUTURE --> M
+```
+
 ## Endpoints
 
 | Method | Path | Description |

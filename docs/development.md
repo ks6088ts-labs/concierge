@@ -52,6 +52,14 @@ Use global options to enable observability.
 * `--mlflow` enables MLflow LangChain autologging.
 * `--verbose` sets the local logger to `DEBUG`.
 
+The same global options are available on service CLIs as well:
+
+```bash
+uv run chat-cli --tracing --mlflow --help
+uv run cloud-agent-cli --tracing --mlflow --help
+uv run todo-cli --tracing --mlflow --help
+```
+
 Start a local MLflow UI in a separate terminal when using `--mlflow`.
 
 ```bash

@@ -44,6 +44,14 @@ def test_message_reply_chatbot_not_configured() -> None:
     assert agent_messages == []
 
 
+def test_cli_help_includes_observability_options() -> None:
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0
+    assert "tracing" in result.output
+    assert "mlflow" in result.output
+    assert "verbose" in result.output
+
+
 def test_message_reply_streams_and_persists() -> None:
     """With a configured responder, ``message reply`` streams chunks and saves the AGENT message."""
     conversation_repo, message_repo, conversation_id = _setup_conversation()

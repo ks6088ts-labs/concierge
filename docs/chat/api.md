@@ -12,6 +12,27 @@ uv run chat-web
 # → Uvicorn running on http://0.0.0.0:8080
 ```
 
+## Observability wiring
+
+Set environment variables before startup to enable shared observability wiring:
+
+```bash
+CONCIERGE_TRACING_ENABLED=true CONCIERGE_MLFLOW_ENABLED=true uv run chat-web
+```
+
+```mermaid
+flowchart LR
+    REQ["HTTP request / SSE"]
+    APP["chat-web create_app()"]
+    OBS["bootstrap_from_env('concierge-chat')"]
+    LC["FoundryChatbotResponder -> chat_model.stream(..., config=trace_config(...))"]
+    F["Foundry tracing UI"]
+    M["MLflow UI :5000"]
+    REQ --> APP --> OBS --> LC
+    LC --> F
+    LC --> M
+```
+
 ## Pages and ports
 
 | URL | What it is |

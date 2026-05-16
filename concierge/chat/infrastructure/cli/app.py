@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import uuid
 from datetime import datetime
@@ -37,6 +38,7 @@ from concierge.chat.infrastructure.persistence.postgres import (
     SqlAlchemyConversationRepository,
     SqlAlchemyMessageRepository,
 )
+from concierge.observability import disable_tracing, enable_mlflow, enable_tracing
 from concierge.settings import ChatRepositoryBackend, get_chat_settings
 
 app = typer.Typer(add_completion=False, help="Chat CLI")
@@ -51,7 +53,38 @@ app.add_typer(realtime_app, name="realtime")
 
 
 @app.callback()
-def _bootstrap() -> None:
+def _bootstrap(
+    tracing: Annotated[
+        bool,
+        typer.Option(
+            "--tracing",
+            "-t",
+            help=(
+                "Enable Microsoft Foundry / Azure Monitor tracing for LangChain runs. "
+                "See https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/langchain-traces"
+            ),
+        ),
+    ] = False,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            "-v",
+            help="Enable verbose (DEBUG) logging",
+        ),
+    ] = False,
+    mlflow: Annotated[
+        bool,
+        typer.Option(
+            "--mlflow",
+            "-m",
+            help=(
+                "Enable MLflow autologging for LangChain / LangGraph runs. "
+                "See https://mlflow.org/docs/latest/genai/tracing/integrations/listing/langgraph/"
+            ),
+        ),
+    ] = False,
+) -> None:
     """Load ``.env`` so libraries that read ``os.environ`` (e.g. ``langchain-azure-ai``) see the values.
 
     ``pydantic-settings`` reads ``.env`` directly for our own settings classes,
@@ -59,6 +92,14 @@ def _bootstrap() -> None:
     Existing process env vars take precedence (``override=False`` by default).
     """
     load_dotenv()
+    if tracing:
+        enable_tracing()
+    else:
+        disable_tracing()
+    if verbose:
+        logging.basicConfig(level=logging.DEBUG)
+    if mlflow:
+        enable_mlflow()
 
 
 def _conversation_to_dict(conversation: Conversation) -> dict[str, object]:

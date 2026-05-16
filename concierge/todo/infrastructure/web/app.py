@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import uvicorn
+from dotenv import load_dotenv
 from fastapi import FastAPI
 
 from concierge.loggers import get_logger
+from concierge.observability import bootstrap_from_env
 from concierge.todo.infrastructure.web.exception_handlers import register_exception_handlers
 from concierge.todo.infrastructure.web.routes import router
 
@@ -11,6 +13,8 @@ logger = get_logger("concierge.todo")
 
 
 def create_app() -> FastAPI:
+    load_dotenv()
+    bootstrap_from_env("concierge-todo")
     app = FastAPI(title="Todo API", version="0.1.0")
     register_exception_handlers(app)
     app.include_router(router)

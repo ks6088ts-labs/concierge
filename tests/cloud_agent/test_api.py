@@ -150,3 +150,12 @@ async def test_dispatch_oversized_payload(app) -> None:
         big = {"data": "x" * (65 * 1024)}
         resp = await client.post("/cloud-agent/tasks", json={"agent_type": "echo", "payload": big})
         assert resp.status_code == 422
+
+
+def test_create_app_with_observability_env(monkeypatch) -> None:
+    monkeypatch.setenv("CONCIERGE_TRACING_ENABLED", "true")
+    monkeypatch.setenv("CONCIERGE_MLFLOW_ENABLED", "false")
+
+    app = create_app()
+
+    assert app.title == "Cloud Agent API"

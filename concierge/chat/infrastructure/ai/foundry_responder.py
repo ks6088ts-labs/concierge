@@ -9,6 +9,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from concierge.chat.domain.entities import Conversation, Message
 from concierge.chat.domain.value_objects import MessageRole
+from concierge.observability import trace_config
 
 
 def _extract_text(content: Any) -> str:
@@ -60,7 +61,7 @@ class FoundryChatbotResponder:
                 lc_messages.append(HumanMessage(content=msg.content))
             elif msg.role == MessageRole.AGENT:
                 lc_messages.append(AIMessage(content=msg.content))
-        for chunk in chat_model.stream(lc_messages):
+        for chunk in chat_model.stream(lc_messages, config=trace_config("concierge-chat")):
             text = _extract_text(chunk.content)
             if text:
                 yield text

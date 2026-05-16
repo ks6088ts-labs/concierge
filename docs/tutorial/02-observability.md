@@ -29,18 +29,54 @@ laptop.
 
 ```mermaid
 flowchart LR
-    subgraph CLI["Typer CLI (vanilla.py)"]
-        cb["_trace_config()"]
-        flag1{"--tracing?"}
-        flag2{"--mlflow?"}
+    subgraph Sources["Sources (CLI / Web / Worker)"]
+        CLI_CHAT["chat-cli"]
+        WEB_CHAT["chat-web (FastAPI)"]
+        CLI_CA["cloud-agent-cli"]
+        WEB_CA["cloud-agent-web"]
+        WORKER_CA["cloud-agent worker"]
+        CLI_TODO["todo-cli"]
+        WEB_TODO["todo-web"]
+        VANILLA["scripts/*/vanilla.py"]
     end
-    CLI -- LangChain runs --> RC[RunnableConfig]
-    flag1 -- yes --> Tracer["AzureAIOpenTelemetryTracer"]
-    Tracer -- OTLP --> AppInsights[("Azure Monitor / App Insights")]
+
+    subgraph Shared["concierge/observability.py"]
+        ENABLE["enable_tracing() / enable_mlflow()"]
+        BOOT["bootstrap_from_env()"]
+        TCONF["trace_config(service_name)"]
+        TRACER["get_tracer(service_name)"]
+    end
+
+    Sources -->|"--tracing / --mlflow"| ENABLE
+    Sources -->|"CONCIERGE_*_ENABLED=true"| BOOT
+    ENABLE --> TCONF
+    TCONF --> TRACER
+
+    subgraph Runtime["Runtime signals"]
+        TRACE["trace: span tree"]
+        METRIC["metric: tokens / latency"]
+        LOG["log: CLI stderr / app logs"]
+    end
+
+    TRACER --> TRACE
+    ENABLE --> METRIC
+    Sources --> LOG
+    TRACE --> AppInsights[("Azure Monitor / App Insights")]
     AppInsights --> Foundry[("Foundry tracing UI")]
-    flag2 -- yes --> Autolog["mlflow.langchain.autolog()"]
-    Autolog -- HTTP --> Local[("Local MLflow server :5000")]
+    METRIC --> MLflow[("Local MLflow UI :5000")]
 ```
+
+## Service-wide rollout (`chat` / `cloud_agent` / `todo`)
+
+- Shared bootstrap and callback wiring now live in `concierge/observability.py`.
+- CLI entrypoints use `--tracing`, `--mlflow`, `--verbose`.
+- Web/worker entrypoints use:
+  - `CONCIERGE_TRACING_ENABLED=true`
+  - `CONCIERGE_MLFLOW_ENABLED=true`
+- Tracer names are fixed per service:
+  - `concierge-chat`
+  - `concierge-cloud-agent`
+  - `concierge-todo`
 
 ## How the toggles are implemented
 
@@ -224,6 +260,22 @@ uv run python scripts/microsoft_foundry/vanilla.py --tracing --mlflow --verbose 
 
 `--verbose` raises the local logger to `DEBUG`, which is useful while wiring
 new commands.
+
+## Service command examples
+
+```bash
+# chat CLI / web
+uv run chat-cli --tracing --mlflow message post <conversation_id> --content "hello"
+CONCIERGE_TRACING_ENABLED=true CONCIERGE_MLFLOW_ENABLED=true uv run chat-web
+
+# cloud_agent CLI / worker / web
+uv run cloud-agent-cli --tracing --mlflow worker --max-iterations 1
+CONCIERGE_TRACING_ENABLED=true CONCIERGE_MLFLOW_ENABLED=true uv run cloud-agent-web
+
+# todo CLI / web (no LangChain path yet, but bootstrap is shared)
+uv run todo-cli --tracing --mlflow task list
+CONCIERGE_TRACING_ENABLED=true CONCIERGE_MLFLOW_ENABLED=true uv run todo-web
+```
 
 ## Verify the nearby code with tests
 

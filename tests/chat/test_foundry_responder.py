@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from concierge.chat.infrastructure.ai.foundry_responder import _extract_text
+from types import SimpleNamespace
+from typing import Any, cast
+
+from concierge.chat.infrastructure.ai.foundry_responder import (
+    FoundryChatbotResponder,
+    _extract_text,
+)
 
 
 def test_extract_text_from_string() -> None:
@@ -60,3 +66,25 @@ def test_extract_text_handles_non_string_text_value() -> None:
 def test_extract_text_returns_empty_for_unsupported_type() -> None:
     assert _extract_text(None) == ""
     assert _extract_text(42) == ""
+
+
+def test_stream_reply_passes_trace_config(monkeypatch) -> None:
+    class FakeChatModel:
+        def stream(self, messages, config=None):  # noqa: ANN001
+            _ = messages
+            assert config is not None
+            assert len(config["callbacks"]) == 1
+            yield SimpleNamespace(content="ok")
+
+    monkeypatch.setattr(
+        "concierge.chat.infrastructure.ai.foundry_responder.init_chat_model",
+        lambda *_args, **_kwargs: FakeChatModel(),
+    )
+    monkeypatch.setattr(
+        "concierge.chat.infrastructure.ai.foundry_responder.trace_config",
+        lambda _service_name: {"callbacks": [object()]},
+    )
+
+    responder = FoundryChatbotResponder(model="azure_ai:gpt-5", system_prompt="system")
+    chunks = list(responder.stream_reply(conversation=cast(Any, SimpleNamespace()), history=[]))
+    assert chunks == ["ok"]

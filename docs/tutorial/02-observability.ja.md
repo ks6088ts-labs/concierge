@@ -28,18 +28,54 @@ LLM アプリのデバッグが難しい理由は、興味のある状態がプ�
 
 ```mermaid
 flowchart LR
-    subgraph CLI["Typer CLI (vanilla.py)"]
-        cb["_trace_config()"]
-        flag1{"--tracing?"}
-        flag2{"--mlflow?"}
+    subgraph Sources["発生源 (CLI / Web / Worker)"]
+        CLI_CHAT["chat-cli"]
+        WEB_CHAT["chat-web (FastAPI)"]
+        CLI_CA["cloud-agent-cli"]
+        WEB_CA["cloud-agent-web"]
+        WORKER_CA["cloud-agent worker"]
+        CLI_TODO["todo-cli"]
+        WEB_TODO["todo-web"]
+        VANILLA["scripts/*/vanilla.py"]
     end
-    CLI -- LangChain 実行 --> RC[RunnableConfig]
-    flag1 -- yes --> Tracer["AzureAIOpenTelemetryTracer"]
-    Tracer -- OTLP --> AppInsights[("Azure Monitor / App Insights")]
-    AppInsights --> Foundry[("Foundry トレース UI")]
-    flag2 -- yes --> Autolog["mlflow.langchain.autolog()"]
-    Autolog -- HTTP --> Local[("ローカル MLflow サーバ :5000")]
+
+    subgraph Shared["concierge/observability.py"]
+        ENABLE["enable_tracing() / enable_mlflow()"]
+        BOOT["bootstrap_from_env()"]
+        TCONF["trace_config(service_name)"]
+        TRACER["get_tracer(service_name)"]
+    end
+
+    Sources -->|"--tracing / --mlflow"| ENABLE
+    Sources -->|"CONCIERGE_*_ENABLED=true"| BOOT
+    ENABLE --> TCONF
+    TCONF --> TRACER
+
+    subgraph Runtime["データ種別"]
+        TRACE["trace: span tree"]
+        METRIC["metric: token / latency"]
+        LOG["log: CLI stderr / app logs"]
+    end
+
+    TRACER --> TRACE
+    ENABLE --> METRIC
+    Sources --> LOG
+    TRACE --> AppInsights[("Azure Monitor / App Insights")]
+    AppInsights --> Foundry[("Foundry tracing UI")]
+    METRIC --> MLflow[("Local MLflow UI :5000")]
 ```
+
+## サービス横展開 (`chat` / `cloud_agent` / `todo`)
+
+- 共有配線は `concierge/observability.py` に集約。
+- CLI は `--tracing` / `--mlflow` / `--verbose`。
+- Web / worker は次の環境変数で切り替え:
+  - `CONCIERGE_TRACING_ENABLED=true`
+  - `CONCIERGE_MLFLOW_ENABLED=true`
+- サービス別 tracer 名:
+  - `concierge-chat`
+  - `concierge-cloud-agent`
+  - `concierge-todo`
 
 ## 切替の実装
 
@@ -225,6 +261,22 @@ uv run python scripts/microsoft_foundry/vanilla.py --tracing --mlflow --verbose 
 
 `--verbose` を付けるとローカルロガーが `DEBUG` レベルになり、新規コマンド
 を組み込む際の確認に便利です。
+
+## サービス別の実行例
+
+```bash
+# chat CLI / web
+uv run chat-cli --tracing --mlflow message post <conversation_id> --content "hello"
+CONCIERGE_TRACING_ENABLED=true CONCIERGE_MLFLOW_ENABLED=true uv run chat-web
+
+# cloud_agent CLI / worker / web
+uv run cloud-agent-cli --tracing --mlflow worker --max-iterations 1
+CONCIERGE_TRACING_ENABLED=true CONCIERGE_MLFLOW_ENABLED=true uv run cloud-agent-web
+
+# todo CLI / web (現状 LangChain 呼び出しは無いが、同じ bootstrap を利用)
+uv run todo-cli --tracing --mlflow task list
+CONCIERGE_TRACING_ENABLED=true CONCIERGE_MLFLOW_ENABLED=true uv run todo-web
+```
 
 ## 周辺コードをテストで確認
 

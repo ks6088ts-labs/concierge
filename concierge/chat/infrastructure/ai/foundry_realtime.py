@@ -148,7 +148,12 @@ class _FoundryRealtimeSession:
 
 
 class FoundryRealtimeResponder:
-    """Opens a Foundry ``/openai/v1/realtime`` WebSocket session."""
+    """Opens a Foundry ``/openai/v1/realtime`` WebSocket session.
+
+    This path does not use LangChain today, so ``trace_config()`` integration is
+    intentionally out of scope. If this responder is migrated to LangChain in
+    the future, adopt ``concierge.observability.trace_config("concierge-chat")``.
+    """
 
     def __init__(
         self,

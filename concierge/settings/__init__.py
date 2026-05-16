@@ -3,6 +3,12 @@ from concierge.settings.azure_postgres import (
     get_azure_postgres_settings,
 )
 from concierge.settings.chat import ChatRepositoryBackend, ChatSettings, get_chat_settings
+from concierge.settings.cloud_agent import (
+    CloudAgentQueueBackend,
+    CloudAgentRepositoryBackend,
+    CloudAgentSettings,
+    get_cloud_agent_settings,
+)
 from concierge.settings.microsoft_foundry import (
     MicrosoftFoundrySettings,
     get_microsoft_foundry_settings,
@@ -23,6 +29,9 @@ __all__ = [
     "AzurePostgresSettings",
     "ChatRepositoryBackend",
     "ChatSettings",
+    "CloudAgentQueueBackend",
+    "CloudAgentRepositoryBackend",
+    "CloudAgentSettings",
     "MicrosoftFoundrySettings",
     "ObservabilitySettings",
     "PostgresSettings",
@@ -31,6 +40,7 @@ __all__ = [
     "TodoSettings",
     "get_azure_postgres_settings",
     "get_chat_settings",
+    "get_cloud_agent_settings",
     "get_microsoft_foundry_settings",
     "get_observability_settings",
     "get_postgres_settings",

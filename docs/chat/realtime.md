@@ -55,6 +55,7 @@ and is a zero-build single HTML file.
 | Sidebar — **表示名 / ユーザー ID** | Persists `display_name` and `user_id` (UUID) in `localStorage` (`chat_rt_display_name`, `chat_rt_user_id`). The UUID is auto-generated on first load and sent as the `X-User-Id` header and `?user_id=` query parameter. |
 | Sidebar — **＋ 新しい会話** | Calls `POST /conversations` and refreshes the list. |
 | Sidebar — Conversation list | Calls `GET /conversations`. Click an entry to load its message history (`GET /conversations/{id}/messages`). |
+| Sidebar — **🗑 delete button** on each conversation row | Revealed on hover (and always visible on the active row). Opens a confirmation modal; clicking **削除する** issues `DELETE /conversations/{id}`, removing the conversation and every persisted message. If the deleted conversation is the one currently open, the call is closed and the message log / call status are cleared. |
 | Toolbar — **通話開始 / 通話終了** | Opens / closes the realtime WebSocket. Disabled until a conversation is selected. Turns red while a call is active. |
 | Toolbar — call status | Shows connection / session state (例: `通話中 🔴`, close-code error labels). |
 | Message log | User and AI transcripts as bubbles. Updated on every `concierge.message.persisted` event from the server. |

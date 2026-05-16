@@ -56,6 +56,7 @@ Chromium 系か Firefox 系ブラウザで <http://localhost:8080/realtime> を�
 | サイドバー：**表示名 / ユーザー ID** | `display_name` と `user_id` (UUID) を `localStorage` (`chat_rt_display_name`, `chat_rt_user_id`) に保存。UUID は初回ロード時に自動生成され、`X-User-Id` ヘッダと `?user_id=` クエリの両方に使われる |
 | サイドバー：**＋ 新しい会話** | `POST /conversations` を呼んで一覧を更新 |
 | サイドバー：会話リスト | `GET /conversations` の結果を表示。クリックで `GET /conversations/{id}/messages` を呼び履歴をロード |
+| サイドバー：会話の **🗑 削除ボタン** | 各会話の行にホバー（または選択中）で表示。確認モーダルで「削除する」を選ぶと `DELETE /conversations/{id}` を呼び会話とメッセージを完全削除する。表示中の会話を削除した場合は通話を終了して履歴ビューもクリアする |
 | ツールバー：**通話開始 / 通話終了** | リアルタイム WebSocket を開始 / 終了。会話を選択するまで無効。通話中は赤いボタンになる |
 | ツールバー：ステータス表示 | 接続 / セッション状態（例：`通話中 🔴`、クローズコードに対応した日本語ラベル） |
 | メッセージ一覧 | ユーザー / AI の transcript を吹き出し表示。`concierge.message.persisted` を受信するたび追記 |

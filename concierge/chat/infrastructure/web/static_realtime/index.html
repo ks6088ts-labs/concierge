@@ -86,13 +86,37 @@
       border-radius: 6px;
       cursor: pointer;
       font-size: 0.85rem;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
       border: 1px solid transparent;
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
     .conv-item:hover { background: #eef4fb; }
     .conv-item.active { background: var(--color-user-bubble); border-color: var(--color-primary); font-weight: 600; }
+    .conv-item-title {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .conv-item-delete {
+      flex: 0 0 auto;
+      background: transparent;
+      border: none;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 2px 6px;
+      border-radius: 4px;
+      opacity: 0;
+      transition: opacity 0.15s, background 0.15s, color 0.15s;
+    }
+    .conv-item:hover .conv-item-delete,
+    .conv-item.active .conv-item-delete,
+    .conv-item-delete:focus { opacity: 1; }
+    .conv-item-delete:hover { background: #fde7e9; color: var(--color-danger); }
+    .conv-item-delete:focus-visible { outline: 2px solid var(--color-danger); outline-offset: 1px; }
     /* ---- Chat area ---- */
     #chat-area {
       flex: 1;
@@ -150,7 +174,7 @@
       min-height: 28px;
     }
     /* New conversation modal */
-    #modal-overlay {
+    .modal-overlay {
       display: none;
       position: fixed;
       inset: 0;
@@ -159,22 +183,38 @@
       align-items: center;
       justify-content: center;
     }
-    #modal-overlay.open { display: flex; }
-    #modal {
+    .modal-overlay.open { display: flex; }
+    .modal {
       background: var(--color-surface);
       border-radius: 8px;
       padding: 24px;
-      width: 320px;
+      width: 340px;
       display: flex;
       flex-direction: column;
       gap: 12px;
     }
-    #modal h2 { font-size: 1rem; }
-    #modal input { width: 100%; padding: 8px; border: 1px solid var(--color-border); border-radius: 4px; }
+    .modal h2 { font-size: 1rem; }
+    .modal input { width: 100%; padding: 8px; border: 1px solid var(--color-border); border-radius: 4px; }
     #modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
     #modal-actions button { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
     #btn-modal-ok { background: var(--color-primary); color: #fff; }
     #btn-modal-cancel { background: var(--color-border); }
+    #btn-delete-ok { background: var(--color-danger); color: #fff; }
+    #btn-delete-ok:hover { filter: brightness(0.9); }
+    #btn-delete-cancel { background: var(--color-border); }
+    #delete-target-title {
+      font-weight: 600;
+      word-break: break-word;
+    }
+    #delete-modal p { font-size: 0.9rem; line-height: 1.5; }
+    #btn-delete-ok { background: var(--color-danger); color: #fff; }
+    #btn-delete-ok:hover { filter: brightness(0.9); }
+    #btn-delete-cancel { background: var(--color-border); }
+    #delete-target-title {
+      font-weight: 600;
+      word-break: break-word;
+    }
+    #delete-modal p { font-size: 0.9rem; line-height: 1.5; }
   </style>
 </head>
 <body>
@@ -214,13 +254,29 @@
 </div>
 
 <!-- New conversation modal -->
-<div id="modal-overlay">
-  <div id="modal">
+<div id="modal-overlay" class="modal-overlay">
+  <div id="modal" class="modal">
     <h2>新しい会話を作成</h2>
     <input id="inp-conv-title" type="text" placeholder="会話のタイトル" maxlength="200" />
     <div id="modal-actions">
       <button id="btn-modal-cancel">キャンセル</button>
       <button id="btn-modal-ok">作成</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirmation modal -->
+<div id="delete-modal-overlay" class="modal-overlay">
+  <div id="delete-modal" class="modal">
+    <h2>会話を削除しますか？</h2>
+    <p>
+      <span id="delete-target-title"></span>
+      <br />
+      この会話とすべてのメッセージが完全に削除されます。この操作は元に戻せません。
+    </p>
+    <div id="modal-actions">
+      <button id="btn-delete-cancel">キャンセル</button>
+      <button id="btn-delete-ok">削除する</button>
     </div>
   </div>
 </div>
@@ -305,9 +361,26 @@ function renderConvList(list) {
   list.forEach(conv => {
     const item = document.createElement('div');
     item.className = 'conv-item' + (conv.id === currentConvId ? ' active' : '');
-    item.textContent = conv.title;
     item.title = conv.id;
     item.addEventListener('click', () => selectConversation(conv));
+
+    const titleEl = document.createElement('span');
+    titleEl.className = 'conv-item-title';
+    titleEl.textContent = conv.title;
+    item.appendChild(titleEl);
+
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'conv-item-delete';
+    delBtn.title = '会話を削除';
+    delBtn.setAttribute('aria-label', `会話「${conv.title}」を削除`);
+    delBtn.textContent = '🗑';
+    delBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      openDeleteModal(conv);
+    });
+    item.appendChild(delBtn);
+
     el.appendChild(item);
   });
 }
@@ -364,6 +437,66 @@ async function createConversation() {
     await selectConversation(conv);
   } catch (e) {
     showError('会話の作成に失敗しました: ' + e.message);
+  }
+}
+
+// Delete conversation modal
+let pendingDeleteConv = null;
+
+function openDeleteModal(conv) {
+  pendingDeleteConv = conv;
+  $id('delete-target-title').textContent = `「${conv.title}」`;
+  $id('delete-modal-overlay').classList.add('open');
+  $id('btn-delete-ok').focus();
+}
+
+function closeDeleteModal() {
+  pendingDeleteConv = null;
+  $id('delete-modal-overlay').classList.remove('open');
+}
+
+$id('btn-delete-cancel').addEventListener('click', closeDeleteModal);
+$id('delete-modal-overlay').addEventListener('click', (ev) => {
+  if (ev.target === $id('delete-modal-overlay')) closeDeleteModal();
+});
+$id('btn-delete-ok').addEventListener('click', () => deleteConversation());
+
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape' && $id('delete-modal-overlay').classList.contains('open')) {
+    closeDeleteModal();
+  }
+});
+
+async function deleteConversation() {
+  if (!pendingDeleteConv) return;
+  const target = pendingDeleteConv;
+  const btn = $id('btn-delete-ok');
+  btn.disabled = true;
+  try {
+    const resp = await fetch(`/conversations/${target.id}`, {
+      method: 'DELETE',
+      headers: { 'X-User-Id': userId }
+    });
+    if (!resp.ok && resp.status !== 204) throw new Error(`HTTP ${resp.status}`);
+
+    // If the deleted conversation is the one currently displayed, reset UI state
+    // and tear down any active call so the WebSocket isn't left dangling.
+    if (target.id === currentConvId) {
+      if (ws) {
+        try { await endCall(); } catch (_) { /* swallow */ }
+      }
+      currentConvId = null;
+      $id('chat-title').textContent = '会話を選択してください';
+      $id('btn-call').disabled = true;
+      $id('messages').innerHTML = '';
+      $id('interim-transcript').textContent = '';
+    }
+  } catch (e) {
+    showError('会話の削除に失敗しました: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    closeDeleteModal();
+    await fetchConversations();
   }
 }
 

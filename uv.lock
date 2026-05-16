@@ -545,6 +545,21 @@ wheels = [
 ]
 
 [[package]]
+name = "azure-storage-queue"
+version = "12.16.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "azure-core" },
+    { name = "cryptography" },
+    { name = "isodate" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/44/cf/c1a46d9c929482922ddcf1bf514f024f217ece2b775e96195725ffe01d96/azure_storage_queue-12.16.0.tar.gz", hash = "sha256:28da532d0fb5e9242e520a66106f6a3e56000295856b20ef2f0d3084c9344ba2", size = 199577, upload-time = "2026-05-15T04:00:34.436Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e4/40/8419e7285cf3ca5abf4fd9e2d0ac0974ccfbba693a7d6ba64900ed124342/azure_storage_queue-12.16.0-py3-none-any.whl", hash = "sha256:ced0dc45274d912a2870976c37bbf2c5dcdc72e075d1a4c4a6e4a871a49e0519", size = 188531, upload-time = "2026-05-15T04:00:36.346Z" },
+]
+
+[[package]]
 name = "babel"
 version = "2.18.0"
 source = { registry = "https://pypi.org/simple" }
@@ -864,6 +879,7 @@ version = "0.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "azure-identity" },
+    { name = "azure-storage-queue" },
     { name = "fastapi" },
     { name = "httpx" },
     { name = "langchain" },
@@ -901,6 +917,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "azure-identity", specifier = ">=1.25.3" },
+    { name = "azure-storage-queue", specifier = ">=12.12.0" },
     { name = "fastapi", specifier = ">=0.136.1" },
     { name = "httpx", specifier = ">=0.28.0" },
     { name = "langchain", specifier = ">=1.2.18" },
@@ -1378,7 +1395,7 @@ name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [

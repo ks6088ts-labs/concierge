@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "azure-identity>=1.25.3",
+    "azure-storage-queue>=12.12.0",
     "fastapi>=0.136.1",
     "httpx>=0.28.0",
     "langchain>=1.2.18",
@@ -49,6 +50,8 @@ todo-web = "concierge.todo.infrastructure.web.app:start"
 todo-cli = "concierge.todo.infrastructure.cli.app:app"
 chat-web = "concierge.chat.infrastructure.web.app:start"
 chat-cli = "concierge.chat.infrastructure.cli.app:app"
+cloud-agent-web = "concierge.cloud_agent.infrastructure.web.app:start"
+cloud-agent-cli = "concierge.cloud_agent.infrastructure.cli.app:app"
 
 [tool.ruff]
 line-length = 120
@@ -188,4 +191,43 @@ type = "independence"
 modules = [
     "concierge.todo",
     "concierge.chat",
+]
+
+[[tool.importlinter.contracts]]
+id = "cloud-agent-layers"
+name = "concierge.cloud_agent follows clean architecture layers"
+type = "layers"
+layers = [
+    "infrastructure",
+    "application",
+    "domain",
+]
+containers = ["concierge.cloud_agent"]
+exhaustive = true
+
+[[tool.importlinter.contracts]]
+id = "cloud-agent-domain-no-frameworks"
+name = "cloud_agent domain layer does not depend on frameworks or IO libraries"
+type = "forbidden"
+source_modules = [
+    "concierge.cloud_agent.domain",
+]
+forbidden_modules = [
+    "fastapi",
+    "uvicorn",
+    "typer",
+    "httpx",
+    "pydantic",
+    "pydantic_settings",
+    "sqlalchemy",
+    "psycopg",
+    "azure",
+    "langchain",
+    "langchain_core",
+    "langchain_postgres",
+    "langgraph",
+    "mlflow",
+    "concierge.settings",
+    "concierge.loggers",
+    "concierge.core",
 ]

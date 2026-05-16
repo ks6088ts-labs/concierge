@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uvicorn
+from dotenv import load_dotenv
 from fastapi import FastAPI
 
 from concierge.cloud_agent.infrastructure.web.exception_handlers import register_exception_handlers
@@ -11,6 +12,14 @@ logger = get_logger("concierge.cloud_agent")
 
 
 def create_app() -> FastAPI:
+    # Populate ``os.environ`` from a local ``.env`` file. ``pydantic-settings``
+    # reads ``.env`` directly for our own settings classes, but third-party
+    # libraries such as ``azure.identity`` (``DefaultAzureCredential`` looks
+    # up ``AZURE_CLIENT_ID`` / ``AZURE_TENANT_ID`` / ``AZURE_CLIENT_SECRET``
+    # etc.) read configuration via ``os.environ``. Existing process env vars
+    # take precedence (``override=False`` by default).
+    load_dotenv()
+
     app = FastAPI(title="Cloud Agent API", version="0.1.0")
     register_exception_handlers(app)
     app.include_router(router)

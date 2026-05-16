@@ -8,6 +8,8 @@ from __future__ import annotations
 import asyncio
 import signal
 
+from dotenv import load_dotenv
+
 from concierge.cloud_agent.application.use_cases import ProcessNextTaskUseCase
 from concierge.cloud_agent.infrastructure.agents.registry import get_agent_registry
 from concierge.cloud_agent.infrastructure.persistence.factory import get_task_repository
@@ -24,6 +26,14 @@ async def run_worker(*, max_iterations: int | None = None) -> None:
     Args:
         max_iterations: If set, stop after this many iterations (useful for tests).
     """
+    # Populate ``os.environ`` from a local ``.env`` file. ``pydantic-settings``
+    # reads ``.env`` directly for our own settings classes, but third-party
+    # libraries such as ``azure.identity`` (``DefaultAzureCredential`` looks
+    # up ``AZURE_CLIENT_ID`` / ``AZURE_TENANT_ID`` / ``AZURE_CLIENT_SECRET``
+    # etc.) read configuration via ``os.environ``. Existing process env vars
+    # take precedence (``override=False`` by default).
+    load_dotenv()
+
     settings = get_cloud_agent_settings()
     repository = get_task_repository()
     queue = get_task_queue()

@@ -90,4 +90,15 @@ uv run cloud-agent-cli agents
 | `CLOUD_AGENT_AZURE_STORAGE_CONNECTION_STRING` | — | Azure Storage 接続文字列 |
 | `CLOUD_AGENT_VISIBILITY_TIMEOUT_SECONDS` | `60` | キュー可視性タイムアウト |
 | `CLOUD_AGENT_MAX_RETRIES` | `3` | デフォルト最大リトライ回数 |
+| `CLOUD_AGENT_WORKER_CONCURRENCY` | `1` | ワーカー内同時実行数（将来拡張用） |
 | `CLOUD_AGENT_POLL_INTERVAL_SECONDS` | `1.0` | キューが空のときのポーリング間隔 |
+
+詳しい解説と構成例は [概要ページの「設定」セクション](index.ja.md#configuration) を参照してください。
+
+## 例: Azure Storage Queue バックエンド
+
+```bash
+export CLOUD_AGENT_QUEUE_BACKEND=azure-storage-queue
+export CLOUD_AGENT_AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;..."
+uv run cloud-agent-cli worker
+```

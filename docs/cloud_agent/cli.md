@@ -119,6 +119,9 @@ All settings are controlled by environment variables (or a `.env` file).
 | `CLOUD_AGENT_WORKER_CONCURRENCY` | `1` | Worker concurrency (future) |
 | `CLOUD_AGENT_POLL_INTERVAL_SECONDS` | `1.0` | Polling interval when queue empty |
 
+See the [Configuration section in the Overview](index.md#configuration) for
+backend selection tables and end-to-end `.env` examples.
+
 ## Example: Azure Storage Queue backend
 
 ```bash

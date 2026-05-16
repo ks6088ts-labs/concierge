@@ -113,6 +113,40 @@ def _trace_config(extra=None) -> RunnableConfig:
 This is what keeps the per-command code free of conditional logic: the toggle
 is set once globally, and every LangChain call picks it up uniformly.
 
+### Why `disable_tracing` exists alongside `enable_tracing`
+
+The enabled / disabled flag in `concierge/observability.py` is held in a
+module-level mutable singleton (`_state`). Once `enable_tracing()` flips it
+to `True`, the flag persists for the lifetime of the process unless something
+actively resets it. That is why a paired `disable_tracing()` is part of the
+public API. It is needed in four concrete situations:
+
+1. **CLI flag symmetry.**
+   `--tracing` is an opt-in flag that defaults to `False`. Each CLI bootstrap
+   calls `disable_tracing()` in the `else` branch so a stale `True` value
+   (left over from a prior session or an import side effect) cannot silently
+   keep the tracer attached. Without this you could end up with traces being
+   sent even when `--tracing` was not passed (see
+   [`concierge/chat/infrastructure/cli/app.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/chat/infrastructure/cli/app.py)).
+2. **Environment-driven bootstrap.**
+   `bootstrap_from_env()` treats `CONCIERGE_TRACING_ENABLED=false` as a
+   deliberate intent to turn tracing off. In long-running processes where
+   configuration may be reloaded, simply not enabling is not enough: we must
+   actively disable so the previous state cannot leak forward.
+3. **Test isolation.**
+   pytest runs many tests in the same process, so the module-level state
+   leaks across tests unless we explicitly reset it. The `_reset_state()`
+   helper in
+   [`tests/test_observability.py`](https://github.com/ks6088ts-labs/concierge/blob/main/tests/test_observability.py)
+   calls `disable_tracing()` for exactly this reason.
+4. **API completeness.**
+   Exposing `enable` / `disable` / `is_enabled` together gives future
+   subcommands or per-request controls a deterministic way to manage the
+   flag.
+
+In short: as soon as you keep state in a process-wide singleton, an API to
+turn it on requires a matching API to turn it off.
+
 ## Step 2a - Azure Monitor tracing
 
 ### Why Azure Monitor

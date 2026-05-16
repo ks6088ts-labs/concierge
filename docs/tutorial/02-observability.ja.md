@@ -111,6 +111,39 @@ def _trace_config(extra=None) -> RunnableConfig:
 これによりコマンド側に条件分岐を持ち込まずに、トレーサーを一括で適用できる
 ようになっています。
 
+### `disable_tracing` が必要な理由
+
+`concierge/observability.py` の有効/無効フラグはモジュール単位の
+ミュータブルなシングルトン (`_state`) として保持されます。一度
+`enable_tracing()` で `True` になると、明示的に戻す手段がない限り
+プロセス内に残り続けるため、対になる `disable_tracing()` を公開 API
+として用意しています。具体的には次の 4 つのユースケースで必要です。
+
+1. **CLI フラグの対称性**
+   `--tracing` は既定 `False` のオプトインです。フラグなしで起動した
+   際に「以前のセッションや import 副作用で `True` のまま残っている」
+   可能性を排除するため、各 CLI の bootstrap は `else: disable_tracing()`
+   で明示的にリセットします。これがないと「`--tracing` を付けていない
+   のに tracer が動く」状態が起こり得ます
+   ([`concierge/chat/infrastructure/cli/app.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/chat/infrastructure/cli/app.py)
+   など)。
+2. **環境変数からの bootstrap**
+   `bootstrap_from_env()` は `CONCIERGE_TRACING_ENABLED=false` を
+   「無効化したい意思」として尊重します。長寿命プロセスで設定が再読込
+   されるケースを想定し、単に enable しないだけでなく能動的に
+   `disable_tracing()` を呼びます。
+3. **テスト分離**
+   pytest は同一プロセスで複数テストを回すため、明示的なリセット
+   手段がないとテスト間でフラグがリークします
+   ([`tests/test_observability.py`](https://github.com/ks6088ts-labs/concierge/blob/main/tests/test_observability.py)
+   の `_reset_state()`)。
+4. **API の完備性**
+   `enable` / `disable` / `is_enabled` を揃えることで、将来追加されうる
+   サブコマンドや HTTP リクエスト単位の制御から決定論的に状態を扱えます。
+
+要するに「シングルトン状態を持つ以上、ON にする API があれば OFF に
+する API も必須」というのが本質的な理由です。
+
 ## ステップ 2a - Azure Monitor トレーシング
 
 ### なぜ Azure Monitor か

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import pytest
 
 from concierge.cloud_agent.application.agents import AgentRegistry, TaskInput, TaskOutput
@@ -12,7 +14,7 @@ from concierge.cloud_agent.infrastructure.queue.memory import InMemoryTaskQueue
 
 
 class _EchoAgent:
-    agent_type = "echo"
+    agent_type: ClassVar[str] = "echo"
 
     async def handle(self, task_input: TaskInput) -> TaskOutput:
         return TaskOutput(status="succeeded", result={"echo": task_input.payload})
@@ -42,7 +44,7 @@ async def test_worker_processes_one_task() -> None:
 
 
 @pytest.mark.anyio
-async def test_worker_with_max_iterations() -> None:
+async def test_worker_with_max_iterations(monkeypatch: pytest.MonkeyPatch) -> None:
     """run_worker should stop after max_iterations."""
     from concierge.cloud_agent.infrastructure.cli.worker import run_worker
 
@@ -54,23 +56,14 @@ async def test_worker_with_max_iterations() -> None:
     # Monkeypatch factories to use our in-memory objects
     import concierge.cloud_agent.infrastructure.cli.worker as worker_module
 
-    orig_get_repo = worker_module.get_task_repository
-    orig_get_queue = worker_module.get_task_queue
-    orig_get_registry = worker_module.get_agent_registry
+    monkeypatch.setattr(worker_module, "get_task_repository", lambda: repo)
+    monkeypatch.setattr(worker_module, "get_task_queue", lambda: queue)
+    monkeypatch.setattr(worker_module, "get_agent_registry", lambda: registry)
 
-    worker_module.get_task_repository = lambda: repo
-    worker_module.get_task_queue = lambda: queue
-    worker_module.get_agent_registry = lambda: registry
-
-    try:
-        # Dispatch a task
-        await DispatchTaskUseCase(repo, queue).execute(agent_type="echo", payload={})
-        # Run for 2 iterations
-        await run_worker(max_iterations=2)
-    finally:
-        worker_module.get_task_repository = orig_get_repo
-        worker_module.get_task_queue = orig_get_queue
-        worker_module.get_agent_registry = orig_get_registry
+    # Dispatch a task
+    await DispatchTaskUseCase(repo, queue).execute(agent_type="echo", payload={})
+    # Run for 2 iterations
+    await run_worker(max_iterations=2)
 
     tasks = repo.find_all(status=TaskStatus.SUCCEEDED)
     assert len(tasks) == 1

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
 import pytest
 
 from concierge.cloud_agent.domain.entities import Task
@@ -31,7 +33,7 @@ def test_task_validates_agent_type_too_long() -> None:
 
 def test_task_validates_payload_not_dict() -> None:
     with pytest.raises(TaskValidationError):
-        Task(agent_type="echo", payload="not-a-dict")  # type: ignore[arg-type]
+        Task(agent_type="echo", payload=cast("dict[str, Any]", "not-a-dict"))
 
 
 def test_task_validates_payload_too_large() -> None:

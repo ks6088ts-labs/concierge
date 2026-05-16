@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import pytest
 from httpx import ASGITransport, AsyncClient
 
@@ -17,7 +19,7 @@ from concierge.cloud_agent.infrastructure.web.dependencies import (
 
 
 class _EchoAgent:
-    agent_type = "echo"
+    agent_type: ClassVar[str] = "echo"
 
     async def handle(self, task_input: TaskInput) -> TaskOutput:
         return TaskOutput(status="succeeded", result={"echo": task_input.payload})

@@ -144,6 +144,16 @@
         font-size: 1rem;
         line-height: 1;
       }
+      button.icon-btn.recording {
+        background: var(--danger);
+        border-color: var(--danger);
+        color: #fff;
+      }
+      button.icon-btn.recording:hover:not(:disabled) {
+        background: var(--danger);
+        border-color: var(--danger);
+        color: #fff;
+      }
       button.block { width: 100%; justify-content: center; }
       [hidden] { display: none !important; }
 
@@ -662,6 +672,15 @@
                 rows="1"
                 disabled
               ></textarea>
+              <button
+                id="voice-input-toggle"
+                class="icon-btn ghost"
+                type="button"
+                title="音声入力 (クリックで開始/停止。音声認識はブラウザベンダーのクラウドで処理される場合があります)"
+                aria-label="音声入力を開始"
+                aria-pressed="false"
+                disabled
+              >🎤</button>
               <button id="send-button" class="primary" type="submit" disabled>送信</button>
             </div>
             <div class="composer-controls">
@@ -756,6 +775,7 @@
         messages: document.getElementById('messages'),
         postForm: document.getElementById('post-message-form'),
         messageContent: document.getElementById('message-content'),
+        voiceInputToggle: document.getElementById('voice-input-toggle'),
         sendButton: document.getElementById('send-button'),
         aiToggle: document.getElementById('ai-toggle'),
         aiAutoReply: document.getElementById('ai-auto-reply'),
@@ -789,6 +809,17 @@
       };
 
       const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const MAX_MESSAGE_LENGTH = Number(els.messageContent.getAttribute('maxlength') || 4000);
+      const VOICE_INPUT_TITLE = '音声入力 (クリックで開始/停止。音声認識はブラウザベンダーのクラウドで処理される場合があります)';
+      const voiceInput = {
+        recognition: null,
+        supported: false,
+        recording: false,
+        baseValue: '',
+        committedText: '',
+        interimText: '',
+        unsupportedNotified: false,
+      };
 
       // -------- Toast --------
       function toast(message, kind = 'info', timeout = 3500) {
@@ -797,6 +828,124 @@
         el.textContent = message;
         els.toasts.appendChild(el);
         setTimeout(() => el.remove(), timeout);
+      }
+
+      // -------- Voice input (Speech-to-Text) --------
+      function dispatchComposerInput() {
+        els.messageContent.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      function clampMessageContent(value) {
+        if (MAX_MESSAGE_LENGTH > 0 && value.length > MAX_MESSAGE_LENGTH) {
+          return value.slice(0, MAX_MESSAGE_LENGTH);
+        }
+        return value;
+      }
+
+      function renderVoiceInputValue() {
+        const needsPrefixSpace = voiceInput.baseValue && !/[\s\n]$/.test(voiceInput.baseValue);
+        const nextValue = clampMessageContent(
+          `${voiceInput.baseValue}${needsPrefixSpace ? ' ' : ''}${voiceInput.committedText}${voiceInput.interimText}`,
+        );
+        els.messageContent.value = nextValue;
+        dispatchComposerInput();
+      }
+
+      function setVoiceInputRecording(recording) {
+        voiceInput.recording = recording;
+        els.voiceInputToggle.classList.toggle('recording', recording);
+        els.voiceInputToggle.textContent = recording ? '⏹' : '🎤';
+        els.voiceInputToggle.setAttribute('aria-pressed', recording ? 'true' : 'false');
+        els.voiceInputToggle.setAttribute('aria-label', recording ? '音声入力を停止' : '音声入力を開始');
+      }
+
+      function stopVoiceInput() {
+        if (!voiceInput.recognition || !voiceInput.recording) return;
+        voiceInput.recognition.stop();
+      }
+
+      function updateVoiceInputAvailability() {
+        const shouldDisable = !voiceInput.supported || els.messageContent.disabled;
+        if (shouldDisable && voiceInput.recording) {
+          stopVoiceInput();
+        }
+        els.voiceInputToggle.disabled = shouldDisable;
+      }
+
+      function initVoiceInput() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        els.voiceInputToggle.title = VOICE_INPUT_TITLE;
+        if (!SpeechRecognition) {
+          voiceInput.supported = false;
+          els.voiceInputToggle.disabled = true;
+          els.voiceInputToggle.title = 'このブラウザは音声入力に対応していません';
+          if (!voiceInput.unsupportedNotified) {
+            voiceInput.unsupportedNotified = true;
+            toast('このブラウザは音声入力に対応していません (Firefox は未対応です)', 'warning');
+          }
+          return;
+        }
+
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+        recognition.lang = navigator.language && !navigator.language.toLowerCase().startsWith('ja')
+          ? navigator.language
+          : 'ja-JP';
+
+        recognition.onstart = () => {
+          setVoiceInputRecording(true);
+          dispatchComposerInput();
+        };
+
+        recognition.onresult = (event) => {
+          let committed = '';
+          let interim = '';
+          for (let i = event.resultIndex; i < event.results.length; i += 1) {
+            const transcript = event.results[i][0].transcript || '';
+            if (event.results[i].isFinal) committed += transcript;
+            else interim += transcript;
+          }
+          voiceInput.committedText += committed;
+          voiceInput.interimText = interim;
+          renderVoiceInputValue();
+        };
+
+        recognition.onend = () => {
+          voiceInput.interimText = '';
+          setVoiceInputRecording(false);
+          renderVoiceInputValue();
+        };
+
+        recognition.onerror = (event) => {
+          voiceInput.interimText = '';
+          setVoiceInputRecording(false);
+          renderVoiceInputValue();
+          switch (event.error) {
+            case 'not-allowed':
+            case 'service-not-allowed':
+              toast('マイクの使用が許可されていません。ブラウザ設定を確認してください。', 'error');
+              break;
+            case 'no-speech':
+              toast('音声が検出されませんでした。もう一度お試しください。', 'warning');
+              break;
+            case 'audio-capture':
+              toast('マイクデバイスにアクセスできません。', 'error');
+              break;
+            case 'network':
+              toast('ネットワークエラーで音声認識に失敗しました。', 'error');
+              break;
+            case 'aborted':
+              break;
+            default:
+              toast(`音声認識でエラーが発生しました(${event.error})。`, 'error');
+          }
+        };
+
+        voiceInput.recognition = recognition;
+        voiceInput.supported = true;
+        updateVoiceInputAvailability();
       }
 
       // -------- Profile --------
@@ -937,6 +1086,7 @@
         els.deleteConversation.disabled = false;
         els.messageContent.disabled = false;
         els.sendButton.disabled = false;
+        updateVoiceInputAvailability();
         updateManualAgentButton();
         await loadMessages();
         renderParticipants();
@@ -1110,6 +1260,7 @@
           els.deleteConversation.disabled = true;
           els.messageContent.disabled = true;
           els.sendButton.disabled = true;
+          updateVoiceInputAvailability();
           els.participants.innerHTML = '';
           updateManualAgentButton();
           await loadConversations();
@@ -1175,6 +1326,27 @@
         if (e.key === 'Enter' && e.shiftKey && !e.isComposing) {
           e.preventDefault();
           els.postForm.requestSubmit();
+        }
+      });
+      els.voiceInputToggle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+      });
+      els.voiceInputToggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!voiceInput.supported || els.voiceInputToggle.disabled || !voiceInput.recognition) return;
+        if (voiceInput.recording) {
+          stopVoiceInput();
+          return;
+        }
+        voiceInput.baseValue = els.messageContent.value;
+        voiceInput.committedText = '';
+        voiceInput.interimText = '';
+        try {
+          voiceInput.recognition.start();
+        } catch (err) {
+          toast(`音声入力の開始に失敗しました: ${err.message}`, 'error');
+          setVoiceInputRecording(false);
+          dispatchComposerInput();
         }
       });
 
@@ -1332,6 +1504,7 @@
       // -------- Init --------
       ensureProfile();
       loadAiPreference();
+      initVoiceInput();
       checkHealth();
       loadConversations();
       autoResize();

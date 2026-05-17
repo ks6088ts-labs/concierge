@@ -52,6 +52,14 @@ uv run python scripts/microsoft_foundry/vanilla.py vector-store-search \
 * `--mlflow` は MLflow の LangChain autologging を有効化します。
 * `--verbose` はローカル logger を `DEBUG` にします。
 
+同じグローバルオプションはサービス CLI でも使えます。
+
+```bash
+uv run chat-cli --tracing --mlflow --help
+uv run cloud-agent-cli --tracing --mlflow --help
+uv run todo-cli --tracing --mlflow --help
+```
+
 `--mlflow` を使う場合は、別ターミナルでローカル MLflow UI を起動します。
 
 ```bash

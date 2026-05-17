@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from typing import Annotated
 
 import typer
+from dotenv import load_dotenv
 
 from concierge.loggers import get_logger
+from concierge.observability import disable_tracing, enable_mlflow, enable_tracing
 from concierge.settings import TodoRepositoryBackend, get_todo_settings
 from concierge.todo.application.use_cases import (
     CompleteTaskUseCase,
@@ -28,6 +31,50 @@ app.add_typer(task_app, name="task")
 app.add_typer(db_app, name="db")
 logger = get_logger("concierge.todo")
 repository = get_task_repository()
+
+
+@app.callback()
+def _bootstrap(
+    tracing: Annotated[
+        bool,
+        typer.Option(
+            "--tracing",
+            "-t",
+            help=(
+                "Enable Microsoft Foundry / Azure Monitor tracing for LangChain runs. "
+                "See https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/langchain-traces"
+            ),
+        ),
+    ] = False,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            "-v",
+            help="Enable verbose (DEBUG) logging",
+        ),
+    ] = False,
+    mlflow: Annotated[
+        bool,
+        typer.Option(
+            "--mlflow",
+            "-m",
+            help=(
+                "Enable MLflow autologging for LangChain / LangGraph runs. "
+                "See https://mlflow.org/docs/latest/genai/tracing/integrations/listing/langgraph/"
+            ),
+        ),
+    ] = False,
+) -> None:
+    load_dotenv()
+    if tracing:
+        enable_tracing()
+    else:
+        disable_tracing()
+    if verbose:
+        logging.basicConfig(level=logging.DEBUG)
+    if mlflow:
+        enable_mlflow()
 
 
 def _task_to_dict(task: Task) -> dict[str, object]:

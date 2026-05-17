@@ -58,3 +58,12 @@ async def test_api_validation(app) -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         response = await client.post("/tasks", json={"title": ""})
         assert response.status_code == 422
+
+
+def test_create_app_with_observability_env(monkeypatch) -> None:
+    monkeypatch.setenv("CONCIERGE_TRACING_ENABLED", "true")
+    monkeypatch.setenv("CONCIERGE_MLFLOW_ENABLED", "false")
+
+    app = create_app()
+
+    assert app.title == "Todo API"

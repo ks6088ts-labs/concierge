@@ -15,6 +15,7 @@ from concierge.cloud_agent.infrastructure.agents.registry import get_agent_regis
 from concierge.cloud_agent.infrastructure.persistence.factory import get_task_repository
 from concierge.cloud_agent.infrastructure.queue.factory import get_task_queue
 from concierge.loggers import get_logger
+from concierge.observability import bootstrap_from_env
 from concierge.settings import get_cloud_agent_settings
 
 logger = get_logger("concierge.cloud_agent.worker")
@@ -26,13 +27,7 @@ async def run_worker(*, max_iterations: int | None = None) -> None:
     Args:
         max_iterations: If set, stop after this many iterations (useful for tests).
     """
-    # Populate ``os.environ`` from a local ``.env`` file. ``pydantic-settings``
-    # reads ``.env`` directly for our own settings classes, but third-party
-    # libraries such as ``azure.identity`` (``DefaultAzureCredential`` looks
-    # up ``AZURE_CLIENT_ID`` / ``AZURE_TENANT_ID`` / ``AZURE_CLIENT_SECRET``
-    # etc.) read configuration via ``os.environ``. Existing process env vars
-    # take precedence (``override=False`` by default).
-    load_dotenv()
+    bootstrap_from_env("concierge-cloud-agent")
 
     settings = get_cloud_agent_settings()
     repository = get_task_repository()
@@ -75,6 +70,7 @@ async def run_worker(*, max_iterations: int | None = None) -> None:
 
 
 def main() -> None:  # pragma: no cover
+    load_dotenv()
     asyncio.run(run_worker())
 
 

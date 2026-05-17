@@ -10,6 +10,27 @@ uv run chat-web
 # → Uvicorn running on http://0.0.0.0:8080
 ```
 
+## observability 配線
+
+環境変数で Web 起動時の配線を有効化します。
+
+```bash
+CONCIERGE_TRACING_ENABLED=true CONCIERGE_MLFLOW_ENABLED=true uv run chat-web
+```
+
+```mermaid
+flowchart LR
+    REQ["HTTP リクエスト / SSE"]
+    APP["chat-web create_app()"]
+    OBS["bootstrap_from_env('concierge-chat')"]
+    LC["FoundryChatbotResponder -> chat_model.stream(..., config=trace_config(...))"]
+    F["Foundry tracing UI"]
+    M["MLflow UI :5000"]
+    REQ --> APP --> OBS --> LC
+    LC --> F
+    LC --> M
+```
+
 ## ページとポート
 
 | URL | 内容 |

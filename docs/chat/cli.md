@@ -20,6 +20,14 @@ chat-cli
 └── db               # init / ping / drop  (postgres / azure-postgres only)
 ```
 
+## Global observability options
+
+`chat-cli` supports the same global toggles as the tutorial CLIs:
+
+- `--tracing` enables Foundry/Azure Monitor tracing (`concierge-chat` tracer name).
+- `--mlflow` enables `mlflow.langchain.autolog()`.
+- `--verbose` sets local logging to `DEBUG`.
+
 !!! warning "The `memory` backend is per-process"
     Every `uv run chat-cli ...` invocation starts a fresh interpreter, so
     the in-memory store is empty again. For two-step flows (create →

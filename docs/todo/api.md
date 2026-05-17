@@ -14,6 +14,29 @@ The server listens on `http://localhost:8080`. Open
 interactive Swagger UI (rendered by FastAPI from the OpenAPI schema at
 [`/openapi.json`](http://localhost:8080/openapi.json)).
 
+## Observability wiring
+
+```bash
+CONCIERGE_TRACING_ENABLED=true CONCIERGE_MLFLOW_ENABLED=true uv run todo-web
+```
+
+`todo` currently does not execute LangChain calls, so tracing output is limited.
+The bootstrap is still enabled to keep future LLM features observable without
+additional wiring.
+
+```mermaid
+flowchart LR
+    REQ["HTTP request"]
+    APP["todo-web create_app()"]
+    OBS["bootstrap_from_env('concierge-todo')"]
+    FUTURE["Future LangChain path -> trace_config(...)"]
+    F["Foundry tracing UI"]
+    M["MLflow UI :5000"]
+    REQ --> APP --> OBS --> FUTURE
+    FUTURE --> F
+    FUTURE --> M
+```
+
 ![Todo API Swagger UI overview](../images/todo-api-swagger-overview.png)
 
 ## Endpoints at a glance

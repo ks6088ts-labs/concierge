@@ -18,6 +18,14 @@ chat-cli
 └── db               # init / ping / drop  （postgres / azure-postgres 専用）
 ```
 
+## observability のグローバルオプション
+
+`chat-cli` でも共通トグルを利用できます。
+
+- `--tracing`: Foundry/Azure Monitor tracing を有効化（tracer 名: `concierge-chat`）
+- `--mlflow`: `mlflow.langchain.autolog()` を有効化
+- `--verbose`: ローカルログを `DEBUG` に設定
+
 !!! warning "`memory` バックエンドはプロセスごとに独立"
     `uv run chat-cli ...` は毎回新しい Python プロセスを起動するため、`memory` バックエンドのストアは毎回空からやり直しです。`create` → `post` のような複数ステップを CLI で行うときは `postgres` バックエンドに切り替えてください（`chat-cli db init` を一度実行）。
 

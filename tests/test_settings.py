@@ -33,22 +33,30 @@ def test_observability_settings_defaults(monkeypatch):
     """ObservabilitySettings should fall back to documented defaults when env vars are unset."""
     monkeypatch.delenv("MLFLOW_TRACKING_URI", raising=False)
     monkeypatch.delenv("MLFLOW_EXPERIMENT_NAME", raising=False)
+    monkeypatch.delenv("CONCIERGE_TRACING_ENABLED", raising=False)
+    monkeypatch.delenv("CONCIERGE_MLFLOW_ENABLED", raising=False)
 
     settings = ObservabilitySettings(_env_file=None)  # ty: ignore[unknown-argument]
 
     assert settings.mlflow_tracking_uri == "http://127.0.0.1:5000"
     assert settings.mlflow_experiment_name == "microsoft-foundry-vanilla"
+    assert settings.concierge_tracing_enabled is False
+    assert settings.concierge_mlflow_enabled is False
 
 
 def test_observability_settings_reads_env(monkeypatch):
     """MLFLOW_TRACKING_URI / MLFLOW_EXPERIMENT_NAME should override defaults."""
     monkeypatch.setenv("MLFLOW_TRACKING_URI", "http://example.com:1234")
     monkeypatch.setenv("MLFLOW_EXPERIMENT_NAME", "my-experiment")
+    monkeypatch.setenv("CONCIERGE_TRACING_ENABLED", "true")
+    monkeypatch.setenv("CONCIERGE_MLFLOW_ENABLED", "1")
 
     settings = ObservabilitySettings(_env_file=None)  # ty: ignore[unknown-argument]
 
     assert settings.mlflow_tracking_uri == "http://example.com:1234"
     assert settings.mlflow_experiment_name == "my-experiment"
+    assert settings.concierge_tracing_enabled is True
+    assert settings.concierge_mlflow_enabled is True
 
 
 def test_todo_settings_defaults(monkeypatch):

@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import uuid
 from typing import Annotated
 
 import typer
+from dotenv import load_dotenv
 
 from concierge.cloud_agent.application.use_cases import (
     CancelTaskUseCase,
@@ -31,11 +33,57 @@ from concierge.cloud_agent.infrastructure.agents.registry import get_agent_regis
 from concierge.cloud_agent.infrastructure.persistence.factory import get_task_repository
 from concierge.cloud_agent.infrastructure.queue.factory import get_task_queue
 from concierge.loggers import get_logger
+from concierge.observability import bootstrap_from_env, disable_tracing, enable_mlflow, enable_tracing
 
 app = typer.Typer(add_completion=False, help="Cloud Agent CLI")
 task_app = typer.Typer(help="Task commands")
 app.add_typer(task_app, name="task")
 logger = get_logger("concierge.cloud_agent")
+
+
+@app.callback()
+def _bootstrap(
+    tracing: Annotated[
+        bool,
+        typer.Option(
+            "--tracing",
+            "-t",
+            help=(
+                "Enable Microsoft Foundry / Azure Monitor tracing for LangChain runs. "
+                "See https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/langchain-traces"
+            ),
+        ),
+    ] = False,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            "-v",
+            help="Enable verbose (DEBUG) logging",
+        ),
+    ] = False,
+    mlflow: Annotated[
+        bool,
+        typer.Option(
+            "--mlflow",
+            "-m",
+            help=(
+                "Enable MLflow autologging for LangChain / LangGraph runs. "
+                "See https://mlflow.org/docs/latest/genai/tracing/integrations/listing/langgraph/"
+            ),
+        ),
+    ] = False,
+) -> None:
+    load_dotenv()
+    bootstrap_from_env("concierge-cloud-agent")
+    if tracing:
+        enable_tracing()
+    else:
+        disable_tracing()
+    if verbose:
+        logging.basicConfig(level=logging.DEBUG)
+    if mlflow:
+        enable_mlflow()
 
 
 def _task_to_dict(task: Task) -> dict[str, object]:

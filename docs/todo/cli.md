@@ -14,6 +14,12 @@ uv run todo-cli task complete <task_id>
 uv run todo-cli task delete <task_id>
 ```
 
+## Global observability options
+
+- `--tracing` toggles shared tracing state (`concierge-todo` tracer name).
+- `--mlflow` enables `mlflow.langchain.autolog()` bootstrap.
+- `--verbose` enables DEBUG logging.
+
 ## Database Commands
 
 The following commands manage the database schema and are only applicable when

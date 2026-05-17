@@ -14,6 +14,12 @@ uv run todo-cli task complete <task_id>
 uv run todo-cli task delete <task_id>
 ```
 
+## observability のグローバルオプション
+
+- `--tracing`: 共有 tracing 状態を有効化（tracer 名: `concierge-todo`）
+- `--mlflow`: `mlflow.langchain.autolog()` を有効化
+- `--verbose`: DEBUG ログを有効化
+
 ## データベースコマンド
 
 以下のコマンドはデータベーススキーマを管理します。`.env` で `TODO_REPOSITORY_BACKEND` を `postgres` または `azure-postgres` に設定した場合のみ有効です。

@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from concierge.cloud_agent.infrastructure.web.exception_handlers import register_exception_handlers
 from concierge.cloud_agent.infrastructure.web.routes import router
 from concierge.loggers import get_logger
+from concierge.observability import bootstrap_from_env
 
 logger = get_logger("concierge.cloud_agent")
 
@@ -19,6 +20,7 @@ def create_app() -> FastAPI:
     # etc.) read configuration via ``os.environ``. Existing process env vars
     # take precedence (``override=False`` by default).
     load_dotenv()
+    bootstrap_from_env("concierge-cloud-agent")
 
     app = FastAPI(title="Cloud Agent API", version="0.1.0")
     register_exception_handlers(app)

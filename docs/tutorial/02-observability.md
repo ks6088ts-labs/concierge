@@ -29,18 +29,54 @@ laptop.
 
 ```mermaid
 flowchart LR
-    subgraph CLI["Typer CLI (vanilla.py)"]
-        cb["_trace_config()"]
-        flag1{"--tracing?"}
-        flag2{"--mlflow?"}
+    subgraph Sources["Sources (CLI / Web / Worker)"]
+        CLI_CHAT["chat-cli"]
+        WEB_CHAT["chat-web (FastAPI)"]
+        CLI_CA["cloud-agent-cli"]
+        WEB_CA["cloud-agent-web"]
+        WORKER_CA["cloud-agent worker"]
+        CLI_TODO["todo-cli"]
+        WEB_TODO["todo-web"]
+        VANILLA["scripts/*/vanilla.py"]
     end
-    CLI -- LangChain runs --> RC[RunnableConfig]
-    flag1 -- yes --> Tracer["AzureAIOpenTelemetryTracer"]
-    Tracer -- OTLP --> AppInsights[("Azure Monitor / App Insights")]
+
+    subgraph Shared["concierge/observability.py"]
+        ENABLE["enable_tracing() / enable_mlflow()"]
+        BOOT["bootstrap_from_env()"]
+        TCONF["trace_config(service_name)"]
+        TRACER["get_tracer(service_name)"]
+    end
+
+    Sources -->|"--tracing / --mlflow"| ENABLE
+    Sources -->|"CONCIERGE_*_ENABLED=true"| BOOT
+    ENABLE --> TCONF
+    TCONF --> TRACER
+
+    subgraph Runtime["Runtime signals"]
+        TRACE["trace: span tree"]
+        METRIC["metric: tokens / latency"]
+        LOG["log: CLI stderr / app logs"]
+    end
+
+    TRACER --> TRACE
+    ENABLE --> METRIC
+    Sources --> LOG
+    TRACE --> AppInsights[("Azure Monitor / App Insights")]
     AppInsights --> Foundry[("Foundry tracing UI")]
-    flag2 -- yes --> Autolog["mlflow.langchain.autolog()"]
-    Autolog -- HTTP --> Local[("Local MLflow server :5000")]
+    METRIC --> MLflow[("Local MLflow UI :5000")]
 ```
+
+## Service-wide rollout (`chat` / `cloud_agent` / `todo`)
+
+- Shared bootstrap and callback wiring now live in `concierge/observability.py`.
+- CLI entrypoints use `--tracing`, `--mlflow`, `--verbose`.
+- Web/worker entrypoints use:
+  - `CONCIERGE_TRACING_ENABLED=true`
+  - `CONCIERGE_MLFLOW_ENABLED=true`
+- Tracer names are fixed per service:
+  - `concierge-chat`
+  - `concierge-cloud-agent`
+  - `concierge-todo`
 
 ## How the toggles are implemented
 
@@ -76,6 +112,40 @@ def _trace_config(extra=None) -> RunnableConfig:
 
 This is what keeps the per-command code free of conditional logic: the toggle
 is set once globally, and every LangChain call picks it up uniformly.
+
+### Why `disable_tracing` exists alongside `enable_tracing`
+
+The enabled / disabled flag in `concierge/observability.py` is held in a
+module-level mutable singleton (`_state`). Once `enable_tracing()` flips it
+to `True`, the flag persists for the lifetime of the process unless something
+actively resets it. That is why a paired `disable_tracing()` is part of the
+public API. It is needed in four concrete situations:
+
+1. **CLI flag symmetry.**
+   `--tracing` is an opt-in flag that defaults to `False`. Each CLI bootstrap
+   calls `disable_tracing()` in the `else` branch so a stale `True` value
+   (left over from a prior session or an import side effect) cannot silently
+   keep the tracer attached. Without this you could end up with traces being
+   sent even when `--tracing` was not passed (see
+   [`concierge/chat/infrastructure/cli/app.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/chat/infrastructure/cli/app.py)).
+2. **Environment-driven bootstrap.**
+   `bootstrap_from_env()` treats `CONCIERGE_TRACING_ENABLED=false` as a
+   deliberate intent to turn tracing off. In long-running processes where
+   configuration may be reloaded, simply not enabling is not enough: we must
+   actively disable so the previous state cannot leak forward.
+3. **Test isolation.**
+   pytest runs many tests in the same process, so the module-level state
+   leaks across tests unless we explicitly reset it. The `_reset_state()`
+   helper in
+   [`tests/test_observability.py`](https://github.com/ks6088ts-labs/concierge/blob/main/tests/test_observability.py)
+   calls `disable_tracing()` for exactly this reason.
+4. **API completeness.**
+   Exposing `enable` / `disable` / `is_enabled` together gives future
+   subcommands or per-request controls a deterministic way to manage the
+   flag.
+
+In short: as soon as you keep state in a process-wide singleton, an API to
+turn it on requires a matching API to turn it off.
 
 ## Step 2a - Azure Monitor tracing
 
@@ -224,6 +294,22 @@ uv run python scripts/microsoft_foundry/vanilla.py --tracing --mlflow --verbose 
 
 `--verbose` raises the local logger to `DEBUG`, which is useful while wiring
 new commands.
+
+## Service command examples
+
+```bash
+# chat CLI / web
+uv run chat-cli --tracing --mlflow message post <conversation_id> --content "hello"
+CONCIERGE_TRACING_ENABLED=true CONCIERGE_MLFLOW_ENABLED=true uv run chat-web
+
+# cloud_agent CLI / worker / web
+uv run cloud-agent-cli --tracing --mlflow worker --max-iterations 1
+CONCIERGE_TRACING_ENABLED=true CONCIERGE_MLFLOW_ENABLED=true uv run cloud-agent-web
+
+# todo CLI / web (no LangChain path yet, but bootstrap is shared)
+uv run todo-cli --tracing --mlflow task list
+CONCIERGE_TRACING_ENABLED=true CONCIERGE_MLFLOW_ENABLED=true uv run todo-web
+```
 
 ## Verify the nearby code with tests
 

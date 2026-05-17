@@ -14,6 +14,28 @@ uv run todo-web
 FastAPI が [`/openapi.json`](http://localhost:8080/openapi.json) から自動生成した
 Swagger UI が表示されます。
 
+## observability 配線
+
+```bash
+CONCIERGE_TRACING_ENABLED=true CONCIERGE_MLFLOW_ENABLED=true uv run todo-web
+```
+
+`todo` は現状 LangChain 呼び出しを持たないため、トレース出力は限定的です。
+ただし bootstrap を共通化しているため、将来 LLM 機能を追加した際に追加配線は不要です。
+
+```mermaid
+flowchart LR
+    REQ["HTTP リクエスト"]
+    APP["todo-web create_app()"]
+    OBS["bootstrap_from_env('concierge-todo')"]
+    FUTURE["将来の LangChain 経路 -> trace_config(...)"]
+    F["Foundry tracing UI"]
+    M["MLflow UI :5000"]
+    REQ --> APP --> OBS --> FUTURE
+    FUTURE --> F
+    FUTURE --> M
+```
+
 ![Todo API Swagger UI 全体](../images/todo-api-swagger-overview.png)
 
 ## エンドポイント一覧

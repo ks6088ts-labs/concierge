@@ -28,18 +28,54 @@ LLM アプリのデバッグが難しい理由は、興味のある状態がプ�
 
 ```mermaid
 flowchart LR
-    subgraph CLI["Typer CLI (vanilla.py)"]
-        cb["_trace_config()"]
-        flag1{"--tracing?"}
-        flag2{"--mlflow?"}
+    subgraph Sources["発生源 (CLI / Web / Worker)"]
+        CLI_CHAT["chat-cli"]
+        WEB_CHAT["chat-web (FastAPI)"]
+        CLI_CA["cloud-agent-cli"]
+        WEB_CA["cloud-agent-web"]
+        WORKER_CA["cloud-agent worker"]
+        CLI_TODO["todo-cli"]
+        WEB_TODO["todo-web"]
+        VANILLA["scripts/*/vanilla.py"]
     end
-    CLI -- LangChain 実行 --> RC[RunnableConfig]
-    flag1 -- yes --> Tracer["AzureAIOpenTelemetryTracer"]
-    Tracer -- OTLP --> AppInsights[("Azure Monitor / App Insights")]
-    AppInsights --> Foundry[("Foundry トレース UI")]
-    flag2 -- yes --> Autolog["mlflow.langchain.autolog()"]
-    Autolog -- HTTP --> Local[("ローカル MLflow サーバ :5000")]
+
+    subgraph Shared["concierge/observability.py"]
+        ENABLE["enable_tracing() / enable_mlflow()"]
+        BOOT["bootstrap_from_env()"]
+        TCONF["trace_config(service_name)"]
+        TRACER["get_tracer(service_name)"]
+    end
+
+    Sources -->|"--tracing / --mlflow"| ENABLE
+    Sources -->|"CONCIERGE_*_ENABLED=true"| BOOT
+    ENABLE --> TCONF
+    TCONF --> TRACER
+
+    subgraph Runtime["データ種別"]
+        TRACE["trace: span tree"]
+        METRIC["metric: token / latency"]
+        LOG["log: CLI stderr / app logs"]
+    end
+
+    TRACER --> TRACE
+    ENABLE --> METRIC
+    Sources --> LOG
+    TRACE --> AppInsights[("Azure Monitor / App Insights")]
+    AppInsights --> Foundry[("Foundry tracing UI")]
+    METRIC --> MLflow[("Local MLflow UI :5000")]
 ```
+
+## サービス横展開 (`chat` / `cloud_agent` / `todo`)
+
+- 共有配線は `concierge/observability.py` に集約。
+- CLI は `--tracing` / `--mlflow` / `--verbose`。
+- Web / worker は次の環境変数で切り替え:
+  - `CONCIERGE_TRACING_ENABLED=true`
+  - `CONCIERGE_MLFLOW_ENABLED=true`
+- サービス別 tracer 名:
+  - `concierge-chat`
+  - `concierge-cloud-agent`
+  - `concierge-todo`
 
 ## 切替の実装
 
@@ -74,6 +110,39 @@ def _trace_config(extra=None) -> RunnableConfig:
 
 これによりコマンド側に条件分岐を持ち込まずに、トレーサーを一括で適用できる
 ようになっています。
+
+### `disable_tracing` が必要な理由
+
+`concierge/observability.py` の有効/無効フラグはモジュール単位の
+ミュータブルなシングルトン (`_state`) として保持されます。一度
+`enable_tracing()` で `True` になると、明示的に戻す手段がない限り
+プロセス内に残り続けるため、対になる `disable_tracing()` を公開 API
+として用意しています。具体的には次の 4 つのユースケースで必要です。
+
+1. **CLI フラグの対称性**
+   `--tracing` は既定 `False` のオプトインです。フラグなしで起動した
+   際に「以前のセッションや import 副作用で `True` のまま残っている」
+   可能性を排除するため、各 CLI の bootstrap は `else: disable_tracing()`
+   で明示的にリセットします。これがないと「`--tracing` を付けていない
+   のに tracer が動く」状態が起こり得ます
+   ([`concierge/chat/infrastructure/cli/app.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/chat/infrastructure/cli/app.py)
+   など)。
+2. **環境変数からの bootstrap**
+   `bootstrap_from_env()` は `CONCIERGE_TRACING_ENABLED=false` を
+   「無効化したい意思」として尊重します。長寿命プロセスで設定が再読込
+   されるケースを想定し、単に enable しないだけでなく能動的に
+   `disable_tracing()` を呼びます。
+3. **テスト分離**
+   pytest は同一プロセスで複数テストを回すため、明示的なリセット
+   手段がないとテスト間でフラグがリークします
+   ([`tests/test_observability.py`](https://github.com/ks6088ts-labs/concierge/blob/main/tests/test_observability.py)
+   の `_reset_state()`)。
+4. **API の完備性**
+   `enable` / `disable` / `is_enabled` を揃えることで、将来追加されうる
+   サブコマンドや HTTP リクエスト単位の制御から決定論的に状態を扱えます。
+
+要するに「シングルトン状態を持つ以上、ON にする API があれば OFF に
+する API も必須」というのが本質的な理由です。
 
 ## ステップ 2a - Azure Monitor トレーシング
 
@@ -225,6 +294,22 @@ uv run python scripts/microsoft_foundry/vanilla.py --tracing --mlflow --verbose 
 
 `--verbose` を付けるとローカルロガーが `DEBUG` レベルになり、新規コマンド
 を組み込む際の確認に便利です。
+
+## サービス別の実行例
+
+```bash
+# chat CLI / web
+uv run chat-cli --tracing --mlflow message post <conversation_id> --content "hello"
+CONCIERGE_TRACING_ENABLED=true CONCIERGE_MLFLOW_ENABLED=true uv run chat-web
+
+# cloud_agent CLI / worker / web
+uv run cloud-agent-cli --tracing --mlflow worker --max-iterations 1
+CONCIERGE_TRACING_ENABLED=true CONCIERGE_MLFLOW_ENABLED=true uv run cloud-agent-web
+
+# todo CLI / web (現状 LangChain 呼び出しは無いが、同じ bootstrap を利用)
+uv run todo-cli --tracing --mlflow task list
+CONCIERGE_TRACING_ENABLED=true CONCIERGE_MLFLOW_ENABLED=true uv run todo-web
+```
 
 ## 周辺コードをテストで確認
 

@@ -12,6 +12,12 @@ The `cloud-agent-cli` entry point is installed automatically when you run
 uv run cloud-agent-cli --help
 ```
 
+## Global observability options
+
+- `--tracing` toggles shared tracing state (`concierge-cloud-agent` tracer name).
+- `--mlflow` enables `mlflow.langchain.autolog()` bootstrap.
+- `--verbose` enables DEBUG logging.
+
 ## Task Commands
 
 ### Dispatch a task

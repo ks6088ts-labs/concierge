@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from concierge.chat.infrastructure.web.exception_handlers import register_exception_handlers
 from concierge.chat.infrastructure.web.routes import router
 from concierge.loggers import get_logger
+from concierge.observability import bootstrap_from_env
 
 logger = get_logger("concierge.chat")
 
@@ -22,6 +23,7 @@ def create_app() -> FastAPI:
     # example ``AZURE_AI_PROJECT_ENDPOINT``) via ``os.environ``. Existing
     # process env vars take precedence (``override=False`` by default).
     load_dotenv()
+    bootstrap_from_env("concierge-chat")
 
     app = FastAPI(title="Chat API", version="0.1.0")
     static_dir = Path(__file__).parent / "static"

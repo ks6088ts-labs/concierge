@@ -13,6 +13,27 @@ uv run cloud-agent-web
 [`http://localhost:8081/docs`](http://localhost:8081/docs) でインタラクティブな
 Swagger UI を確認できます。
 
+## observability 配線
+
+`cloud-agent-web` と worker は環境変数で observability を切り替えます。
+
+```bash
+CONCIERGE_TRACING_ENABLED=true CONCIERGE_MLFLOW_ENABLED=true uv run cloud-agent-web
+```
+
+```mermaid
+flowchart LR
+    REQ["HTTP リクエスト / worker poll"]
+    APP["cloud-agent app / worker"]
+    OBS["bootstrap_from_env('concierge-cloud-agent')"]
+    FUTURE["将来の LangChain agent.invoke(..., config=trace_config(...))"]
+    F["Foundry tracing UI"]
+    M["MLflow UI :5000"]
+    REQ --> APP --> OBS --> FUTURE
+    FUTURE --> F
+    FUTURE --> M
+```
+
 ## エンドポイント一覧
 
 | メソッド | パス | 説明 |

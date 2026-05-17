@@ -19,7 +19,44 @@ flowchart LR
     UC --> Repo[TaskRepository]
     UC --> Queue[TaskQueue]
     UC --> Registry[AgentRegistry]
-    Registry --> Agent[Agent]
+    Registry --> Echo[EchoAgent]
+    Registry --> LGE[LangGraphEchoAgent]
+```
+
+## Agent Extension Point
+
+Agents are registered in
+`concierge/cloud_agent/infrastructure/agents/registry.py`.  Each agent
+implements the `Agent` Protocol from the `application` layer:
+
+```python
+class Agent(Protocol):
+    agent_type: ClassVar[str]
+    async def handle(self, task_input: TaskInput) -> TaskOutput: ...
+```
+
+The `infrastructure` layer is the only place that may import LangChain /
+LangGraph.  The `domain` and `application` layers must remain framework-free
+(enforced by `tests/cloud_agent/test_architecture.py`).
+
+```mermaid
+classDiagram
+    class Agent {
+        <<Protocol>>
+        +agent_type: str
+        +handle(task_input) TaskOutput
+    }
+    class EchoAgent {
+        +agent_type = "echo"
+        +handle(task_input) TaskOutput
+    }
+    class LangGraphEchoAgent {
+        +agent_type = "langgraph-echo"
+        +handle(task_input) TaskOutput
+        -_build_agent()
+    }
+    Agent <|.. EchoAgent
+    Agent <|.. LangGraphEchoAgent
 ```
 
 ## Key Design Principles
@@ -107,6 +144,8 @@ share the exact same configuration object.
 | `CLOUD_AGENT_MAX_RETRIES` | `3` | Default retry budget injected into `DispatchTaskUseCase`. A task is moved to the DLQ when `retry_count > max_retries`. Can be overridden per dispatch via the API / CLI. |
 | `CLOUD_AGENT_WORKER_CONCURRENCY` | `1` | Reserved for future concurrent processing per worker. The current loop processes one task at a time; scale horizontally instead. |
 | `CLOUD_AGENT_POLL_INTERVAL_SECONDS` | `1.0` | How long the worker sleeps after an empty `dequeue()` before polling again. |
+| `CLOUD_AGENT_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | Model string for `init_chat_model` used by LangGraph-based agents (e.g. `"azure_ai:gpt-5"`, `"azure_ai:gpt-4o-mini"`). |
+| `CLOUD_AGENT_LANGGRAPH_SYSTEM_PROMPT` | _(built-in)_ | System prompt injected into LangGraph agents.  Override to customise agent behaviour. |
 
 ### Repository backend selection
 

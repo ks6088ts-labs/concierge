@@ -28,6 +28,32 @@ uv run cloud-agent-cli task dispatch \
   --payload '{"message": "hello world"}'
 ```
 
+### Dispatch a LangGraph echo task
+
+```bash
+uv run cloud-agent-cli task dispatch \
+  --agent-type langgraph-echo \
+  --payload '{"message": "Hello LangGraph"}'
+```
+
+The worker processes the task and stores the result.  Poll with:
+
+```bash
+uv run cloud-agent-cli task get <uuid>
+```
+
+A successful result looks like:
+
+```json
+{
+  "echo": "Hello LangGraph",
+  "reply": "Hello LangGraph",
+  "tool_calls": [
+    {"name": "echo", "args": {"text": "Hello LangGraph"}}
+  ]
+}
+```
+
 Options:
 
 | Flag | Required | Description |
@@ -105,7 +131,7 @@ uv run cloud-agent-cli agents
 Output:
 
 ```json
-["echo"]
+["echo", "langgraph-echo"]
 ```
 
 ## Configuration
@@ -124,6 +150,8 @@ All settings are controlled by environment variables (or a `.env` file).
 | `CLOUD_AGENT_MAX_RETRIES` | `3` | Default max retries |
 | `CLOUD_AGENT_WORKER_CONCURRENCY` | `1` | Worker concurrency (future) |
 | `CLOUD_AGENT_POLL_INTERVAL_SECONDS` | `1.0` | Polling interval when queue empty |
+| `CLOUD_AGENT_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | Model string for `init_chat_model` used by LangGraph agents |
+| `CLOUD_AGENT_LANGGRAPH_SYSTEM_PROMPT` | _(built-in)_ | System prompt for LangGraph agents |
 
 See the [Configuration section in the Overview](index.md#configuration) for
 backend selection tables and end-to-end `.env` examples.

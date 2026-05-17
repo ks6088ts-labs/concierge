@@ -27,6 +27,32 @@ uv run cloud-agent-cli task dispatch \
   --payload '{"message": "hello world"}'
 ```
 
+### LangGraph エコータスクのディスパッチ
+
+```bash
+uv run cloud-agent-cli task dispatch \
+  --agent-type langgraph-echo \
+  --payload '{"message": "Hello LangGraph"}'
+```
+
+ワーカーがタスクを処理し、結果を保存します。結果を取得するには:
+
+```bash
+uv run cloud-agent-cli task get <uuid>
+```
+
+成功時の結果の例:
+
+```json
+{
+  "echo": "Hello LangGraph",
+  "reply": "Hello LangGraph",
+  "tool_calls": [
+    {"name": "echo", "args": {"text": "Hello LangGraph"}}
+  ]
+}
+```
+
 オプション:
 
 | フラグ | 必須 | 説明 |
@@ -98,6 +124,8 @@ uv run cloud-agent-cli agents
 | `CLOUD_AGENT_MAX_RETRIES` | `3` | デフォルト最大リトライ回数 |
 | `CLOUD_AGENT_WORKER_CONCURRENCY` | `1` | ワーカー内同時実行数（将来拡張用） |
 | `CLOUD_AGENT_POLL_INTERVAL_SECONDS` | `1.0` | キューが空のときのポーリング間隔 |
+| `CLOUD_AGENT_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | LangGraph エージェントで使う `init_chat_model` のモデル文字列 |
+| `CLOUD_AGENT_LANGGRAPH_SYSTEM_PROMPT` | _(組み込み)_ | LangGraph エージェントのシステムプロンプト |
 
 詳しい解説と構成例は [概要ページの「設定」セクション](index.ja.md#configuration) を参照してください。
 

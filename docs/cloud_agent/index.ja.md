@@ -19,7 +19,44 @@ flowchart LR
     UC --> Repo[TaskRepository]
     UC --> Queue[TaskQueue]
     UC --> Registry[AgentRegistry]
-    Registry --> Agent[Agent]
+    Registry --> Echo[EchoAgent]
+    Registry --> LGE[LangGraphEchoAgent]
+```
+
+## エージェント拡張ポイント
+
+エージェントは
+`concierge/cloud_agent/infrastructure/agents/registry.py` に登録します。
+各エージェントは `application` 層が定義する `Agent` Protocol を実装します。
+
+```python
+class Agent(Protocol):
+    agent_type: ClassVar[str]
+    async def handle(self, task_input: TaskInput) -> TaskOutput: ...
+```
+
+LangChain / LangGraph のインポートは `infrastructure` 層のみに許可されます。
+`domain` 層・`application` 層はフレームワーク非依存を維持します
+（`tests/cloud_agent/test_architecture.py` で機械的に検証）。
+
+```mermaid
+classDiagram
+    class Agent {
+        <<Protocol>>
+        +agent_type: str
+        +handle(task_input) TaskOutput
+    }
+    class EchoAgent {
+        +agent_type = "echo"
+        +handle(task_input) TaskOutput
+    }
+    class LangGraphEchoAgent {
+        +agent_type = "langgraph-echo"
+        +handle(task_input) TaskOutput
+        -_build_agent()
+    }
+    Agent <|.. EchoAgent
+    Agent <|.. LangGraphEchoAgent
 ```
 
 ## 主要な設計方針
@@ -105,6 +142,8 @@ Cloud Agent の設定はすべて
 | `CLOUD_AGENT_MAX_RETRIES` | `3` | `DispatchTaskUseCase` のデフォルトリトライ予算。`retry_count > max_retries` で DLQ 行き。API / CLI でディスパッチごとに上書き可能 |
 | `CLOUD_AGENT_WORKER_CONCURRENCY` | `1` | 1 ワーカー内の同時実行数（将来拡張用）。現状の実装は逐次処理のため、スケールしたい場合はワーカープロセスを増やす |
 | `CLOUD_AGENT_POLL_INTERVAL_SECONDS` | `1.0` | キューが空のときの再ポーリング間隔（秒） |
+| `CLOUD_AGENT_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | LangGraph ベースエージェントで使う `init_chat_model` のモデル文字列（例: `"azure_ai:gpt-5"`, `"azure_ai:gpt-4o-mini"`） |
+| `CLOUD_AGENT_LANGGRAPH_SYSTEM_PROMPT` | _(組み込み)_ | LangGraph エージェントに注入するシステムプロンプト。エージェントの動作をカスタマイズする際に上書きします |
 
 ### リポジトリバックエンドの選択
 

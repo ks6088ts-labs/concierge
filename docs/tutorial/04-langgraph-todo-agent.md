@@ -83,3 +83,14 @@ Check:
 1. `todo-web` is running
 2. `--endpoint` points to the correct host/port
 3. request/response details under `--verbose`
+
+## Further Reading
+
+The same LangGraph agent pattern can be integrated into the
+[Cloud Agent service](../cloud_agent/index.md) so that it runs as an
+async background task.  The `LangGraphEchoAgent` in
+`concierge/cloud_agent/infrastructure/agents/langgraph_echo_agent.py`
+is a minimal reference implementation that follows the same `create_agent`
+API used in this tutorial.  See the
+[Cloud Agent CLI docs](../cloud_agent/cli.md#dispatch-a-langgraph-echo-task)
+for a dispatch example.

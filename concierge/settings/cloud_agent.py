@@ -46,6 +46,11 @@ class CloudAgentSettings(BaseSettings):
         max_retries: Default maximum retry count for tasks.
         worker_concurrency: Number of concurrent task processors per worker.
         poll_interval_seconds: Polling interval when queue is empty.
+        langgraph_model: Model string for ``init_chat_model`` used by
+            LangGraph-based agents (e.g. ``"azure_ai:gpt-5"``).
+            Overridable via ``CLOUD_AGENT_LANGGRAPH_MODEL``.
+        langgraph_system_prompt: System prompt injected into LangGraph
+            agents.  Overridable via ``CLOUD_AGENT_LANGGRAPH_SYSTEM_PROMPT``.
     """
 
     repository_backend: CloudAgentRepositoryBackend = CloudAgentRepositoryBackend.MEMORY
@@ -58,6 +63,14 @@ class CloudAgentSettings(BaseSettings):
     max_retries: int = 3
     worker_concurrency: int = 1
     poll_interval_seconds: float = 1.0
+
+    # LangGraph / LangChain agent settings
+    langgraph_model: str = "azure_ai:gpt-5"
+    langgraph_system_prompt: str = (
+        "You are a minimal echo agent. "
+        "When you receive any user input, call the `echo` tool with the user's text verbatim, "
+        "then return the tool result as your final answer in one sentence."
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -60,6 +60,14 @@ Dispatch a new task to the queue.
 }
 ```
 
+To dispatch to the `langgraph-echo` agent:
+
+```bash
+curl -X POST http://localhost:8081/cloud-agent/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"agent_type": "langgraph-echo", "payload": {"message": "Hello LangGraph"}}'
+```
+
 - `agent_type` — registered agent identifier (required, 1–100 chars)
 - `payload` — dict forwarded to the agent (max 64 KiB)
 - `max_retries` — override default max retries (optional)
@@ -141,7 +149,7 @@ List all registered agent types.
 
 ```json
 {
-  "agent_types": ["echo"]
+  "agent_types": ["echo", "langgraph-echo"]
 }
 ```
 

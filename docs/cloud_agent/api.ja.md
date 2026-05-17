@@ -60,6 +60,14 @@ flowchart LR
 }
 ```
 
+`langgraph-echo` エージェントへのディスパッチ例:
+
+```bash
+curl -X POST http://localhost:8081/cloud-agent/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"agent_type": "langgraph-echo", "payload": {"message": "Hello LangGraph"}}'
+```
+
 - `agent_type` — 登録済みエージェント識別子（必須、1〜100 文字）
 - `payload` — エージェントに渡す辞書（最大 64 KiB）
 - `max_retries` — 既定の最大リトライ回数を上書き（省略可）

@@ -5,7 +5,20 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
-FRAMEWORK_IMPORTS = {"fastapi", "pydantic", "typer", "uvicorn", "httpx", "sqlalchemy", "psycopg", "azure"}
+FRAMEWORK_IMPORTS = {
+    "fastapi",
+    "pydantic",
+    "typer",
+    "uvicorn",
+    "httpx",
+    "sqlalchemy",
+    "psycopg",
+    "azure",
+    "langchain",
+    "langgraph",
+    "langchain_core",
+    "langchain_azure_ai",
+}
 BASE_PATH = Path("concierge/cloud_agent")
 
 

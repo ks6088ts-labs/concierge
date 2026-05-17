@@ -82,3 +82,13 @@ Todo API が接続失敗や 4xx/5xx を返した場合、ツールは例外を�
 1. `todo-web` が起動しているか
 2. `--endpoint` が正しいか
 3. `--verbose` で HTTP 詳細ログを確認
+
+## 参考リンク
+
+このチュートリアルと同じ LangGraph エージェントパターンを
+[Cloud Agent サービス](../cloud_agent/index.ja.md) に組み込み、
+非同期バックグラウンドタスクとして実行することもできます。
+`concierge/cloud_agent/infrastructure/agents/langgraph_echo_agent.py` の
+`LangGraphEchoAgent` は、本チュートリアルと同じ `create_agent` API を使った
+最小リファレンス実装です。ディスパッチ例は
+[Cloud Agent CLI ドキュメント](../cloud_agent/cli.ja.md) を参照してください。

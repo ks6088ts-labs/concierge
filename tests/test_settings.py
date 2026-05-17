@@ -5,11 +5,13 @@ from dotenv import load_dotenv
 
 from concierge.loggers import get_logger
 from concierge.settings import (
+    AgentsSettings,
     ObservabilitySettings,
     ProjectSettings,
     TodoRepositoryBackend,
     TodoSettings,
 )
+from concierge.settings.chat import ChatResponderBackend, ChatSettings
 
 logger = get_logger(__name__)
 
@@ -90,3 +92,45 @@ def test_todo_settings_rejects_unknown_backend(monkeypatch):
 
     with pytest.raises(ValueError, match="repository_backend"):
         TodoSettings(_env_file=None)  # ty: ignore[unknown-argument]
+
+
+def test_agents_settings_defaults(monkeypatch):
+    """AgentsSettings should load default values when no env vars are set."""
+    monkeypatch.delenv("AGENTS_LANGGRAPH_MODEL", raising=False)
+    monkeypatch.delenv("AGENTS_LANGGRAPH_SYSTEM_PROMPT", raising=False)
+
+    settings = AgentsSettings(_env_file=None)  # ty: ignore[unknown-argument]
+
+    assert settings.langgraph_model == "azure_ai:gpt-5"
+    assert "echo" in settings.langgraph_system_prompt.lower()
+
+
+def test_agents_settings_reads_env(monkeypatch):
+    """AGENTS_LANGGRAPH_MODEL / AGENTS_LANGGRAPH_SYSTEM_PROMPT should override defaults."""
+    monkeypatch.setenv("AGENTS_LANGGRAPH_MODEL", "azure_ai:gpt-4o-mini")
+    monkeypatch.setenv("AGENTS_LANGGRAPH_SYSTEM_PROMPT", "custom prompt")
+
+    settings = AgentsSettings(_env_file=None)  # ty: ignore[unknown-argument]
+
+    assert settings.langgraph_model == "azure_ai:gpt-4o-mini"
+    assert settings.langgraph_system_prompt == "custom prompt"
+
+
+def test_cloud_agent_settings_no_langgraph_fields(monkeypatch):
+    """CloudAgentSettings must NOT have langgraph_model / langgraph_system_prompt (clean break)."""
+    from concierge.settings.cloud_agent import CloudAgentSettings
+
+    settings = CloudAgentSettings(_env_file=None)  # ty: ignore[unknown-argument]
+    assert not hasattr(settings, "langgraph_model")
+    assert not hasattr(settings, "langgraph_system_prompt")
+
+
+def test_chat_settings_defaults(monkeypatch):
+    """ChatSettings.responder_backend and bot_agent_type should have the correct defaults."""
+    monkeypatch.delenv("CHAT_RESPONDER_BACKEND", raising=False)
+    monkeypatch.delenv("CHAT_BOT_AGENT_TYPE", raising=False)
+
+    settings = ChatSettings(_env_file=None)  # ty: ignore[unknown-argument]
+
+    assert settings.responder_backend is ChatResponderBackend.FOUNDRY
+    assert settings.bot_agent_type == "langgraph-echo"

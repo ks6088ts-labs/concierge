@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from concierge.cloud_agent.application.agents import AgentRegistry
+from concierge.agents.application.registry import AgentRegistry
+from concierge.agents.infrastructure.registry_factory import get_agent_registry
 from concierge.cloud_agent.application.queues import TaskQueue
 from concierge.cloud_agent.application.repositories import TaskRepository
-from concierge.cloud_agent.infrastructure.agents.registry import get_agent_registry
 from concierge.cloud_agent.infrastructure.persistence.factory import get_task_repository as _get_repo
 from concierge.cloud_agent.infrastructure.queue.factory import get_task_queue as _get_queue
 from concierge.settings import get_cloud_agent_settings

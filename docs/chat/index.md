@@ -244,22 +244,25 @@ participant replies inside a conversation. The wiring lives in
 - `infrastructure/ai/foundry_responder.py` — implements it with
   `langchain.chat_models.init_chat_model` + `DefaultAzureCredential`,
   consuming `chat_model.stream(...)`.
+- `infrastructure/ai/agent_responder.py` — implements it via the shared
+  `concierge.agents` registry (LLM-optional path).
 - `infrastructure/ai/factory.py` — single read-side for settings; raises
-  `ChatbotNotConfiguredError` when `AZURE_AI_PROJECT_ENDPOINT` is unset.
+  `ChatbotNotConfiguredError` when the backend is not properly configured.
 
 ```mermaid
 flowchart LR
     Caller[FastAPI route / CLI command] --> Factory[create_chatbot_responder]
-    Factory -->|AZURE_AI_PROJECT_ENDPOINT set| Foundry[FoundryChatbotResponder]
-    Factory -->|otherwise| Error[ChatbotNotConfiguredError\nHTTP 503 / CLI exit 1]
+    Factory -->|CHAT_RESPONDER_BACKEND=foundry| Foundry[FoundryChatbotResponder]
+    Factory -->|CHAT_RESPONDER_BACKEND=agent| Agent[AgentChatbotResponder]
+    Factory -->|not configured| Error[ChatbotNotConfiguredError\nHTTP 503 / CLI exit 1]
     Foundry -->|init_chat_model.stream<br/>+ DefaultAzureCredential| Azure[(Azure AI Foundry)]
+    Agent --> Registry[concierge.agents.AgentRegistry]
 ```
 
-`create_chatbot_responder()` returns `FoundryChatbotResponder` **only when**
-`AZURE_AI_PROJECT_ENDPOINT` is set
-(`MicrosoftFoundrySettings.azure_ai_project_endpoint`). Otherwise it raises
-`ChatbotNotConfiguredError`, which the FastAPI dependency maps to HTTP 503
-and the `chat-cli message reply` command surfaces as exit code 1.
+`create_chatbot_responder()` selects the backend via `CHAT_RESPONDER_BACKEND`
+(default `foundry`). For `foundry`, `AZURE_AI_PROJECT_ENDPOINT` must be set;
+otherwise `ChatbotNotConfiguredError` is raised (HTTP 503 / exit 1). For
+`agent`, the registry must contain the agent type specified in `CHAT_BOT_AGENT_TYPE`.
 
 ### Settings reference
 
@@ -272,9 +275,11 @@ All chatbot settings are part of `ChatSettings` (prefix `CHAT_`).
 | `CHAT_BOT_DISPLAY_NAME` | `Concierge AI` | Display name shown for the agent participant |
 | `CHAT_BOT_PARTICIPANT_ID` | `00000000-0000-0000-0000-000000000001` | Stable UUID for the agent participant |
 | `CHAT_BOT_HISTORY_LIMIT` | `20` | Maximum number of past messages forwarded as context |
-| `AZURE_AI_PROJECT_ENDPOINT` | unset | Required to enable `FoundryChatbotResponder` |
+| `AZURE_AI_PROJECT_ENDPOINT` | unset | Required when `CHAT_RESPONDER_BACKEND=foundry` |
+| `CHAT_RESPONDER_BACKEND` | `foundry` | Reply backend: `foundry` (default) or `agent` |
+| `CHAT_BOT_AGENT_TYPE` | `langgraph-echo` | Agent type to use when `CHAT_RESPONDER_BACKEND=agent` |
 
-### Enable the chatbot
+### Enable the chatbot (Foundry backend)
 
 ```bash
 # 1. Configure the Foundry endpoint.
@@ -287,6 +292,29 @@ az login
 uv run chat-web
 ```
 
+### Agent-backed responder (LLM-optional)
+
+Use the `echo` agent for a quick smoke-test without Azure credentials:
+
+```bash
+export CHAT_RESPONDER_BACKEND=agent
+export CHAT_BOT_AGENT_TYPE=echo
+uv run chat-web
+```
+
+For the LangGraph echo agent (requires `AZURE_AI_PROJECT_ENDPOINT`):
+
+```bash
+export CHAT_RESPONDER_BACKEND=agent
+export CHAT_BOT_AGENT_TYPE=langgraph-echo
+export AGENTS_LANGGRAPH_MODEL=azure_ai:gpt-5
+az login
+uv run chat-web
+```
+
+See [Shared Agent Runtime](../agents/index.md) for more details on available agents
+and configuration.
+
 ### API design
 
 - `POST /conversations/{id}/messages` — **persists the user message only**.
@@ -296,7 +324,7 @@ uv run chat-web
   Server-Sent Events (`text/event-stream`). Emits `delta` events with
   partial tokens followed by a single `complete` event carrying the persisted
   `AGENT` message. Returns HTTP 503 (or CLI exit code 1) when
-  `AZURE_AI_PROJECT_ENDPOINT` is not configured.
+  the chatbot is not configured.
 - The CLI mirrors the same split: `message post` saves only, `message reply`
   streams the response.
 

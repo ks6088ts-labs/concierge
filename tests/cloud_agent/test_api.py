@@ -7,7 +7,7 @@ from typing import ClassVar
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from concierge.cloud_agent.application.agents import AgentRegistry, TaskInput, TaskOutput
+from concierge.cloud_agent.application.agents import AgentRegistry, AgentRequest, AgentResponse
 from concierge.cloud_agent.infrastructure.persistence.memory import InMemoryTaskRepository
 from concierge.cloud_agent.infrastructure.queue.memory import InMemoryTaskQueue
 from concierge.cloud_agent.infrastructure.web.app import create_app
@@ -21,8 +21,8 @@ from concierge.cloud_agent.infrastructure.web.dependencies import (
 class _EchoAgent:
     agent_type: ClassVar[str] = "echo"
 
-    async def handle(self, task_input: TaskInput) -> TaskOutput:
-        return TaskOutput(status="succeeded", result={"echo": task_input.payload})
+    async def handle(self, request: AgentRequest) -> AgentResponse:
+        return AgentResponse(status="succeeded", result={"echo": request.payload})
 
 
 @pytest.fixture

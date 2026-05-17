@@ -10,8 +10,8 @@ import signal
 
 from dotenv import load_dotenv
 
+from concierge.agents.infrastructure.registry_factory import get_agent_registry
 from concierge.cloud_agent.application.use_cases import ProcessNextTaskUseCase
-from concierge.cloud_agent.infrastructure.agents.registry import get_agent_registry
 from concierge.cloud_agent.infrastructure.persistence.factory import get_task_repository
 from concierge.cloud_agent.infrastructure.queue.factory import get_task_queue
 from concierge.loggers import get_logger

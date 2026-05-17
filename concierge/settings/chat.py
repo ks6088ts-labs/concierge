@@ -15,6 +15,11 @@ class ChatRepositoryBackend(str, Enum):
     AZURE_POSTGRES = "azure-postgres"
 
 
+class ChatResponderBackend(str, Enum):
+    FOUNDRY = "foundry"
+    AGENT = "agent"
+
+
 class ChatSettings(BaseSettings):
     repository_backend: ChatRepositoryBackend = ChatRepositoryBackend.MEMORY
     conversations_table_name: str = "chat_conversations"
@@ -26,6 +31,9 @@ class ChatSettings(BaseSettings):
     bot_history_limit: int = 20
     bot_system_prompt: str = "あなたは Concierge Chat のアシスタントです。日本語で簡潔に応答してください。"
     bot_model: str = "azure_ai:gpt-5"
+
+    responder_backend: ChatResponderBackend = ChatResponderBackend.FOUNDRY
+    bot_agent_type: str = "langgraph-echo"
 
     realtime_model: str = "gpt-realtime-1.5"
     realtime_voice: str = "alloy"

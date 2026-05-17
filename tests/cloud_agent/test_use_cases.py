@@ -7,7 +7,7 @@ from typing import ClassVar
 
 import pytest
 
-from concierge.cloud_agent.application.agents import AgentRegistry, TaskInput, TaskOutput
+from concierge.cloud_agent.application.agents import AgentRegistry, AgentRequest, AgentResponse
 from concierge.cloud_agent.application.use_cases import (
     CancelTaskUseCase,
     DispatchTaskUseCase,
@@ -26,21 +26,21 @@ from concierge.cloud_agent.infrastructure.queue.memory import InMemoryTaskQueue
 class _FailAgent:
     agent_type: ClassVar[str] = "fail"
 
-    async def handle(self, task_input: TaskInput) -> TaskOutput:
-        return TaskOutput(status="failed", error="deliberate failure")
+    async def handle(self, request: AgentRequest) -> AgentResponse:
+        return AgentResponse(status="failed", error="deliberate failure")
 
 
 class _SucceedAgent:
     agent_type: ClassVar[str] = "succeed"
 
-    async def handle(self, task_input: TaskInput) -> TaskOutput:
-        return TaskOutput(status="succeeded", result={"done": True})
+    async def handle(self, request: AgentRequest) -> AgentResponse:
+        return AgentResponse(status="succeeded", result={"done": True})
 
 
 class _RaiseAgent:
     agent_type: ClassVar[str] = "raise"
 
-    async def handle(self, task_input: TaskInput) -> TaskOutput:
+    async def handle(self, request: AgentRequest) -> AgentResponse:
         raise RuntimeError("unexpected crash")
 
 

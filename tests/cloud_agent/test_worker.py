@@ -6,7 +6,7 @@ from typing import ClassVar
 
 import pytest
 
-from concierge.cloud_agent.application.agents import AgentRegistry, TaskInput, TaskOutput
+from concierge.cloud_agent.application.agents import AgentRegistry, AgentRequest, AgentResponse
 from concierge.cloud_agent.application.use_cases import DispatchTaskUseCase, ProcessNextTaskUseCase
 from concierge.cloud_agent.domain.value_objects import TaskStatus
 from concierge.cloud_agent.infrastructure.persistence.memory import InMemoryTaskRepository
@@ -16,8 +16,8 @@ from concierge.cloud_agent.infrastructure.queue.memory import InMemoryTaskQueue
 class _EchoAgent:
     agent_type: ClassVar[str] = "echo"
 
-    async def handle(self, task_input: TaskInput) -> TaskOutput:
-        return TaskOutput(status="succeeded", result={"echo": task_input.payload})
+    async def handle(self, request: AgentRequest) -> AgentResponse:
+        return AgentResponse(status="succeeded", result={"echo": request.payload})
 
 
 @pytest.mark.anyio

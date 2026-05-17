@@ -1,8 +1,9 @@
+from concierge.settings.agents import AgentsSettings, get_agents_settings
 from concierge.settings.azure_postgres import (
     AzurePostgresSettings,
     get_azure_postgres_settings,
 )
-from concierge.settings.chat import ChatRepositoryBackend, ChatSettings, get_chat_settings
+from concierge.settings.chat import ChatRepositoryBackend, ChatResponderBackend, ChatSettings, get_chat_settings
 from concierge.settings.cloud_agent import (
     CloudAgentQueueBackend,
     CloudAgentRepositoryBackend,
@@ -26,8 +27,10 @@ from concierge.settings.todo import (
 )
 
 __all__ = [
+    "AgentsSettings",
     "AzurePostgresSettings",
     "ChatRepositoryBackend",
+    "ChatResponderBackend",
     "ChatSettings",
     "CloudAgentQueueBackend",
     "CloudAgentRepositoryBackend",
@@ -38,6 +41,7 @@ __all__ = [
     "ProjectSettings",
     "TodoRepositoryBackend",
     "TodoSettings",
+    "get_agents_settings",
     "get_azure_postgres_settings",
     "get_chat_settings",
     "get_cloud_agent_settings",

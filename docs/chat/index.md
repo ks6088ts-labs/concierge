@@ -98,6 +98,39 @@ configured — see
 
 ---
 
+## Voice Input (Speech-to-Text)
+
+The bundled web UI at <http://localhost:8080/> supports voice input through
+the browser Web Speech API.
+
+### How to use
+
+1. Create/select a conversation so the message composer is enabled.
+2. Click the microphone button (`🎤`) next to the send button.
+3. Speak; interim and final recognition text is appended in the message box.
+4. Click the button again (`⏹`) to stop recognition.
+5. Send manually with the existing send button (or `Shift+Enter`).
+
+Voice input never auto-sends messages. Only text is sent when you explicitly
+submit.
+
+### Browser support
+
+- Supported: latest Google Chrome, Microsoft Edge, Safari (macOS / iOS)
+- Not supported: Firefox (Web Speech API is not available by default)
+- On unsupported browsers, the microphone button is disabled and a warning
+  toast is shown in the UI.
+
+### Privacy notes
+
+- Microphone permission is handled by the browser prompt.
+- Speech recognition may be processed by the browser vendor cloud service
+  (for example, Chrome/Edge implementations).
+- The concierge backend does **not** receive raw audio. It only receives text
+  if/when you send the message through the existing API flow.
+
+---
+
 ## CLI-only smoke test
 
 The CLI works the same way, but each invocation is its own process. For the

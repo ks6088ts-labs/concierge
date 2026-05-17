@@ -63,14 +63,132 @@ def test_enable_mlflow_is_idempotent(monkeypatch) -> None:
     monkeypatch.setattr(
         observability,
         "get_observability_settings",
-        lambda: SimpleNamespace(mlflow_tracking_uri="http://127.0.0.1:5000", mlflow_experiment_name="concierge"),
+        lambda: SimpleNamespace(
+            mlflow_tracking_uri="http://127.0.0.1:5000",
+            mlflow_experiment_name="concierge",
+            mlflow_health_check_timeout_seconds=3.0,
+            mlflow_http_request_timeout_seconds=5.0,
+            mlflow_http_request_max_retries=1,
+        ),
     )
+    monkeypatch.setattr(observability, "_is_mlflow_server_reachable", lambda _uri, _timeout: True)
 
     observability.enable_mlflow()
     observability.enable_mlflow()
 
     assert call_counts == {"set_tracking_uri": 1, "set_experiment": 1, "autolog": 1}
     assert observability.is_mlflow_enabled() is True
+
+
+def test_enable_mlflow_skips_when_server_unreachable(monkeypatch, caplog) -> None:
+    _reset_state()
+    mlflow_calls: list[str] = []
+    fake_mlflow = types.SimpleNamespace(
+        set_tracking_uri=lambda _uri: mlflow_calls.append("set_tracking_uri"),
+        set_experiment=lambda _name: mlflow_calls.append("set_experiment"),
+        langchain=types.SimpleNamespace(autolog=lambda: mlflow_calls.append("autolog")),
+    )
+    monkeypatch.setitem(sys.modules, "mlflow", fake_mlflow)
+    monkeypatch.setattr(
+        observability,
+        "get_observability_settings",
+        lambda: SimpleNamespace(
+            mlflow_tracking_uri="http://127.0.0.1:5000",
+            mlflow_experiment_name="concierge",
+            mlflow_health_check_timeout_seconds=0.5,
+            mlflow_http_request_timeout_seconds=5.0,
+            mlflow_http_request_max_retries=1,
+        ),
+    )
+    monkeypatch.setattr(observability, "_is_mlflow_server_reachable", lambda _uri, _timeout: False)
+
+    with caplog.at_level("WARNING", logger=observability.logger.name):
+        observability.enable_mlflow()
+
+    assert observability.is_mlflow_enabled() is False
+    assert mlflow_calls == []
+    assert any("not reachable" in record.message for record in caplog.records)
+
+
+def test_enable_mlflow_swallows_setup_exception(monkeypatch, caplog) -> None:
+    _reset_state()
+
+    def _raise(_uri: str) -> None:
+        raise RuntimeError("boom")
+
+    fake_mlflow = types.SimpleNamespace(
+        set_tracking_uri=_raise,
+        set_experiment=lambda _name: None,
+        langchain=types.SimpleNamespace(autolog=lambda: None),
+    )
+    monkeypatch.setitem(sys.modules, "mlflow", fake_mlflow)
+    monkeypatch.setattr(
+        observability,
+        "get_observability_settings",
+        lambda: SimpleNamespace(
+            mlflow_tracking_uri="http://127.0.0.1:5000",
+            mlflow_experiment_name="concierge",
+            mlflow_health_check_timeout_seconds=3.0,
+            mlflow_http_request_timeout_seconds=5.0,
+            mlflow_http_request_max_retries=1,
+        ),
+    )
+    monkeypatch.setattr(observability, "_is_mlflow_server_reachable", lambda _uri, _timeout: True)
+
+    with caplog.at_level("WARNING", logger=observability.logger.name):
+        observability.enable_mlflow()
+
+    assert observability.is_mlflow_enabled() is False
+    assert any("Failed to enable MLflow" in record.message for record in caplog.records)
+    # Cache must be cleared so a subsequent call retries instead of returning
+    # the cached (failed) result.
+    assert observability._enable_mlflow_once.cache_info().currsize == 0
+
+
+def test_enable_mlflow_skips_health_check_for_non_http_uri(monkeypatch) -> None:
+    _reset_state()
+    mlflow_calls: list[str] = []
+    fake_mlflow = types.SimpleNamespace(
+        set_tracking_uri=lambda _uri: mlflow_calls.append("set_tracking_uri"),
+        set_experiment=lambda _name: mlflow_calls.append("set_experiment"),
+        langchain=types.SimpleNamespace(autolog=lambda: mlflow_calls.append("autolog")),
+    )
+    monkeypatch.setitem(sys.modules, "mlflow", fake_mlflow)
+    monkeypatch.setattr(
+        observability,
+        "get_observability_settings",
+        lambda: SimpleNamespace(
+            mlflow_tracking_uri="file:./mlruns",
+            mlflow_experiment_name="concierge",
+            mlflow_health_check_timeout_seconds=3.0,
+            mlflow_http_request_timeout_seconds=5.0,
+            mlflow_http_request_max_retries=1,
+        ),
+    )
+
+    def _fail_if_called(_uri: str, _timeout: float) -> bool:
+        raise AssertionError("health check should be skipped for non-HTTP URIs")
+
+    monkeypatch.setattr(observability, "_is_mlflow_server_reachable", _fail_if_called)
+
+    observability.enable_mlflow()
+
+    assert observability.is_mlflow_enabled() is True
+    assert mlflow_calls == ["set_tracking_uri", "set_experiment", "autolog"]
+
+
+def test_apply_mlflow_http_env_defaults_respects_existing(monkeypatch) -> None:
+    _reset_state()
+    monkeypatch.setenv("MLFLOW_HTTP_REQUEST_TIMEOUT", "42")
+    monkeypatch.delenv("MLFLOW_HTTP_REQUEST_MAX_RETRIES", raising=False)
+
+    observability._apply_mlflow_http_env_defaults(request_timeout=5.0, max_retries=1)
+
+    import os
+
+    # Pre-existing value preserved, missing one gets the default.
+    assert os.environ["MLFLOW_HTTP_REQUEST_TIMEOUT"] == "42"
+    assert os.environ["MLFLOW_HTTP_REQUEST_MAX_RETRIES"] == "1"
 
 
 def test_bootstrap_from_env_toggles_tracing(monkeypatch) -> None:

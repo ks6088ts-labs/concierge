@@ -42,6 +42,9 @@ def test_observability_settings_defaults(monkeypatch):
     assert settings.mlflow_experiment_name == "microsoft-foundry-vanilla"
     assert settings.concierge_tracing_enabled is False
     assert settings.concierge_mlflow_enabled is False
+    assert settings.mlflow_health_check_timeout_seconds == 3.0
+    assert settings.mlflow_http_request_timeout_seconds == 5.0
+    assert settings.mlflow_http_request_max_retries == 1
 
 
 def test_observability_settings_reads_env(monkeypatch):

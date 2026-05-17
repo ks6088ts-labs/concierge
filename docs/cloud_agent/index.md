@@ -109,6 +109,115 @@ uv run cloud-agent-cli task dispatch --agent-type echo --payload '{"msg": "hello
 uv run cloud-agent-cli agents
 ```
 
+## Running the LangGraph Echo Agent
+
+`LangGraphEchoAgent` (`agent_type = "langgraph-echo"`) is the reference
+implementation for integrating LangChain / LangGraph agents with the
+`cloud_agent` task pipeline. It uses
+[`langchain.agents.create_agent`](https://python.langchain.com/) with a single
+`echo` tool and an Azure-hosted chat model resolved through
+`init_chat_model`.
+
+### Prerequisites
+
+- Azure AI Foundry (or Azure OpenAI) deployment reachable via the model
+  string in `CLOUD_AGENT_LANGGRAPH_MODEL` (default `azure_ai:gpt-5`).
+- A principal that `DefaultAzureCredential` can resolve — typically
+  `az login` for local development, or a managed identity in Azure.
+- The signed-in principal must have permission to call the Foundry
+  deployment (e.g. **Azure AI Developer** role).
+
+### Minimal `.env`
+
+The fastest setup uses both in-memory backends. The API and the worker
+**must run in the same Python process** to share the queue / repository, so
+this mode is only useful for embedded smoke tests. For a realistic split
+(separate `cloud-agent-cli worker` and `cloud-agent-cli task dispatch`
+processes), switch to `postgres` + `azure-storage-queue`.
+
+```bash
+# .env — split-process setup
+CLOUD_AGENT_REPOSITORY_BACKEND=postgres
+CLOUD_AGENT_QUEUE_BACKEND=azure-storage-queue
+CLOUD_AGENT_AZURE_STORAGE_ACCOUNT_URL=https://<account>.queue.core.windows.net
+CLOUD_AGENT_LANGGRAPH_MODEL=azure_ai:gpt-5
+
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_USER=concierge
+POSTGRES_PASSWORD=concierge
+POSTGRES_DB=concierge
+```
+
+### Step-by-step
+
+```bash
+# 1. Authenticate so DefaultAzureCredential can mint tokens
+az login
+
+# 2. Start dependencies (only required for postgres / azure-storage-queue)
+docker compose up -d postgres
+
+# 3. Confirm the agent is registered
+uv run cloud-agent-cli agents
+# → ["echo", "langgraph-echo"]
+
+# 4. Start the worker (terminal 1)
+uv run cloud-agent-cli worker
+
+# 5. Dispatch a task (terminal 2)
+uv run cloud-agent-cli task dispatch \
+  --agent-type langgraph-echo \
+  --payload '{"message": "Hello LangGraph"}'
+
+# 6. Poll for the result using the task id printed above
+uv run cloud-agent-cli task get <task-id>
+```
+
+### Payload contract
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| `message` | `string` | Yes | Non-empty. Forwarded verbatim to the LLM; the agent fails with `payload.message is required` otherwise. |
+
+### Result shape
+
+A successful task stores the following object under `result`:
+
+```json
+{
+  "echo": "Hello LangGraph",
+  "reply": "<final assistant message>",
+  "tool_calls": [
+    {"name": "echo", "args": {"text": "Hello LangGraph"}}
+  ]
+}
+```
+
+`reply` is the last `AIMessage.content` produced by the graph, and
+`tool_calls` lists every `(name, args)` pair the model emitted while
+processing the task.
+
+### Customising the agent
+
+- `CLOUD_AGENT_LANGGRAPH_MODEL` — swap the underlying chat model (e.g.
+  `azure_ai:gpt-4o-mini`).
+- `CLOUD_AGENT_LANGGRAPH_SYSTEM_PROMPT` — replace the built-in system prompt
+  to change behaviour without writing code.
+- For a new agent, copy
+  [`concierge/cloud_agent/infrastructure/agents/langgraph_echo_agent.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/cloud_agent/infrastructure/agents/langgraph_echo_agent.py),
+  add tools, and register it in
+  [`registry.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/cloud_agent/infrastructure/agents/registry.py).
+
+### Troubleshooting
+
+| Symptom | Likely cause |
+|---------|--------------|
+| Task stuck in `QUEUED` | Worker not running, or `memory` backend used across separate processes. Start `cloud-agent-cli worker` or switch to `postgres` + `azure-storage-queue`. |
+| `status=failed`, error mentions credentials | `DefaultAzureCredential` could not resolve a principal. Run `az login` or configure a managed identity. |
+| `status=failed`, `payload.message is required` | The dispatched payload is missing `message` or it is an empty / whitespace-only string. |
+| 403 from the model deployment | The principal is missing the **Azure AI Developer** role on the Foundry project. |
+
 ## Task Lifecycle
 
 ```

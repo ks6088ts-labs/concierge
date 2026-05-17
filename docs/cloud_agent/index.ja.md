@@ -107,6 +107,109 @@ uv run cloud-agent-cli task dispatch --agent-type echo --payload '{"msg": "hello
 uv run cloud-agent-cli agents
 ```
 
+## LangGraph エコーエージェントの実行
+
+`LangGraphEchoAgent`（`agent_type = "langgraph-echo"`）は、LangChain / LangGraph
+エージェントを `cloud_agent` タスクパイプラインに統合するためのリファレンス実装です。
+[`langchain.agents.create_agent`](https://python.langchain.com/) で構築され、
+`echo` ツールを 1 つだけ持ち、`init_chat_model` 経由で Azure 上のチャットモデルを利用します。
+
+### 前提条件
+
+- `CLOUD_AGENT_LANGGRAPH_MODEL`（デフォルト `azure_ai:gpt-5`）で指定したモデルにアクセスできる
+  Azure AI Foundry（または Azure OpenAI）のデプロイメント。
+- `DefaultAzureCredential` が解決できるプリンシパル。
+  ローカル開発では `az login`、Azure 上では Managed Identity が一般的です。
+- 対象プリンシパルが Foundry デプロイメントを呼び出せるロール（例: **Azure AI Developer**）を保有していること。
+
+### 最小構成の `.env`
+
+最も手早く試すならインメモリ構成ですが、API とワーカーは **同じ Python プロセス内**
+でないとキュー / リポジトリを共有できないため、別ターミナルで
+`cloud-agent-cli worker` と `cloud-agent-cli task dispatch` を実行する場合は
+`postgres` + `azure-storage-queue` を使ってください。
+
+```bash
+# .env — 別プロセスで動かす構成
+CLOUD_AGENT_REPOSITORY_BACKEND=postgres
+CLOUD_AGENT_QUEUE_BACKEND=azure-storage-queue
+CLOUD_AGENT_AZURE_STORAGE_ACCOUNT_URL=https://<account>.queue.core.windows.net
+CLOUD_AGENT_LANGGRAPH_MODEL=azure_ai:gpt-5
+
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_USER=concierge
+POSTGRES_PASSWORD=concierge
+POSTGRES_DB=concierge
+```
+
+### 手順
+
+```bash
+# 1. DefaultAzureCredential が token を取得できる状態にする
+az login
+
+# 2. 依存サービスを起動（postgres / azure-storage-queue を使うとき）
+docker compose up -d postgres
+
+# 3. エージェントが登録されていることを確認
+uv run cloud-agent-cli agents
+# → ["echo", "langgraph-echo"]
+
+# 4. ワーカー起動（ターミナル 1）
+uv run cloud-agent-cli worker
+
+# 5. タスク投入（ターミナル 2）
+uv run cloud-agent-cli task dispatch \
+  --agent-type langgraph-echo \
+  --payload '{"message": "Hello LangGraph"}'
+
+# 6. 上記で出力された task id で結果を取得
+uv run cloud-agent-cli task get <task-id>
+```
+
+### payload 仕様
+
+| フィールド | 型 | 必須 | 備考 |
+|----------|----|------|------|
+| `message` | `string` | 必須 | 非空文字列。LLM へそのまま渡されます。空文字や欠落の場合は `payload.message is required` で失敗します。 |
+
+### 結果の形式
+
+成功時、`result` には以下のオブジェクトが格納されます。
+
+```json
+{
+  "echo": "Hello LangGraph",
+  "reply": "<最終 AI メッセージ>",
+  "tool_calls": [
+    {"name": "echo", "args": {"text": "Hello LangGraph"}}
+  ]
+}
+```
+
+`reply` はグラフが出力した最後の `AIMessage.content`、`tool_calls` は処理中に
+モデルが発行した `(name, args)` のペアです。
+
+### カスタマイズ
+
+- `CLOUD_AGENT_LANGGRAPH_MODEL`: 利用するチャットモデルを変更（例: `azure_ai:gpt-4o-mini`）。
+- `CLOUD_AGENT_LANGGRAPH_SYSTEM_PROMPT`: 組み込みシステムプロンプトを差し替えてコード変更なしで挙動を変更。
+- 新しいエージェントを追加する場合は
+  [`concierge/cloud_agent/infrastructure/agents/langgraph_echo_agent.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/cloud_agent/infrastructure/agents/langgraph_echo_agent.py)
+  を雛形にツールを追加し、
+  [`registry.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/cloud_agent/infrastructure/agents/registry.py)
+  に登録してください。
+
+### トラブルシューティング
+
+| 症状 | 主な原因 |
+|------|----------|
+| タスクが `QUEUED` のまま | ワーカーが起動していない、または `memory` バックエンドを別プロセス間で利用している。`cloud-agent-cli worker` を起動するか `postgres` + `azure-storage-queue` に切り替える。 |
+| `status=failed` で認証関連エラー | `DefaultAzureCredential` がプリンシパルを解決できない。`az login` または Managed Identity を設定する。 |
+| `status=failed`, `payload.message is required` | payload に `message` が無いか、空白のみの文字列。 |
+| モデルデプロイメントから 403 | プリンシパルに Foundry プロジェクトの **Azure AI Developer** ロールが付与されていない。 |
+
 ## タスクライフサイクル
 
 ```

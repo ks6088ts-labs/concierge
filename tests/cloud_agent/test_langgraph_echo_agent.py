@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langchain_core.messages import AIMessage
+from langchain_core.messages.tool import ToolCall
 
 from concierge.cloud_agent.application.agents import TaskInput, TaskOutput
 from concierge.cloud_agent.infrastructure.agents.langgraph_echo_agent import LangGraphEchoAgent
@@ -34,8 +35,8 @@ def _make_task_input(payload: dict[str, Any]) -> TaskInput:
 def _make_agent_result(reply: str, tool_call_name: str = "echo", tool_call_args: dict | None = None) -> dict:
     """Build a fake ``ainvoke`` result that mimics a LangGraph compiled graph output."""
     ai_msg = AIMessage(content=reply)
-    ai_msg.tool_calls = [  # type: ignore[attr-defined]
-        {"name": tool_call_name, "args": tool_call_args or {"text": reply}}
+    ai_msg.tool_calls = [
+        ToolCall(name=tool_call_name, args=tool_call_args or {"text": reply}, id=None, type="tool_call")
     ]
     return {"messages": [ai_msg]}
 
@@ -103,7 +104,7 @@ def test_final_text_uses_last_ai_message() -> None:
 
 def test_collect_tool_calls_with_tool_calls() -> None:
     msg = AIMessage(content="")
-    msg.tool_calls = [{"name": "echo", "args": {"text": "hello"}}]  # type: ignore[attr-defined]
+    msg.tool_calls = [ToolCall(name="echo", args={"text": "hello"}, id=None, type="tool_call")]
     result = LangGraphEchoAgent._collect_tool_calls([msg])
     assert result == [{"name": "echo", "args": {"text": "hello"}}]
 

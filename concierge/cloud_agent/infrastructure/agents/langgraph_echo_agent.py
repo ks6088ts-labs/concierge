@@ -7,16 +7,31 @@ the ``cloud_agent`` service.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any, ClassVar
 
 from azure.identity import DefaultAzureCredential
 from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
 from concierge.cloud_agent.application.agents import TaskInput, TaskOutput
 from concierge.settings import get_cloud_agent_settings
+
+RunConfigFactory = Callable[[TaskInput], RunnableConfig]
+"""Factory that builds a ``RunnableConfig`` for a given task.
+
+The factory is the injection point for cross-cutting concerns such as
+tracing callbacks, run metadata, and tags.  Agents themselves stay
+decoupled from observability backends; the wiring lives in the registry /
+DI layer.
+"""
+
+
+def _empty_run_config(_task_input: TaskInput) -> RunnableConfig:
+    return RunnableConfig()
 
 
 class LangGraphEchoAgent:
@@ -29,12 +44,24 @@ class LangGraphEchoAgent:
     The agent is instantiated (``_build_agent``) fresh on every ``handle()``
     call so that Azure credential acquisition does not block worker startup
     when the Foundry endpoint is not yet configured.
+
+    :param run_config_factory: Optional factory producing a
+        :class:`RunnableConfig` for each task. Used to inject tracing
+        callbacks / run metadata without coupling this class to a specific
+        observability backend. Defaults to a no-op factory returning an
+        empty config.
     """
 
     agent_type: ClassVar[str] = "langgraph-echo"
 
-    def __init__(self) -> None:
+    # Class-level fallback so instances constructed via ``__new__`` (used in
+    # some unit tests to bypass settings loading) still have a usable factory.
+    _run_config_factory: RunConfigFactory = staticmethod(_empty_run_config)
+
+    def __init__(self, run_config_factory: RunConfigFactory | None = None) -> None:
         self._settings = get_cloud_agent_settings()
+        if run_config_factory is not None:
+            self._run_config_factory = run_config_factory
 
     async def handle(self, task_input: TaskInput) -> TaskOutput:
         message = self._extract_message(task_input.payload)
@@ -46,7 +73,11 @@ class LangGraphEchoAgent:
 
         try:
             agent = self._build_agent()
-            result = await agent.ainvoke({"messages": [("user", message)]})
+            config = self._run_config_factory(task_input)
+            result = await agent.ainvoke(
+                {"messages": [("user", message)]},
+                config=config,
+            )
         except Exception as exc:  # noqa: BLE001
             return TaskOutput(status="failed", error=f"{type(exc).__name__}: {exc}")
 

@@ -82,10 +82,12 @@ def _apply_mlflow_http_env_defaults(
     """Apply fail-fast defaults for MLflow's REST client via env vars.
 
     Uses ``setdefault`` so any value the user already exported wins. MLflow
-    reads these env vars on first use of its HTTP client.
+    reads these env vars on first use of its HTTP client. Both variables
+    are parsed by MLflow as ``int``, so we coerce to ``int`` before writing
+    even though the timeout setting is exposed as ``float`` for ergonomics.
     """
-    os.environ.setdefault("MLFLOW_HTTP_REQUEST_TIMEOUT", str(request_timeout))
-    os.environ.setdefault("MLFLOW_HTTP_REQUEST_MAX_RETRIES", str(max_retries))
+    os.environ.setdefault("MLFLOW_HTTP_REQUEST_TIMEOUT", str(int(request_timeout)))
+    os.environ.setdefault("MLFLOW_HTTP_REQUEST_MAX_RETRIES", str(int(max_retries)))
 
 
 @lru_cache(maxsize=1)

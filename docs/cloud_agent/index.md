@@ -103,7 +103,7 @@ uv run cloud-agent-web
 uv run cloud-agent-cli worker
 
 # Dispatch a task
-uv run cloud-agent-cli task dispatch --agent-type echo --payload '{"msg": "hello"}'
+uv run cloud-agent-cli task dispatch --agent-type echo --payload '{"message": "hello"}'
 
 # List registered agents
 uv run cloud-agent-cli agents

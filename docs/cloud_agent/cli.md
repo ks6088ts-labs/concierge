@@ -22,6 +22,9 @@ uv run cloud-agent-cli --help
 
 ### Dispatch a task
 
+Both built-in agents (`echo` and `langgraph-echo`) share the same payload
+contract: a non-empty `message` string is required.
+
 ```bash
 uv run cloud-agent-cli task dispatch \
   --agent-type echo \

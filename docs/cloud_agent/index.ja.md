@@ -101,7 +101,7 @@ uv run cloud-agent-web
 uv run cloud-agent-cli worker
 
 # タスク投入
-uv run cloud-agent-cli task dispatch --agent-type echo --payload '{"msg": "hello"}'
+uv run cloud-agent-cli task dispatch --agent-type echo --payload '{"message": "hello"}'
 
 # 登録済みエージェント一覧
 uv run cloud-agent-cli agents

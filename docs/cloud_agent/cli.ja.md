@@ -21,6 +21,9 @@ uv run cloud-agent-cli --help
 
 ### タスクのディスパッチ
 
+組み込みエージェント（`echo` / `langgraph-echo`）は同じ payload 仕様で、
+非空文字列の `message` が必須です。
+
 ```bash
 uv run cloud-agent-cli task dispatch \
   --agent-type echo \

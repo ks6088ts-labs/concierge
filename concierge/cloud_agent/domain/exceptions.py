@@ -25,14 +25,6 @@ class TaskStateError(Exception):
         super().__init__(message)
 
 
-class AgentNotFoundError(Exception):
-    """Raised when the requested agent_type is not registered."""
-
-    def __init__(self, agent_type: str):
-        self.agent_type = agent_type
-        super().__init__(f"Agent not found: {agent_type!r}")
-
-
 class QueueError(Exception):
     """Raised when a queue operation fails."""
 

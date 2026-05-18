@@ -127,8 +127,8 @@ uv run cloud-agent-cli agents
 | `CLOUD_AGENT_MAX_RETRIES` | `3` | デフォルト最大リトライ回数 |
 | `CLOUD_AGENT_WORKER_CONCURRENCY` | `1` | ワーカー内同時実行数（将来拡張用） |
 | `CLOUD_AGENT_POLL_INTERVAL_SECONDS` | `1.0` | キューが空のときのポーリング間隔 |
-| `CLOUD_AGENT_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | LangGraph エージェントで使う `init_chat_model` のモデル文字列 |
-| `CLOUD_AGENT_LANGGRAPH_SYSTEM_PROMPT` | _(組み込み)_ | LangGraph エージェントのシステムプロンプト |
+| `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | LangGraph エージェントで使う `init_chat_model` のモデル文字列 |
+| `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(組み込み)_ | LangGraph エージェントのシステムプロンプト |
 
 詳しい解説と構成例は [概要ページの「設定」セクション](index.ja.md#configuration) を参照してください。
 

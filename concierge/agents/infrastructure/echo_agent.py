@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any, ClassVar
 
-from concierge.cloud_agent.application.agents import TaskInput, TaskOutput
+from concierge.agents.application.contracts import AgentRequest, AgentResponse
 
 
 class EchoAgent:
@@ -18,14 +18,14 @@ class EchoAgent:
 
     agent_type: ClassVar[str] = "echo"
 
-    async def handle(self, task_input: TaskInput) -> TaskOutput:
-        message = self._extract_message(task_input.payload)
+    async def handle(self, request: AgentRequest) -> AgentResponse:
+        message = self._extract_message(request.payload)
         if not message:
-            return TaskOutput(
+            return AgentResponse(
                 status="failed",
                 error="payload.message is required (non-empty string)",
             )
-        return TaskOutput(
+        return AgentResponse(
             status="succeeded",
             result={"echo": message, "reply": message},
         )

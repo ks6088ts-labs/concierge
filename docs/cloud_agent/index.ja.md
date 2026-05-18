@@ -25,34 +25,33 @@ flowchart LR
 
 ## エージェント拡張ポイント
 
-エージェントは
-`concierge/cloud_agent/infrastructure/agents/registry.py` に登録します。
-各エージェントは `application` 層が定義する `Agent` Protocol を実装します。
+エージェントは共有バウンデッドコンテキスト `concierge/agents/` で定義されます。
+各エージェントは共有 `application` 層の `Agent` Protocol を実装します。
 
 ```python
 class Agent(Protocol):
     agent_type: ClassVar[str]
-    async def handle(self, task_input: TaskInput) -> TaskOutput: ...
+    async def handle(self, request: AgentRequest) -> AgentResponse: ...
 ```
 
 LangChain / LangGraph のインポートは `infrastructure` 層のみに許可されます。
 `domain` 層・`application` 層はフレームワーク非依存を維持します
-（`tests/cloud_agent/test_architecture.py` で機械的に検証）。
+（`tests/agents/test_architecture.py` と import-linter 契約で機械的に検証）。
 
 ```mermaid
 classDiagram
     class Agent {
         <<Protocol>>
         +agent_type: str
-        +handle(task_input) TaskOutput
+        +handle(request) AgentResponse
     }
     class EchoAgent {
         +agent_type = "echo"
-        +handle(task_input) TaskOutput
+        +handle(request) AgentResponse
     }
     class LangGraphEchoAgent {
         +agent_type = "langgraph-echo"
-        +handle(task_input) TaskOutput
+        +handle(request) AgentResponse
         -_build_agent()
     }
     Agent <|.. EchoAgent
@@ -63,9 +62,9 @@ classDiagram
 
 - **キュー非依存の抽象化** — `InMemory`（ローカル開発）と
   `AzureStorageQueue` の 2 実装を提供。`CLOUD_AGENT_QUEUE_BACKEND` で切り替え可能。
-- **エージェント I/O の標準化** — すべてのエージェントは `TaskInput` を受け取り、
-  `TaskOutput` を返す（Pydantic スキーマ）。`AgentRegistry` が `agent_type` 文字列を
-  具体的な `Agent` 実装にマッピングする。
+- **エージェント I/O の標準化** — すべてのエージェントは `AgentRequest` を受け取り、
+  `AgentResponse` を返す（`concierge.agents` の Pydantic スキーマ）。`AgentRegistry` が
+  `agent_type` 文字列を具体的な `Agent` 実装にマッピングする。
 - **実行環境非依存のワーカー** — 現在はローカル CLI プロセスとして動作するが、
   同じ `Agent` インタフェースを将来 Azure Functions でも再利用できる。
 - **Dead Letter Queue（DLQ）** — `max_retries` を超えたタスクは自動的に DLQ に移動される。
@@ -79,14 +78,13 @@ concierge/cloud_agent/
     value_objects.py   # TaskStatus 列挙型 + 許可遷移
     exceptions.py      # ドメイン固有例外
   application/
-    agents.py          # Agent Protocol, TaskInput/Output, AgentRegistry
+    agents.py          # 共有 agents パッケージからの再エクスポート
     queues.py          # TaskQueue Protocol + QueueMessage スキーマ
     repositories.py    # TaskRepository Protocol
     use_cases.py       # DispatchTask, GetTask, ListTasks, CancelTask など
   infrastructure/
     persistence/       # InMemoryTaskRepository, SqlAlchemyTaskRepository
     queue/             # InMemoryTaskQueue, AzureStorageQueueTaskQueue
-    agents/            # EchoAgent, デフォルト AgentRegistry
     web/               # FastAPI アプリ、ルート、スキーマ、例外ハンドラ
     cli/               # Typer CLI アプリ、ワーカーループ
 ```
@@ -116,7 +114,7 @@ uv run cloud-agent-cli agents
 
 ### 前提条件
 
-- `CLOUD_AGENT_LANGGRAPH_MODEL`（デフォルト `azure_ai:gpt-5`）で指定したモデルにアクセスできる
+- `AGENTS_LANGGRAPH_MODEL`（デフォルト `azure_ai:gpt-5`）で指定したモデルにアクセスできる
   Azure AI Foundry（または Azure OpenAI）のデプロイメント。
 - `DefaultAzureCredential` が解決できるプリンシパル。
   ローカル開発では `az login`、Azure 上では Managed Identity が一般的です。
@@ -134,7 +132,7 @@ uv run cloud-agent-cli agents
 CLOUD_AGENT_REPOSITORY_BACKEND=postgres
 CLOUD_AGENT_QUEUE_BACKEND=azure-storage-queue
 CLOUD_AGENT_AZURE_STORAGE_ACCOUNT_URL=https://<account>.queue.core.windows.net
-CLOUD_AGENT_LANGGRAPH_MODEL=azure_ai:gpt-5
+AGENTS_LANGGRAPH_MODEL=azure_ai:gpt-5
 
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
@@ -193,12 +191,12 @@ uv run cloud-agent-cli task get <task-id>
 
 ### カスタマイズ
 
-- `CLOUD_AGENT_LANGGRAPH_MODEL`: 利用するチャットモデルを変更（例: `azure_ai:gpt-4o-mini`）。
-- `CLOUD_AGENT_LANGGRAPH_SYSTEM_PROMPT`: 組み込みシステムプロンプトを差し替えてコード変更なしで挙動を変更。
+- `AGENTS_LANGGRAPH_MODEL`: 利用するチャットモデルを変更（例: `azure_ai:gpt-4o-mini`）。
+- `AGENTS_LANGGRAPH_SYSTEM_PROMPT`: 組み込みシステムプロンプトを差し替えてコード変更なしで挙動を変更。
 - 新しいエージェントを追加する場合は
-  [`concierge/cloud_agent/infrastructure/agents/langgraph_echo_agent.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/cloud_agent/infrastructure/agents/langgraph_echo_agent.py)
+  [`concierge/agents/infrastructure/langgraph_echo_agent.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/agents/infrastructure/langgraph_echo_agent.py)
   を雛形にツールを追加し、
-  [`registry.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/cloud_agent/infrastructure/agents/registry.py)
+  [`concierge/agents/infrastructure/registry_factory.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/agents/infrastructure/registry_factory.py)
   に登録してください。
 
 ### トラブルシューティング
@@ -245,8 +243,9 @@ Cloud Agent の設定はすべて
 | `CLOUD_AGENT_MAX_RETRIES` | `3` | `DispatchTaskUseCase` のデフォルトリトライ予算。`retry_count > max_retries` で DLQ 行き。API / CLI でディスパッチごとに上書き可能 |
 | `CLOUD_AGENT_WORKER_CONCURRENCY` | `1` | 1 ワーカー内の同時実行数（将来拡張用）。現状の実装は逐次処理のため、スケールしたい場合はワーカープロセスを増やす |
 | `CLOUD_AGENT_POLL_INTERVAL_SECONDS` | `1.0` | キューが空のときの再ポーリング間隔（秒） |
-| `CLOUD_AGENT_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | LangGraph ベースエージェントで使う `init_chat_model` のモデル文字列（例: `"azure_ai:gpt-5"`, `"azure_ai:gpt-4o-mini"`） |
-| `CLOUD_AGENT_LANGGRAPH_SYSTEM_PROMPT` | _(組み込み)_ | LangGraph エージェントに注入するシステムプロンプト。エージェントの動作をカスタマイズする際に上書きします |
+
+LangGraph エージェント設定（`AGENTS_LANGGRAPH_MODEL`, `AGENTS_LANGGRAPH_SYSTEM_PROMPT`）は
+**共有エージェントランタイム**で管理されます。[共有エージェントランタイム](../agents/index.ja.md) を参照してください。
 
 ### リポジトリバックエンドの選択
 

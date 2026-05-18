@@ -153,8 +153,8 @@ All settings are controlled by environment variables (or a `.env` file).
 | `CLOUD_AGENT_MAX_RETRIES` | `3` | Default max retries |
 | `CLOUD_AGENT_WORKER_CONCURRENCY` | `1` | Worker concurrency (future) |
 | `CLOUD_AGENT_POLL_INTERVAL_SECONDS` | `1.0` | Polling interval when queue empty |
-| `CLOUD_AGENT_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | Model string for `init_chat_model` used by LangGraph agents |
-| `CLOUD_AGENT_LANGGRAPH_SYSTEM_PROMPT` | _(built-in)_ | System prompt for LangGraph agents |
+| `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | Model string for `init_chat_model` used by LangGraph agents |
+| `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(built-in)_ | System prompt for LangGraph agents |
 
 See the [Configuration section in the Overview](index.md#configuration) for
 backend selection tables and end-to-end `.env` examples.

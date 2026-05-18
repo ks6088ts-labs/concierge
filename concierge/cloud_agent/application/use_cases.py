@@ -4,11 +4,12 @@ import logging
 import uuid
 from typing import Any
 
-from concierge.cloud_agent.application.agents import AgentRegistry, TaskInput
+from concierge.agents.domain.exceptions import AgentNotFoundError
+from concierge.cloud_agent.application.agents import AgentRegistry, AgentRequest
 from concierge.cloud_agent.application.queues import TaskQueue
 from concierge.cloud_agent.application.repositories import TaskRepository
 from concierge.cloud_agent.domain.entities import Task
-from concierge.cloud_agent.domain.exceptions import AgentNotFoundError, TaskNotFoundError, TaskStateError
+from concierge.cloud_agent.domain.exceptions import TaskNotFoundError, TaskStateError
 from concierge.cloud_agent.domain.value_objects import TaskStatus
 
 logger = logging.getLogger(__name__)
@@ -175,16 +176,20 @@ class ProcessNextTaskUseCase:
             return True
 
         # Execute agent
-        task_input = TaskInput(task_id=task.id, agent_type=task.agent_type, payload=task.payload)
+        request = AgentRequest(
+            agent_type=task.agent_type,
+            payload=task.payload,
+            context={"task_id": str(task.id)},
+        )
         try:
-            output = await agent.handle(task_input)
-            if output.status == "succeeded":
-                task.mark_succeeded(output.result or {})
+            response = await agent.handle(request)
+            if response.status == "succeeded":
+                task.mark_succeeded(response.result or {})
                 self.repository.save(task)
                 await self.queue.ack(message)
                 logger.info("Task id=%s succeeded", task.id)
             else:
-                task.mark_failed(output.error or "agent returned failed status")
+                task.mark_failed(response.error or "agent returned failed status")
                 task.bump_retry()
                 if task.should_retry():
                     task.status = TaskStatus.QUEUED
@@ -193,9 +198,9 @@ class ProcessNextTaskUseCase:
                     await self.queue.ack(message)
                     logger.info("Task id=%s failed; re-queued (retry %d)", task.id, task.retry_count)
                 else:
-                    task.mark_dead_letter(output.error or "max retries exceeded")
+                    task.mark_dead_letter(response.error or "max retries exceeded")
                     self.repository.save(task)
-                    await self.queue.move_to_dlq(message, reason=output.error or "max retries exceeded")
+                    await self.queue.move_to_dlq(message, reason=response.error or "max retries exceeded")
                     logger.warning("Task id=%s moved to DLQ", task.id)
         except Exception as exc:
             error_msg = str(exc)

@@ -1,4 +1,4 @@
-"""Unit tests for LangGraphEchoAgent.
+"""Unit tests for LangGraphEchoAgent (shared agents package).
 
 LLM calls are fully mocked; no Azure credentials or network access required.
 """
@@ -19,14 +19,15 @@ from concierge.agents.infrastructure.langgraph_echo_agent import LangGraphEchoAg
 # Helpers
 # ---------------------------------------------------------------------------
 
-_FAKE_TASK_ID = "00000000-0000-0000-0000-000000000001"
+_MODEL = "azure_ai:gpt-5"
+_SYSTEM_PROMPT = "You are a minimal echo agent."
 
 
-def _make_task_input(payload: dict[str, Any]) -> AgentRequest:
+def _make_request(payload: dict[str, Any]) -> AgentRequest:
     return AgentRequest(
         agent_type="langgraph-echo",
         payload=payload,
-        context={"task_id": _FAKE_TASK_ID},
+        context={"task_id": "00000000-0000-0000-0000-000000000001"},
     )
 
 
@@ -51,7 +52,6 @@ def test_extract_message_returns_message_string() -> None:
 
 def test_extract_message_strips_whitespace() -> None:
     agent = LangGraphEchoAgent.__new__(LangGraphEchoAgent)
-    # strip() must succeed → empty string → falsy
     assert agent._extract_message({"message": "   "}) == ""
 
 
@@ -117,16 +117,12 @@ def test_collect_tool_calls_no_tool_calls() -> None:
 # ---------------------------------------------------------------------------
 
 
-_MODEL = "azure_ai:gpt-5"
-_SYSTEM_PROMPT = "You are a minimal echo agent."
-
-
 @pytest.mark.anyio
 async def test_handle_missing_message_returns_failed() -> None:
     agent = LangGraphEchoAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT)
 
-    task_input = _make_task_input({})
-    output: AgentResponse = await agent.handle(task_input)
+    request = _make_request({})
+    output: AgentResponse = await agent.handle(request)
 
     assert output.status == "failed"
     assert output.error is not None
@@ -137,8 +133,8 @@ async def test_handle_missing_message_returns_failed() -> None:
 async def test_handle_empty_message_returns_failed() -> None:
     agent = LangGraphEchoAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT)
 
-    task_input = _make_task_input({"message": "   "})
-    output: AgentResponse = await agent.handle(task_input)
+    request = _make_request({"message": "   "})
+    output: AgentResponse = await agent.handle(request)
 
     assert output.status == "failed"
 
@@ -152,8 +148,8 @@ async def test_handle_success() -> None:
     mock_compiled.ainvoke = AsyncMock(return_value=fake_result)
 
     with patch.object(agent, "_build_agent", return_value=mock_compiled):
-        task_input = _make_task_input({"message": "Hello LangGraph"})
-        output: AgentResponse = await agent.handle(task_input)
+        request = _make_request({"message": "Hello LangGraph"})
+        output: AgentResponse = await agent.handle(request)
 
     assert output.status == "succeeded"
     assert output.result is not None
@@ -170,8 +166,8 @@ async def test_handle_llm_exception_returns_failed() -> None:
     mock_compiled.ainvoke = AsyncMock(side_effect=RuntimeError("network error"))
 
     with patch.object(agent, "_build_agent", return_value=mock_compiled):
-        task_input = _make_task_input({"message": "hello"})
-        output: AgentResponse = await agent.handle(task_input)
+        request = _make_request({"message": "hello"})
+        output: AgentResponse = await agent.handle(request)
 
     assert output.status == "failed"
     assert output.error is not None

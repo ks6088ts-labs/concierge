@@ -25,34 +25,33 @@ flowchart LR
 
 ## Agent Extension Point
 
-Agents are registered in
-`concierge/cloud_agent/infrastructure/agents/registry.py`.  Each agent
-implements the `Agent` Protocol from the `application` layer:
+Agents are defined in the shared `concierge/agents/` package.  Each agent
+implements the `Agent` Protocol from the shared `application` layer:
 
 ```python
 class Agent(Protocol):
     agent_type: ClassVar[str]
-    async def handle(self, task_input: TaskInput) -> TaskOutput: ...
+    async def handle(self, request: AgentRequest) -> AgentResponse: ...
 ```
 
 The `infrastructure` layer is the only place that may import LangChain /
 LangGraph.  The `domain` and `application` layers must remain framework-free
-(enforced by `tests/cloud_agent/test_architecture.py`).
+(enforced by `tests/agents/test_architecture.py` and import-linter contracts).
 
 ```mermaid
 classDiagram
     class Agent {
         <<Protocol>>
         +agent_type: str
-        +handle(task_input) TaskOutput
+        +handle(request) AgentResponse
     }
     class EchoAgent {
         +agent_type = "echo"
-        +handle(task_input) TaskOutput
+        +handle(request) AgentResponse
     }
     class LangGraphEchoAgent {
         +agent_type = "langgraph-echo"
-        +handle(task_input) TaskOutput
+        +handle(request) AgentResponse
         -_build_agent()
     }
     Agent <|.. EchoAgent
@@ -63,9 +62,9 @@ classDiagram
 
 - **Queue-agnostic abstraction** — ships with `InMemory` (local dev) and
   `AzureStorageQueue` backends; switch via `CLOUD_AGENT_QUEUE_BACKEND`.
-- **Agent I/O standardised** — every agent receives `TaskInput` and returns
-  `TaskOutput` (Pydantic schemas).  The `AgentRegistry` maps `agent_type`
-  strings to concrete `Agent` implementations.
+- **Agent I/O standardised** — every agent receives `AgentRequest` and returns
+  `AgentResponse` (Pydantic schemas from `concierge.agents`).  The `AgentRegistry`
+  maps `agent_type` strings to concrete `Agent` implementations.
 - **Runtime-agnostic workers** — the worker loop runs as a local CLI process
   today; the same `Agent` interface can be reused on Azure Functions in the
   future.
@@ -88,7 +87,6 @@ concierge/cloud_agent/
   infrastructure/
     persistence/       # InMemoryTaskRepository, SqlAlchemyTaskRepository
     queue/             # InMemoryTaskQueue, AzureStorageQueueTaskQueue
-    agents/            # EchoAgent, default AgentRegistry
     web/               # FastAPI app, routes, schemas, exception handlers
     cli/               # Typer CLI app, worker loop
 ```
@@ -121,7 +119,7 @@ implementation for integrating LangChain / LangGraph agents with the
 ### Prerequisites
 
 - Azure AI Foundry (or Azure OpenAI) deployment reachable via the model
-  string in `CLOUD_AGENT_LANGGRAPH_MODEL` (default `azure_ai:gpt-5`).
+  string in `AGENTS_LANGGRAPH_MODEL` (default `azure_ai:gpt-5`).
 - A principal that `DefaultAzureCredential` can resolve — typically
   `az login` for local development, or a managed identity in Azure.
 - The signed-in principal must have permission to call the Foundry
@@ -140,7 +138,7 @@ processes), switch to `postgres` + `azure-storage-queue`.
 CLOUD_AGENT_REPOSITORY_BACKEND=postgres
 CLOUD_AGENT_QUEUE_BACKEND=azure-storage-queue
 CLOUD_AGENT_AZURE_STORAGE_ACCOUNT_URL=https://<account>.queue.core.windows.net
-CLOUD_AGENT_LANGGRAPH_MODEL=azure_ai:gpt-5
+AGENTS_LANGGRAPH_MODEL=azure_ai:gpt-5
 
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
@@ -200,14 +198,14 @@ processing the task.
 
 ### Customising the agent
 
-- `CLOUD_AGENT_LANGGRAPH_MODEL` — swap the underlying chat model (e.g.
+- `AGENTS_LANGGRAPH_MODEL` — swap the underlying chat model (e.g.
   `azure_ai:gpt-4o-mini`).
-- `CLOUD_AGENT_LANGGRAPH_SYSTEM_PROMPT` — replace the built-in system prompt
+- `AGENTS_LANGGRAPH_SYSTEM_PROMPT` — replace the built-in system prompt
   to change behaviour without writing code.
 - For a new agent, copy
-  [`concierge/cloud_agent/infrastructure/agents/langgraph_echo_agent.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/cloud_agent/infrastructure/agents/langgraph_echo_agent.py),
+  [`concierge/agents/infrastructure/langgraph_echo_agent.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/agents/infrastructure/langgraph_echo_agent.py),
   add tools, and register it in
-  [`registry.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/cloud_agent/infrastructure/agents/registry.py).
+  [`concierge/agents/infrastructure/registry_factory.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/agents/infrastructure/registry_factory.py).
 
 ### Troubleshooting
 
@@ -253,8 +251,9 @@ share the exact same configuration object.
 | `CLOUD_AGENT_MAX_RETRIES` | `3` | Default retry budget injected into `DispatchTaskUseCase`. A task is moved to the DLQ when `retry_count > max_retries`. Can be overridden per dispatch via the API / CLI. |
 | `CLOUD_AGENT_WORKER_CONCURRENCY` | `1` | Reserved for future concurrent processing per worker. The current loop processes one task at a time; scale horizontally instead. |
 | `CLOUD_AGENT_POLL_INTERVAL_SECONDS` | `1.0` | How long the worker sleeps after an empty `dequeue()` before polling again. |
-| `CLOUD_AGENT_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | Model string for `init_chat_model` used by LangGraph-based agents (e.g. `"azure_ai:gpt-5"`, `"azure_ai:gpt-4o-mini"`). |
-| `CLOUD_AGENT_LANGGRAPH_SYSTEM_PROMPT` | _(built-in)_ | System prompt injected into LangGraph agents.  Override to customise agent behaviour. |
+
+LangGraph agent settings (`AGENTS_LANGGRAPH_MODEL`, `AGENTS_LANGGRAPH_SYSTEM_PROMPT`) are now
+managed in the **shared agent runtime**. See [Shared Agent Runtime](../agents/index.md#configuration).
 
 ### Repository backend selection
 

@@ -15,6 +15,8 @@ from typing import Annotated
 import typer
 from dotenv import load_dotenv
 
+from concierge.agents.domain.exceptions import AgentNotFoundError
+from concierge.agents.infrastructure.registry_factory import get_agent_registry
 from concierge.cloud_agent.application.use_cases import (
     CancelTaskUseCase,
     DispatchTaskUseCase,
@@ -23,13 +25,11 @@ from concierge.cloud_agent.application.use_cases import (
 )
 from concierge.cloud_agent.domain.entities import Task
 from concierge.cloud_agent.domain.exceptions import (
-    AgentNotFoundError,
     TaskNotFoundError,
     TaskStateError,
     TaskValidationError,
 )
 from concierge.cloud_agent.domain.value_objects import TaskStatus
-from concierge.cloud_agent.infrastructure.agents.registry import get_agent_registry
 from concierge.cloud_agent.infrastructure.persistence.factory import get_task_repository
 from concierge.cloud_agent.infrastructure.queue.factory import get_task_queue
 from concierge.loggers import get_logger

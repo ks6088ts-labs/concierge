@@ -3,8 +3,8 @@ from __future__ import annotations
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from concierge.agents.domain.exceptions import AgentNotFoundError
 from concierge.cloud_agent.domain.exceptions import (
-    AgentNotFoundError,
     QueueError,
     TaskNotFoundError,
     TaskStateError,

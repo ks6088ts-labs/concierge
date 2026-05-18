@@ -52,6 +52,7 @@ chat-web = "concierge.chat.infrastructure.web.app:start"
 chat-cli = "concierge.chat.infrastructure.cli.app:app"
 cloud-agent-web = "concierge.cloud_agent.infrastructure.web.app:start"
 cloud-agent-cli = "concierge.cloud_agent.infrastructure.cli.app:app"
+agents-cli = "concierge.agents.infrastructure.cli.app:app"
 
 [tool.ruff]
 line-length = 120
@@ -230,4 +231,50 @@ forbidden_modules = [
     "concierge.settings",
     "concierge.loggers",
     "concierge.core",
+]
+
+[[tool.importlinter.contracts]]
+id = "agents-layers"
+name = "concierge.agents follows clean architecture layers"
+type = "layers"
+layers = [
+    "infrastructure",
+    "application",
+    "domain",
+]
+containers = ["concierge.agents"]
+exhaustive = true
+
+[[tool.importlinter.contracts]]
+id = "agents-domain-no-frameworks"
+name = "agents domain layer does not depend on frameworks or IO libraries"
+type = "forbidden"
+source_modules = ["concierge.agents.domain"]
+forbidden_modules = [
+    "fastapi", "uvicorn", "typer", "httpx", "pydantic", "pydantic_settings",
+    "sqlalchemy", "psycopg", "azure", "langchain", "langchain_core",
+    "langchain_postgres", "langgraph", "mlflow",
+    "concierge.settings", "concierge.loggers", "concierge.core",
+]
+
+[[tool.importlinter.contracts]]
+id = "agents-application-no-infrastructure"
+name = "agents application layer must not depend on infrastructure or frameworks"
+type = "forbidden"
+source_modules = ["concierge.agents.application"]
+forbidden_modules = [
+    "fastapi", "uvicorn", "typer", "httpx", "sqlalchemy", "psycopg",
+    "azure", "langchain", "langchain_core", "langchain_postgres",
+    "langgraph", "concierge.agents.infrastructure",
+]
+
+[[tool.importlinter.contracts]]
+id = "agents-no-service-coupling"
+name = "concierge.agents must not depend on bounded contexts"
+type = "forbidden"
+source_modules = ["concierge.agents"]
+forbidden_modules = [
+    "concierge.todo",
+    "concierge.chat",
+    "concierge.cloud_agent",
 ]

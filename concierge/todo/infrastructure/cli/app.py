@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import json
-import logging
 import uuid
 from typing import Annotated
 
 import typer
 from dotenv import load_dotenv
 
-from concierge.loggers import get_logger
+from concierge.loggers import enable_verbose_logging, get_logger
 from concierge.observability import disable_tracing, enable_mlflow, enable_tracing
 from concierge.settings import TodoRepositoryBackend, get_todo_settings
 from concierge.todo.application.use_cases import (
@@ -72,7 +71,7 @@ def _bootstrap(
     else:
         disable_tracing()
     if verbose:
-        logging.basicConfig(level=logging.DEBUG)
+        enable_verbose_logging()
     if mlflow:
         enable_mlflow()
 

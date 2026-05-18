@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 from typing import Annotated, Any
 
 import typer
@@ -20,7 +19,7 @@ from dotenv import load_dotenv
 from concierge.agents.application.contracts import AgentRequest, AgentResponse
 from concierge.agents.domain.exceptions import AgentNotFoundError
 from concierge.agents.infrastructure.registry_factory import get_agent_registry
-from concierge.loggers import get_logger
+from concierge.loggers import enable_verbose_logging, get_logger
 from concierge.observability import bootstrap_from_env, disable_tracing, enable_mlflow, enable_tracing
 from concierge.settings import get_agents_settings
 
@@ -76,7 +75,7 @@ def _bootstrap(
     else:
         disable_tracing()
     if verbose:
-        logging.basicConfig(level=logging.DEBUG)
+        enable_verbose_logging()
     if mlflow:
         enable_mlflow()
 

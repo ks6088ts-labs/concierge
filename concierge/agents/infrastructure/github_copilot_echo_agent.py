@@ -1,13 +1,12 @@
 """GitHub Copilot SDK based echo agent.
 
-This agent intentionally does not call an LLM. It only initializes a Copilot
-client/session and returns the input message verbatim so CI can validate SDK
-wiring without network dependency.
+This agent intentionally does not call an LLM. It only instantiates a Copilot
+client and returns the input message verbatim so CI can validate SDK wiring
+without network dependency.
 """
 
 from __future__ import annotations
 
-import os
 from collections.abc import Callable
 from typing import Any, ClassVar
 
@@ -50,14 +49,11 @@ class GitHubCopilotEchoAgent:
 
         try:
             self._run_config_factory(request)
-            async with self._build_client() as client:
-                session = await client.create_session(
-                    on_permission_request=self._allow_permissions,
-                    model=self._model,
-                    system_message={"content": self._system_prompt},
-                )
-                async with session:
-                    pass
+            # Validate SDK wiring by instantiating the client. We intentionally
+            # do not start the CLI subprocess nor create a session: this echo
+            # agent must remain offline-safe in CI, while still confirming the
+            # SDK import path and constructor surface are intact.
+            self._build_client()
         except Exception as exc:  # noqa: BLE001
             return AgentResponse(status="failed", error=f"{type(exc).__name__}: {exc}")
 
@@ -76,10 +72,5 @@ class GitHubCopilotEchoAgent:
         return value if isinstance(value, str) and value.strip() else ""
 
     @staticmethod
-    def _allow_permissions(_request: Any) -> dict[str, str]:
-        return {"outcome": "allow"}
-
-    @staticmethod
     def _build_client() -> CopilotClient:
-        os.environ.setdefault("COPILOT_GITHUB_TOKEN", "placeholder")
         return CopilotClient()

@@ -23,6 +23,7 @@ def test_cli_list_returns_registered_agent_types() -> None:
     agent_types = json.loads(result.output)
     assert "echo" in agent_types
     assert "langgraph-echo" in agent_types
+    assert "github-copilot-echo" in agent_types
 
 
 def test_cli_invoke_echo_with_payload_succeeds() -> None:
@@ -46,6 +47,21 @@ def test_cli_invoke_echo_with_message_shortcut() -> None:
     response = json.loads(result.output)
     assert response["status"] == "succeeded"
     assert response["result"] == {"echo": "shortcut", "reply": "shortcut"}
+
+
+def test_cli_invoke_github_copilot_echo_with_message_shortcut() -> None:
+    result = runner.invoke(
+        app,
+        ["invoke", "--agent-type", "github-copilot-echo", "--message", "Hello Copilot"],
+    )
+    assert result.exit_code == 0, result.output
+    response = json.loads(result.output)
+    assert response["status"] == "succeeded"
+    assert response["result"] == {
+        "echo": "Hello Copilot",
+        "reply": "Hello Copilot",
+        "client": {"initialized": True, "model": "gpt-5"},
+    }
 
 
 def test_cli_invoke_echo_missing_message_fails_with_exit_code_1() -> None:
@@ -103,6 +119,17 @@ def test_cli_info_for_langgraph_echo_includes_settings() -> None:
     assert "settings" in info
     assert "langgraph_model" in info["settings"]
     assert "langgraph_system_prompt" in info["settings"]
+
+
+def test_cli_info_for_github_copilot_echo_includes_settings() -> None:
+    result = runner.invoke(app, ["info", "--agent-type", "github-copilot-echo"])
+    assert result.exit_code == 0, result.output
+    info = json.loads(result.output)
+    assert info["agent_type"] == "github-copilot-echo"
+    assert info["class"] == "GitHubCopilotEchoAgent"
+    assert "settings" in info
+    assert "github_copilot_model" in info["settings"]
+    assert "github_copilot_system_prompt" in info["settings"]
 
 
 def test_cli_info_unknown_agent_type_returns_error() -> None:

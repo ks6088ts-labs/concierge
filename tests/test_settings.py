@@ -98,22 +98,30 @@ def test_agents_settings_defaults(monkeypatch):
     """AgentsSettings should load default values when no env vars are set."""
     monkeypatch.delenv("AGENTS_LANGGRAPH_MODEL", raising=False)
     monkeypatch.delenv("AGENTS_LANGGRAPH_SYSTEM_PROMPT", raising=False)
+    monkeypatch.delenv("AGENTS_GITHUB_COPILOT_MODEL", raising=False)
+    monkeypatch.delenv("AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT", raising=False)
 
     settings = AgentsSettings(_env_file=None)  # ty: ignore[unknown-argument]
 
     assert settings.langgraph_model == "azure_ai:gpt-5"
     assert "echo" in settings.langgraph_system_prompt.lower()
+    assert settings.github_copilot_model == "gpt-5"
+    assert "copilot sdk" in settings.github_copilot_system_prompt.lower()
 
 
 def test_agents_settings_reads_env(monkeypatch):
     """AGENTS_LANGGRAPH_MODEL / AGENTS_LANGGRAPH_SYSTEM_PROMPT should override defaults."""
     monkeypatch.setenv("AGENTS_LANGGRAPH_MODEL", "azure_ai:gpt-4o-mini")
     monkeypatch.setenv("AGENTS_LANGGRAPH_SYSTEM_PROMPT", "custom prompt")
+    monkeypatch.setenv("AGENTS_GITHUB_COPILOT_MODEL", "gpt-4.1")
+    monkeypatch.setenv("AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT", "custom copilot prompt")
 
     settings = AgentsSettings(_env_file=None)  # ty: ignore[unknown-argument]
 
     assert settings.langgraph_model == "azure_ai:gpt-4o-mini"
     assert settings.langgraph_system_prompt == "custom prompt"
+    assert settings.github_copilot_model == "gpt-4.1"
+    assert settings.github_copilot_system_prompt == "custom copilot prompt"
 
 
 def test_cloud_agent_settings_no_langgraph_fields(monkeypatch):

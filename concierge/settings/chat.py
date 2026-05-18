@@ -33,6 +33,7 @@ class ChatSettings(BaseSettings):
     bot_model: str = "azure_ai:gpt-5"
 
     responder_backend: ChatResponderBackend = ChatResponderBackend.FOUNDRY
+    # Used when CHAT_RESPONDER_BACKEND=agent (e.g. echo, langgraph-echo, github-copilot-echo).
     bot_agent_type: str = "langgraph-echo"
 
     realtime_model: str = "gpt-realtime-1.5"

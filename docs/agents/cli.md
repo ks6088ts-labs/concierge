@@ -37,7 +37,7 @@ uv run agents-cli list
 Output:
 
 ```json
-["echo", "langgraph-echo"]
+["echo", "langgraph-echo", "github-copilot-echo"]
 ```
 
 ### Invoke an agent
@@ -61,11 +61,12 @@ uv run agents-cli invoke \
   --context '{"task_id": "00000000-0000-0000-0000-000000000001"}'
 ```
 
-Both built-in agents (`echo` and `langgraph-echo`) read `payload.message`,
+All built-in agents (`echo`, `langgraph-echo`, and `github-copilot-echo`) read `payload.message`,
 so the same shortcut works for both:
 
 ```bash
 uv run agents-cli invoke --agent-type langgraph-echo --message "Hello LangGraph"
+uv run agents-cli invoke --agent-type github-copilot-echo --message "Hello Copilot"
 ```
 
 A successful `langgraph-echo` response looks like:
@@ -97,6 +98,7 @@ Options:
 
 ```bash
 uv run agents-cli info --agent-type langgraph-echo
+uv run agents-cli info --agent-type github-copilot-echo
 ```
 
 Output:
@@ -125,6 +127,8 @@ belong to the `cloud_agent` and `chat` services and are not relevant here.
 |----------|---------|-------------|
 | `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | Model string for `init_chat_model` used by `langgraph-echo` |
 | `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `langgraph-echo` |
+| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5` | Model name passed to `CopilotClient.create_session(model=...)` for `github-copilot-echo` |
+| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-echo` (compat field for future Copilot agents) |
 | `CONCIERGE_TRACING_ENABLED` | `false` | Enable tracing without passing `--tracing` |
 | `CONCIERGE_MLFLOW_ENABLED` | `false` | Enable MLflow autologging without passing `--mlflow` |
 
@@ -139,4 +143,17 @@ az login
 uv run agents-cli \
   --tracing --mlflow --verbose \
   invoke --agent-type langgraph-echo --message "trace me"
+```
+Successful `github-copilot-echo` output:
+
+```json
+{
+  "status": "succeeded",
+  "result": {
+    "echo": "Hello Copilot",
+    "reply": "Hello Copilot",
+    "client": {"initialized": true, "model": "gpt-5"}
+  },
+  "error": null
+}
 ```

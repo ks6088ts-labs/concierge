@@ -211,6 +211,12 @@ def agent_info(
             "langgraph_model": agents_settings.langgraph_model,
             "langgraph_system_prompt": agents_settings.langgraph_system_prompt,
         }
+    if agent_type == "github-copilot-echo":
+        agents_settings = get_agents_settings()
+        info["settings"] = {
+            "github_copilot_model": agents_settings.github_copilot_model,
+            "github_copilot_system_prompt": agents_settings.github_copilot_system_prompt,
+        }
 
     _print_json(info)
 

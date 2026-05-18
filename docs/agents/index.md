@@ -16,10 +16,12 @@ flowchart LR
     cloud_agent[cloud_agent worker] --> Registry
     Registry[AgentRegistry] --> Echo[EchoAgent]
     Registry --> LGE[LangGraphEchoAgent]
+    Registry --> GCE[GitHubCopilotEchoAgent]
     subgraph agents["concierge/agents (shared kernel)"]
         Registry
         Echo
         LGE
+        GCE
     end
 ```
 
@@ -35,6 +37,7 @@ concierge/agents/
   infrastructure/
     echo_agent.py          # EchoAgent
     langgraph_echo_agent.py # LangGraphEchoAgent
+    github_copilot_echo_agent.py # GitHubCopilotEchoAgent
     registry_factory.py    # get_agent_registry() (lru_cache)
 ```
 
@@ -86,6 +89,7 @@ agent = registry.resolve("my-agent")
 |------------|-------|-------------|
 | `echo` | `EchoAgent` | Returns `payload.message` verbatim. No LLM required. |
 | `langgraph-echo` | `LangGraphEchoAgent` | LangGraph agent with `echo` tool backed by an Azure AI chat model. |
+| `github-copilot-echo` | `GitHubCopilotEchoAgent` | Initializes GitHub Copilot SDK client/session and returns `payload.message` verbatim (no `session.send`). |
 
 ## Configuration
 
@@ -95,6 +99,8 @@ Agent settings are read from environment variables with the **`AGENTS_`** prefix
 |----------|---------|-------------|
 | `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | Model string for `init_chat_model` (e.g. `azure_ai:gpt-4o-mini`). |
 | `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(built-in)_ | System prompt for LangGraph agents. |
+| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5` | Model name passed to `CopilotClient.create_session(model=...)`. |
+| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-echo` (compat field for future non-echo agents). |
 
 ## Using from cloud_agent worker
 
@@ -115,6 +121,17 @@ export CHAT_RESPONDER_BACKEND=agent
 export CHAT_BOT_AGENT_TYPE=echo   # LLM-free smoke test
 uv run chat-web
 ```
+
+You can also route chat replies through `github-copilot-echo`:
+
+```bash
+export CHAT_RESPONDER_BACKEND=agent
+export CHAT_BOT_AGENT_TYPE=github-copilot-echo
+uv run chat-web
+```
+
+`github-copilot-echo` is not a LangChain/LangGraph agent, so MLflow LangChain
+autologging does not capture its internal SDK spans automatically.
 
 Verify with:
 

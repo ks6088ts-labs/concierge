@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+from unittest.mock import AsyncMock, patch
 
 from typer.testing import CliRunner
 
 from concierge.agents.infrastructure.cli.app import app
+from concierge.agents.infrastructure.github_copilot_echo_agent import GitHubCopilotEchoAgent
 
 runner = CliRunner()
 
@@ -50,17 +52,29 @@ def test_cli_invoke_echo_with_message_shortcut() -> None:
 
 
 def test_cli_invoke_github_copilot_echo_with_message_shortcut() -> None:
-    result = runner.invoke(
-        app,
-        ["invoke", "--agent-type", "github-copilot-echo", "--message", "Hello Copilot"],
-    )
+    """The CLI runs the github-copilot-echo agent end-to-end, with the SDK session mocked.
+
+    The Copilot SDK opens a real CLI subprocess on ``CopilotClient.__aenter__``,
+    so the unit test patches ``_run_session`` to return a canned reply. The
+    rest of the CLI ↔ agent ↔ registry chain still runs unmodified.
+    """
+    with patch.object(
+        GitHubCopilotEchoAgent,
+        "_run_session",
+        new=AsyncMock(return_value="Hello Copilot"),
+    ):
+        result = runner.invoke(
+            app,
+            ["invoke", "--agent-type", "github-copilot-echo", "--message", "Hello Copilot"],
+        )
+
     assert result.exit_code == 0, result.output
     response = json.loads(result.output)
     assert response["status"] == "succeeded"
     assert response["result"] == {
         "echo": "Hello Copilot",
         "reply": "Hello Copilot",
-        "client": {"initialized": True, "model": "gpt-5"},
+        "model": "gpt-5-mini",
     }
 
 

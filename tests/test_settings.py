@@ -105,8 +105,8 @@ def test_agents_settings_defaults(monkeypatch):
 
     assert settings.langgraph_model == "azure_ai:gpt-5"
     assert "echo" in settings.langgraph_system_prompt.lower()
-    assert settings.github_copilot_model == "gpt-5"
-    assert "copilot sdk" in settings.github_copilot_system_prompt.lower()
+    assert settings.github_copilot_model == "gpt-5-mini"
+    assert "helpful coding assistant" in settings.github_copilot_system_prompt.lower()
 
 
 def test_agents_settings_reads_env(monkeypatch):

@@ -127,8 +127,8 @@ belong to the `cloud_agent` and `chat` services and are not relevant here.
 |----------|---------|-------------|
 | `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | Model string for `init_chat_model` used by `langgraph-echo` |
 | `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `langgraph-echo` |
-| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5` | Model name passed to `CopilotClient.create_session(model=...)` for `github-copilot-echo` |
-| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-echo` (compat field for future Copilot agents) |
+| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | Model name passed to `CopilotClient.create_session(model=...)` for `github-copilot-echo` |
+| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-echo` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Default: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
 | `CONCIERGE_TRACING_ENABLED` | `false` | Enable tracing without passing `--tracing` |
 | `CONCIERGE_MLFLOW_ENABLED` | `false` | Enable MLflow autologging without passing `--mlflow` |
 
@@ -144,7 +144,9 @@ uv run agents-cli \
   --tracing --mlflow --verbose \
   invoke --agent-type langgraph-echo --message "trace me"
 ```
-Successful `github-copilot-echo` output:
+
+Successful `github-copilot-echo` output (the assistant reply text
+returned by the SDK session is surfaced under `reply`):
 
 ```json
 {
@@ -152,8 +154,17 @@ Successful `github-copilot-echo` output:
   "result": {
     "echo": "Hello Copilot",
     "reply": "Hello Copilot",
-    "client": {"initialized": true, "model": "gpt-5"}
+    "model": "gpt-5-mini"
   },
   "error": null
 }
 ```
+
+> The `github-copilot-echo` agent opens a fresh `CopilotClient` per
+> request, calls `create_session(model=..., system_message=...,
+> on_permission_request=PermissionHandler.approve_all)`, sends the user
+> message over the session and waits for `SessionIdleData` before
+> returning. The accumulated `AssistantMessageData.content` becomes
+> `result.reply`. Running this command therefore requires the
+> [GitHub Copilot CLI](https://github.com/github/copilot-cli) to be
+> installed and authenticated.

@@ -89,7 +89,7 @@ agent = registry.resolve("my-agent")
 |------------|-------|-------------|
 | `echo` | `EchoAgent` | Returns `payload.message` verbatim. No LLM required. |
 | `langgraph-echo` | `LangGraphEchoAgent` | LangGraph agent with `echo` tool backed by an Azure AI chat model. |
-| `github-copilot-echo` | `GitHubCopilotEchoAgent` | Initializes GitHub Copilot SDK client/session and returns `payload.message` verbatim (no `session.send`). |
+| `github-copilot-echo` | `GitHubCopilotEchoAgent` | Opens a GitHub Copilot SDK session per request, `send`s the user message, and returns the assistant reply. |
 
 ## Configuration
 
@@ -99,8 +99,8 @@ Agent settings are read from environment variables with the **`AGENTS_`** prefix
 |----------|---------|-------------|
 | `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | Model string for `init_chat_model` (e.g. `azure_ai:gpt-4o-mini`). |
 | `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(built-in)_ | System prompt for LangGraph agents. |
-| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5` | Model name passed to `CopilotClient.create_session(model=...)`. |
-| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-echo` (compat field for future non-echo agents). |
+| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | Model name passed to `CopilotClient.create_session(model=...)`. |
+| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-echo` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Default: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
 
 ## Using from cloud_agent worker
 

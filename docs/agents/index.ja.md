@@ -79,7 +79,7 @@ class MyAgent:
 |------------|--------|------|
 | `echo` | `EchoAgent` | `payload.message` をそのまま返す。LLM 不要。 |
 | `langgraph-echo` | `LangGraphEchoAgent` | `echo` ツールを持つ LangGraph エージェント。Azure AI チャットモデルを使用。 |
-| `github-copilot-echo` | `GitHubCopilotEchoAgent` | GitHub Copilot SDK のクライアント/セッション初期化のみを実行し、`payload.message` をそのまま返す（`session.send` は呼ばない）。 |
+| `github-copilot-echo` | `GitHubCopilotEchoAgent` | リクエストごとに GitHub Copilot SDK セッションを開き、ユーザーメッセージを `send` し、アシスタント応答を返します。 |
 
 ## 設定
 
@@ -89,8 +89,8 @@ class MyAgent:
 |------|-----------|------|
 | `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | `init_chat_model` に渡すモデル文字列。 |
 | `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(組み込み)_ | LangGraph エージェントへのシステムプロンプト。 |
-| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5` | `CopilotClient.create_session(model=...)` に渡すモデル名。 |
-| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(組み込み)_ | `github-copilot-echo` 用システムプロンプト（将来拡張の互換項目）。 |
+| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | `CopilotClient.create_session(model=...)` に渡すモデル名。 |
+| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(組み込み)_ | `github-copilot-echo` 用システムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルト: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
 
 ## cloud_agent ワーカーからの利用
 

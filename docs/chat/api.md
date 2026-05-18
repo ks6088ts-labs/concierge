@@ -165,7 +165,6 @@ the setup steps.
 To route this endpoint through the shared agents runtime, set:
 
 ```bash
-export CHAT_RESPONDER_BACKEND=agent
 export CHAT_BOT_AGENT_TYPE=github-copilot-echo
 ```
 

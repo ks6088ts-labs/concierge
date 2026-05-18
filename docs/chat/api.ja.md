@@ -150,6 +150,12 @@ curl -s -o /dev/null -w "HTTP %{http_code}\n" -X DELETE \
 
 `POST /conversations/{conversation_id}/messages` は**ユーザー発言の保存のみ**を行い、ボット応答はトリガーしません。AI 応答はクライアントが明示的に要求できるよう、専用エンドポイントに分離されています。セットアップ手順は [AI チャットボット応答（任意）](index.ja.md#ai) を参照。
 
+このエンドポイントを共有エージェントランタイム経由で動かすには次のように設定します。
+
+```bash
+export CHAT_BOT_AGENT_TYPE=github-copilot-echo
+```
+
 ### `POST .../agent-replies` でストリーミング応答
 
 レスポンスは **Server-Sent Events** で返るため、クライアントは応答を逐次レンダリングでき、ポーリング不要です。`Content-Type: text/event-stream` で次のイベントを送信します。

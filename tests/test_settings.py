@@ -11,7 +11,7 @@ from concierge.settings import (
     TodoRepositoryBackend,
     TodoSettings,
 )
-from concierge.settings.chat import ChatResponderBackend, ChatSettings
+from concierge.settings.chat import ChatSettings
 
 logger = get_logger(__name__)
 
@@ -134,11 +134,12 @@ def test_cloud_agent_settings_no_langgraph_fields(monkeypatch):
 
 
 def test_chat_settings_defaults(monkeypatch):
-    """ChatSettings.responder_backend and bot_agent_type should have the correct defaults."""
+    """ChatSettings.bot_agent_type should default to 'foundry'."""
     monkeypatch.delenv("CHAT_RESPONDER_BACKEND", raising=False)
     monkeypatch.delenv("CHAT_BOT_AGENT_TYPE", raising=False)
 
     settings = ChatSettings(_env_file=None)  # ty: ignore[unknown-argument]
 
-    assert settings.responder_backend is ChatResponderBackend.FOUNDRY
-    assert settings.bot_agent_type == "langgraph-echo"
+    assert settings.bot_agent_type == "foundry"
+    # ChatResponderBackend has been removed; no such attribute should exist.
+    assert not hasattr(settings, "responder_backend")

@@ -114,10 +114,13 @@ uv run cloud-agent-cli task dispatch \
 
 ## Using from chat
 
-Set `CHAT_RESPONDER_BACKEND=agent` to route chat replies through the shared agent:
+## Using from chat
+
+Set `CHAT_BOT_AGENT_TYPE` to a registered agent type to route chat replies
+through the shared agent runtime (the default `foundry` value bypasses the
+registry and uses the streaming Foundry responder):
 
 ```bash
-export CHAT_RESPONDER_BACKEND=agent
 export CHAT_BOT_AGENT_TYPE=echo   # LLM-free smoke test
 uv run chat-web
 ```
@@ -125,7 +128,6 @@ uv run chat-web
 You can also route chat replies through `github-copilot-echo`:
 
 ```bash
-export CHAT_RESPONDER_BACKEND=agent
 export CHAT_BOT_AGENT_TYPE=github-copilot-echo
 uv run chat-web
 ```

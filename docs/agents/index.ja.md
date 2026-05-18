@@ -102,10 +102,9 @@ uv run cloud-agent-cli task dispatch \
 
 ## chat からの利用
 
-`CHAT_RESPONDER_BACKEND=agent` を設定すると、チャット返信が共有エージェント経由になります。
+`CHAT_BOT_AGENT_TYPE` に登録済みのエージェント名を設定すると、チャット返信が共有エージェント経由になります（デフォルトの `foundry` は従来通り Foundry ストリーミングを使用）。
 
 ```bash
-export CHAT_RESPONDER_BACKEND=agent
 export CHAT_BOT_AGENT_TYPE=echo   # LLM 不要のスモークテスト
 uv run chat-web
 ```
@@ -113,7 +112,6 @@ uv run chat-web
 `github-copilot-echo` を使う場合:
 
 ```bash
-export CHAT_RESPONDER_BACKEND=agent
 export CHAT_BOT_AGENT_TYPE=github-copilot-echo
 uv run chat-web
 ```

@@ -24,6 +24,7 @@ nav:
       - Realtime Voice: chat/realtime.md
   - Shared Agent Runtime:
       - Overview: agents/index.md
+      - CLI Reference: agents/cli.md
   - Cloud Agent App (Clean Architecture):
       - Overview: cloud_agent/index.md
       - REST API Reference: cloud_agent/api.md

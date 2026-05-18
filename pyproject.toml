@@ -52,6 +52,7 @@ chat-web = "concierge.chat.infrastructure.web.app:start"
 chat-cli = "concierge.chat.infrastructure.cli.app:app"
 cloud-agent-web = "concierge.cloud_agent.infrastructure.web.app:start"
 cloud-agent-cli = "concierge.cloud_agent.infrastructure.cli.app:app"
+agents-cli = "concierge.agents.infrastructure.cli.app:app"
 
 [tool.ruff]
 line-length = 120

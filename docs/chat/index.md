@@ -131,6 +131,35 @@ submit.
 
 ---
 
+## Voice Output (Text-to-Speech)
+
+The bundled web UI at <http://localhost:8080/> supports text-to-speech for
+**AGENT** messages through the browser Web Speech API.
+
+### How to use
+
+1. Receive an AGENT message in the conversation view.
+2. Click the speaker button (`🔊`) on the message bubble.
+3. While speaking, the same button switches to stop (`■`).
+4. Click `■` to stop immediately, or click `🔊` on another AGENT message to
+   switch playback.
+
+### Browser support
+
+- Supported: latest Google Chrome and Microsoft Edge (Chromium-based)
+- Not supported by default: Firefox (Web Speech API speech synthesis may be
+  unavailable)
+- On unsupported browsers, the speaker button is not rendered.
+
+### Privacy notes
+
+- Speech synthesis may be processed by the browser vendor cloud service,
+  depending on browser implementation and selected voice.
+- The concierge backend does **not** send message text to any new TTS API.
+  Playback uses text already present in the browser.
+
+---
+
 ## CLI-only smoke test
 
 The CLI works the same way, but each invocation is its own process. For the

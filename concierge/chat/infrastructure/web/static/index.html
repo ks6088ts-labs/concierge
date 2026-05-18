@@ -352,6 +352,24 @@
         align-items: center;
       }
       .message .meta strong { color: var(--text-muted); font-weight: 600; }
+      .tts-btn {
+        margin-left: auto;
+        padding: 0.1rem 0.35rem;
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--text-muted);
+        font-size: 0.75rem;
+        line-height: 1;
+      }
+      .tts-btn:hover:not(:disabled) {
+        background: var(--surface-muted);
+        color: var(--text);
+      }
+      .tts-btn[aria-pressed="true"] {
+        color: var(--agent);
+        border-color: #ddd6fe;
+        background: #ede9fe;
+      }
       .message .content { font-size: 0.92rem; }
       .message.mine {
         align-self: flex-end;
@@ -810,6 +828,8 @@
 
       const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const MAX_MESSAGE_LENGTH = Number(els.messageContent.getAttribute('maxlength') || 4000);
+      const TTS_MAX_CHARS = 4000;
+      const ttsSupported = typeof window !== 'undefined' && 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
       const VOICE_INPUT_TITLE = '音声入力 (クリックで開始/停止。音声認識はブラウザベンダーのクラウドで処理される場合があります)';
       const voiceInput = {
         recognition: null,
@@ -820,6 +840,8 @@
         interimText: '',
         unsupportedNotified: false,
       };
+      let currentTtsButton = null;
+      let currentTtsUtterance = null;
 
       // -------- Toast --------
       function toast(message, kind = 'info', timeout = 3500) {
@@ -840,6 +862,58 @@
           return value.slice(0, MAX_MESSAGE_LENGTH);
         }
         return value;
+      }
+
+      // -------- Voice output (Text-to-Speech) --------
+      function setTtsButtonState(button, speaking) {
+        button.setAttribute('aria-pressed', speaking ? 'true' : 'false');
+        button.setAttribute('aria-label', speaking ? '読み上げ停止' : '読み上げる');
+        button.textContent = speaking ? '■' : '🔊';
+      }
+
+      function pickJaVoice() {
+        if (!ttsSupported) return null;
+        const voices = window.speechSynthesis.getVoices();
+        return (
+          voices.find((voice) => typeof voice.lang === 'string' && voice.lang.toLowerCase().startsWith('ja-jp'))
+          || voices.find((voice) => typeof voice.lang === 'string' && voice.lang.toLowerCase().startsWith('ja'))
+          || null
+        );
+      }
+
+      function clearTtsState() {
+        if (currentTtsButton) setTtsButtonState(currentTtsButton, false);
+        currentTtsButton = null;
+        currentTtsUtterance = null;
+      }
+
+      function stopSpeaking(cancel = true) {
+        if (!ttsSupported) return;
+        if (cancel) window.speechSynthesis.cancel();
+        clearTtsState();
+      }
+
+      function speakText(text, button) {
+        if (!ttsSupported || !text) return;
+        stopSpeaking();
+        const utterance = new SpeechSynthesisUtterance(String(text).slice(0, TTS_MAX_CHARS));
+        utterance.lang = 'ja-JP';
+        const voice = pickJaVoice();
+        if (voice) utterance.voice = voice;
+        utterance.onend = () => {
+          if (currentTtsUtterance === utterance) stopSpeaking(false);
+        };
+        utterance.onerror = () => {
+          if (currentTtsUtterance === utterance) stopSpeaking(false);
+        };
+        currentTtsUtterance = utterance;
+        currentTtsButton = button;
+        setTtsButtonState(button, true);
+        try {
+          window.speechSynthesis.speak(utterance);
+        } catch (_) {
+          stopSpeaking(false);
+        }
       }
 
       function renderVoiceInputValue() {
@@ -1157,14 +1231,26 @@
         const div = document.createElement('div');
         const isMine = m.sender && m.sender.id === myUserId;
         const role = (m.role || '').toLowerCase();
+        const canUseTts = ttsSupported && role === 'agent';
         div.className = `message ${isMine ? 'mine' : role}`;
         div.innerHTML = `
           <div class="meta">
             <strong>${escapeHtml(m.sender.display_name)}</strong>
             <span title="${escapeHtml(m.created_at)}">${escapeHtml(formatRelative(m.created_at))}</span>
+            ${canUseTts ? '<button type="button" class="tts-btn" aria-label="読み上げる" aria-pressed="false">🔊</button>' : ''}
           </div>
           <div class="content">${escapeHtml(m.content)}</div>
         `;
+        if (canUseTts) {
+          const ttsButton = div.querySelector('.tts-btn');
+          ttsButton.addEventListener('click', () => {
+            if (ttsButton.getAttribute('aria-pressed') === 'true') {
+              stopSpeaking();
+              return;
+            }
+            speakText(m.content, ttsButton);
+          });
+        }
         els.messages.appendChild(div);
       }
 

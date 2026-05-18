@@ -27,9 +27,17 @@ def get_message_repository() -> MessageRepository:
     return _factory_get_message_repository()
 
 
-def get_chatbot_responder() -> ChatbotResponder:
+def get_chatbot_responder(
+    agent_type: str | None = Query(default=None, alias="agent_type"),
+) -> ChatbotResponder:
+    """Build the chatbot responder for the current request.
+
+    Accepts an optional ``?agent_type=`` query parameter that overrides the
+    ``CHAT_BOT_AGENT_TYPE`` setting. When not provided, the configured default
+    is used.
+    """
     try:
-        return create_chatbot_responder()
+        return create_chatbot_responder(agent_type=agent_type)
     except ChatbotNotConfiguredError as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

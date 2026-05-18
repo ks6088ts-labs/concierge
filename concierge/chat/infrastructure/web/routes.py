@@ -29,6 +29,7 @@ from concierge.chat.application.use_cases import (
 )
 from concierge.chat.domain.exceptions import ConversationNotFoundError
 from concierge.chat.domain.value_objects import Participant, ParticipantKind
+from concierge.chat.infrastructure.ai.factory import list_available_agent_types
 from concierge.chat.infrastructure.web.dependencies import (
     get_chatbot_responder,
     get_conversation_repository,
@@ -37,6 +38,7 @@ from concierge.chat.infrastructure.web.dependencies import (
     get_realtime_responder_optional,
 )
 from concierge.chat.infrastructure.web.schemas import (
+    AgentTypesResponse,
     ConversationResponse,
     CreateConversationRequest,
     JoinConversationRequest,
@@ -67,6 +69,23 @@ def _bot_participant(settings: ChatSettings) -> Participant:
 
 def get_chat_settings_dep() -> ChatSettings:
     return get_chat_settings()
+
+
+@router.get("/agents", response_model=AgentTypesResponse, tags=["chat"])
+def list_agents(
+    chat_settings: Annotated[ChatSettings, Depends(get_chat_settings_dep)],
+) -> AgentTypesResponse:
+    """List agent types selectable from the chat web UI.
+
+    Returns the server-configured default (``CHAT_BOT_AGENT_TYPE``) along with
+    every type the user can pick (registered agents plus ``foundry`` when
+    ``AZURE_AI_PROJECT_ENDPOINT`` is configured). The configured default is
+    always present in ``available`` so the UI can still display it.
+    """
+    available = list_available_agent_types()
+    if chat_settings.bot_agent_type not in available:
+        available = [chat_settings.bot_agent_type, *available]
+    return AgentTypesResponse(default=chat_settings.bot_agent_type, available=available)
 
 
 @router.post("/conversations", response_model=ConversationResponse, status_code=status.HTTP_201_CREATED)
@@ -188,6 +207,13 @@ def stream_agent_reply(
     chat_settings: Annotated[ChatSettings, Depends(get_chat_settings_dep)],
 ) -> StreamingResponse:
     """Stream an AI agent reply over Server-Sent Events.
+
+    Query parameters:
+
+    - ``agent_type`` (optional) — override the server-configured
+      ``CHAT_BOT_AGENT_TYPE`` for this request only. Must be one of the values
+      returned by ``GET /agents``. When omitted, the configured default is
+      used.
 
     Connection protocol:
 

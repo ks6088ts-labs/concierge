@@ -840,7 +840,7 @@ requires-dist = [
     { name = "azure-identity", specifier = ">=1.25.3" },
     { name = "azure-storage-queue", specifier = ">=12.16.0" },
     { name = "fastapi", specifier = ">=0.136.1" },
-    { name = "github-copilot-sdk", specifier = ">=0.1.25" },
+    { name = "github-copilot-sdk", specifier = ">=0.3.0" },
     { name = "httpx", specifier = ">=0.28.0" },
     { name = "langchain", specifier = ">=1.2.18" },
     { name = "langchain-azure-ai", extras = ["opentelemetry"], specifier = ">=1.2.3" },

@@ -281,17 +281,18 @@ participant replies inside a conversation. The wiring lives in
 ```mermaid
 flowchart LR
     Caller[FastAPI route / CLI command] --> Factory[create_chatbot_responder]
-    Factory -->|CHAT_RESPONDER_BACKEND=foundry| Foundry[FoundryChatbotResponder]
-    Factory -->|CHAT_RESPONDER_BACKEND=agent| Agent[AgentChatbotResponder]
+    Factory -->|CHAT_BOT_AGENT_TYPE=foundry| Foundry[FoundryChatbotResponder]
+    Factory -->|CHAT_BOT_AGENT_TYPE=<agent-name>| Agent[AgentChatbotResponder]
     Factory -->|not configured| Error[ChatbotNotConfiguredError\nHTTP 503 / CLI exit 1]
     Foundry -->|init_chat_model.stream<br/>+ DefaultAzureCredential| Azure[(Azure AI Foundry)]
     Agent --> Registry[concierge.agents.AgentRegistry]
 ```
 
-`create_chatbot_responder()` selects the backend via `CHAT_RESPONDER_BACKEND`
+`create_chatbot_responder()` selects the responder via `CHAT_BOT_AGENT_TYPE`
 (default `foundry`). For `foundry`, `AZURE_AI_PROJECT_ENDPOINT` must be set;
-otherwise `ChatbotNotConfiguredError` is raised (HTTP 503 / exit 1). For
-`agent`, the registry must contain the agent type specified in `CHAT_BOT_AGENT_TYPE`.
+otherwise `ChatbotNotConfiguredError` is raised (HTTP 503 / exit 1). Any other
+value (e.g. `echo`, `langgraph-echo`, `github-copilot-echo`) is resolved from
+the shared `AgentRegistry`.
 
 ### Settings reference
 
@@ -304,9 +305,12 @@ All chatbot settings are part of `ChatSettings` (prefix `CHAT_`).
 | `CHAT_BOT_DISPLAY_NAME` | `Concierge AI` | Display name shown for the agent participant |
 | `CHAT_BOT_PARTICIPANT_ID` | `00000000-0000-0000-0000-000000000001` | Stable UUID for the agent participant |
 | `CHAT_BOT_HISTORY_LIMIT` | `20` | Maximum number of past messages forwarded as context |
-| `AZURE_AI_PROJECT_ENDPOINT` | unset | Required when `CHAT_RESPONDER_BACKEND=foundry` |
-| `CHAT_RESPONDER_BACKEND` | `foundry` | Reply backend: `foundry` (default) or `agent` |
-| `CHAT_BOT_AGENT_TYPE` | `langgraph-echo` | Agent type to use when `CHAT_RESPONDER_BACKEND=agent` |
+| `AZURE_AI_PROJECT_ENDPOINT` | unset | Required when `CHAT_BOT_AGENT_TYPE=foundry` |
+| `CHAT_BOT_AGENT_TYPE` | `foundry` | Responder selector: `foundry` (default, streaming) or a registered agent type (`echo`, `langgraph-echo`, `github-copilot-echo`) |
+
+> **Note:** The previous `CHAT_RESPONDER_BACKEND` variable has been removed.
+> If it is still present in your `.env`, it is silently ignored and a
+> `DeprecationWarning` is emitted at startup.
 
 ### Enable the chatbot (Foundry backend)
 
@@ -326,7 +330,6 @@ uv run chat-web
 Use the `echo` agent for a quick smoke-test without Azure credentials:
 
 ```bash
-export CHAT_RESPONDER_BACKEND=agent
 export CHAT_BOT_AGENT_TYPE=echo
 uv run chat-web
 ```
@@ -334,7 +337,6 @@ uv run chat-web
 For the LangGraph echo agent (requires `AZURE_AI_PROJECT_ENDPOINT`):
 
 ```bash
-export CHAT_RESPONDER_BACKEND=agent
 export CHAT_BOT_AGENT_TYPE=langgraph-echo
 export AGENTS_LANGGRAPH_MODEL=azure_ai:gpt-5
 az login

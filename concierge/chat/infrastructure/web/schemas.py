@@ -49,3 +49,16 @@ class JoinConversationRequest(BaseModel):
 class PostMessageRequest(BaseModel):
     content: str = Field(..., min_length=1, max_length=4000)
     display_name: str | None = Field(default=None, min_length=1, max_length=100)
+
+
+class AgentTypesResponse(BaseModel):
+    """List of agent types selectable from the chat-web UI.
+
+    ``default`` reflects the server-side configuration (``CHAT_BOT_AGENT_TYPE``);
+    ``available`` lists every type the user can pick. The server-configured
+    default is always included, even when it is not currently usable, so the UI
+    can surface it (e.g. ``foundry`` without ``AZURE_AI_PROJECT_ENDPOINT``).
+    """
+
+    default: str
+    available: list[str]

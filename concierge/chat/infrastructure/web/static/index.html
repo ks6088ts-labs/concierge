@@ -473,6 +473,30 @@
       .composer-controls .hint {
         color: var(--text-subtle);
       }
+      .agent-select {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.78rem;
+        color: var(--text-muted);
+      }
+      .agent-select .label {
+        white-space: nowrap;
+      }
+      .agent-select select {
+        font: inherit;
+        color: var(--text);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0.2rem 0.4rem;
+        max-width: 200px;
+      }
+      .agent-select select:disabled {
+        background: var(--surface-muted);
+        color: var(--text-subtle);
+        cursor: not-allowed;
+      }
 
       /* ---------- Toggle switch ---------- */
       .toggle {
@@ -707,6 +731,12 @@
                 <span class="track" aria-hidden="true"></span>
                 <span class="label">🤖 AI 自動応答</span>
               </label>
+              <label class="agent-select" for="agent-type" title="応答を生成する AI エージェントの種類を選択します">
+                <span class="label">🧠 エージェント</span>
+                <select id="agent-type" disabled>
+                  <option value="">読み込み中…</option>
+                </select>
+              </label>
               <div class="composer-controls" style="gap: 0.5rem; padding:0;">
                 <button id="manual-agent-reply" class="ghost" type="button" title="AI に応答を生成させる" disabled hidden>
                   🤖 AI に応答してもらう
@@ -800,6 +830,7 @@
         manualAgentReply: document.getElementById('manual-agent-reply'),
         aiBanner: document.getElementById('ai-banner'),
         aiBannerText: document.getElementById('ai-banner-text'),
+        agentType: document.getElementById('agent-type'),
         // Settings modal
         settingsModal: document.getElementById('settings-modal'),
         closeSettings: document.getElementById('close-settings'),
@@ -824,6 +855,10 @@
         // 'unknown' | 'available' | 'unavailable'
         aiAvailability: 'unknown',
         agentReplyInFlight: false,
+        // Selected agent_type sent on POST /agent-replies. Empty string means
+        // "use the server-configured default" (no query parameter).
+        agentType: '',
+        availableAgentTypes: [],
       };
 
       const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -1045,6 +1080,55 @@
         const saved = localStorage.getItem('chat_ai_auto_reply');
         if (saved === '0') els.aiAutoReply.checked = false;
         syncAiToggleClass();
+      }
+
+      function persistAgentType() {
+        if (state.agentType) {
+          localStorage.setItem('chat_agent_type', state.agentType);
+        } else {
+          localStorage.removeItem('chat_agent_type');
+        }
+      }
+
+      function renderAgentTypeOptions(defaultType, available) {
+        const saved = localStorage.getItem('chat_agent_type') || '';
+        const preferred = saved && available.includes(saved) ? saved : defaultType;
+        state.availableAgentTypes = available.slice();
+        state.agentType = preferred;
+        els.agentType.innerHTML = '';
+        for (const type of available) {
+          const opt = document.createElement('option');
+          opt.value = type;
+          opt.textContent = type === defaultType ? `${type} (デフォルト)` : type;
+          if (type === preferred) opt.selected = true;
+          els.agentType.appendChild(opt);
+        }
+        els.agentType.disabled = available.length <= 1;
+        els.agentType.title = available.length <= 1
+          ? 'サーバ設定のエージェントのみ利用可能です'
+          : '応答を生成する AI エージェントの種類を選択します';
+      }
+
+      async function loadAgentTypes() {
+        try {
+          const r = await fetch('/agents', { headers: { 'Accept': 'application/json' } });
+          if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+          const data = await r.json();
+          const available = Array.isArray(data.available) && data.available.length > 0
+            ? data.available
+            : [data.default];
+          renderAgentTypeOptions(data.default, available);
+        } catch (err) {
+          console.warn('failed to load agent types', err);
+          els.agentType.innerHTML = '';
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = '(取得失敗)';
+          els.agentType.appendChild(opt);
+          els.agentType.disabled = true;
+          state.agentType = '';
+          state.availableAgentTypes = [];
+        }
       }
 
       function syncAiToggleClass() {
@@ -1401,6 +1485,11 @@
         updateManualAgentButton();
       });
 
+      els.agentType.addEventListener('change', () => {
+        state.agentType = els.agentType.value || '';
+        persistAgentType();
+      });
+
       els.manualAgentReply.addEventListener('click', async () => {
         if (!state.selectedConversationId) return;
         await runAgentReply(state.selectedConversationId);
@@ -1511,8 +1600,11 @@
         let buffer = '';
         let success = false;
         try {
+          const url = state.agentType
+            ? `/conversations/${conversationId}/agent-replies?agent_type=${encodeURIComponent(state.agentType)}`
+            : `/conversations/${conversationId}/agent-replies`;
           const response = await fetch(
-            `/conversations/${conversationId}/agent-replies`,
+            url,
             {
               method: 'POST',
               headers: { 'X-User-Id': userId, 'Accept': 'text/event-stream' },
@@ -1592,6 +1684,7 @@
       loadAiPreference();
       initVoiceInput();
       checkHealth();
+      loadAgentTypes();
       loadConversations();
       autoResize();
     </script>

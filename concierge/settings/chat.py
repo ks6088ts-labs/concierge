@@ -8,16 +8,15 @@ from uuid import UUID
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Sentinel value of ``CHAT_BOT_AGENT_TYPE`` that selects the streaming Foundry
+# responder. Anything else is resolved against the shared AgentRegistry.
+FOUNDRY_BOT_AGENT_TYPE = "foundry"
+
 
 class ChatRepositoryBackend(str, Enum):
     MEMORY = "memory"
     POSTGRES = "postgres"
     AZURE_POSTGRES = "azure-postgres"
-
-
-class ChatResponderBackend(str, Enum):
-    FOUNDRY = "foundry"
-    AGENT = "agent"
 
 
 class ChatSettings(BaseSettings):
@@ -32,8 +31,11 @@ class ChatSettings(BaseSettings):
     bot_system_prompt: str = "あなたは Concierge Chat のアシスタントです。日本語で簡潔に応答してください。"
     bot_model: str = "azure_ai:gpt-5"
 
-    responder_backend: ChatResponderBackend = ChatResponderBackend.FOUNDRY
-    bot_agent_type: str = "langgraph-echo"
+    # Selects the chat reply responder. ``foundry`` (default) uses the streaming
+    # ``FoundryChatbotResponder`` (requires ``AZURE_AI_PROJECT_ENDPOINT``). Any
+    # other value is resolved against the shared ``AgentRegistry`` (built-ins:
+    # ``echo``, ``langgraph-echo``, ``github-copilot-echo``).
+    bot_agent_type: str = FOUNDRY_BOT_AGENT_TYPE
 
     realtime_model: str = "gpt-realtime-1.5"
     realtime_voice: str = "alloy"

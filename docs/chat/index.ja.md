@@ -234,17 +234,20 @@ Chat アプリは LangChain 経由で **Microsoft Foundry** を呼び出し、�
 
 - `application/responders.py`：`ChatbotResponder` プロトコルを定義（`stream_reply` でトークンストリームを yield）
 - `infrastructure/ai/foundry_responder.py`：`langchain.chat_models.init_chat_model` と `DefaultAzureCredential` で実装し、`chat_model.stream(...)` を利用
+- `infrastructure/ai/agent_responder.py`：共有 `concierge.agents` レジストリ経由で実装（LLM オプション経路）
 - `infrastructure/ai/factory.py`：`create_chatbot_responder()` を公開（設定未満たし時に `ChatbotNotConfiguredError` を送出）
 
 ```mermaid
 flowchart LR
     Caller[FastAPI ルート / CLI コマンド] --> Factory[create_chatbot_responder]
-    Factory -->|AZURE_AI_PROJECT_ENDPOINT 設定済み| Foundry[FoundryChatbotResponder]
-    Factory -->|それ以外| Error[ChatbotNotConfiguredError\nHTTP 503 / CLI exit 1]
+    Factory -->|CHAT_BOT_AGENT_TYPE=foundry| Foundry[FoundryChatbotResponder]
+    Factory -->|CHAT_BOT_AGENT_TYPE=<エージェント名>| Agent[AgentChatbotResponder]
+    Factory -->|未設定 / 不明な値| Error[ChatbotNotConfiguredError\nHTTP 503 / CLI exit 1]
     Foundry -->|init_chat_model.stream<br/>+ DefaultAzureCredential| Azure[(Azure AI Foundry)]
+    Agent --> Registry[concierge.agents.AgentRegistry]
 ```
 
-`create_chatbot_responder()` は `AZURE_AI_PROJECT_ENDPOINT` (`MicrosoftFoundrySettings.azure_ai_project_endpoint`) が設定されているときに限り `FoundryChatbotResponder` を返します。未設定のときは `ChatbotNotConfiguredError` を送出し、FastAPI ルートは HTTP 503、`chat-cli message reply` は終了コード 1 で失敗します。
+`create_chatbot_responder()` は `CHAT_BOT_AGENT_TYPE`（既定 `foundry`）でレスポンダを選択します。`foundry` の場合は `AZURE_AI_PROJECT_ENDPOINT` の設定が必須で、未設定だと `ChatbotNotConfiguredError` を送出します（FastAPI ルートは HTTP 503、`chat-cli message reply` は終了コード 1）。`foundry` 以外の値（`echo` / `langgraph-echo` / `github-copilot-echo` など）は共有 `AgentRegistry` から解決されます。
 
 ### 設定一覧
 
@@ -255,9 +258,12 @@ flowchart LR
 | `CHAT_BOT_DISPLAY_NAME` | `Concierge AI` | エージェント参加者の表示名 |
 | `CHAT_BOT_PARTICIPANT_ID` | `00000000-0000-0000-0000-000000000001` | エージェント参加者の固定 UUID |
 | `CHAT_BOT_HISTORY_LIMIT` | `20` | コンテキストとして渡す過去メッセージの最大数 |
-| `AZURE_AI_PROJECT_ENDPOINT` | 未設定 | `FoundryChatbotResponder` を有効化するために必須 |
+| `AZURE_AI_PROJECT_ENDPOINT` | 未設定 | `CHAT_BOT_AGENT_TYPE=foundry` のときに必須 |
+| `CHAT_BOT_AGENT_TYPE` | `foundry` | レスポンダ選択。`foundry`（既定、ストリーミング）か登録済みエージェント名（`echo` / `langgraph-echo` / `github-copilot-echo`） |
 
-### チャットボットを有効にする
+> **メモ:** 旧 `CHAT_RESPONDER_BACKEND` 変数は廃止されました。`.env` に残っていても無視されますが、起動時に `DeprecationWarning` が出ます。
+
+### チャットボットを有効にする（Foundry バックエンド）
 
 ```bash
 # 1. Foundry エンドポイントの設定
@@ -269,6 +275,26 @@ az login
 # 3. API 起動
 uv run chat-web
 ```
+
+### エージェント駆動レスポンダ（LLM オプション）
+
+LLM 不要のスモークテストには `echo` エージェントを使います。
+
+```bash
+export CHAT_BOT_AGENT_TYPE=echo
+uv run chat-web
+```
+
+LangGraph echo エージェント（`AZURE_AI_PROJECT_ENDPOINT` が必要）:
+
+```bash
+export CHAT_BOT_AGENT_TYPE=langgraph-echo
+export AGENTS_LANGGRAPH_MODEL=azure_ai:gpt-5
+az login
+uv run chat-web
+```
+
+利用可能なエージェントと設定の詳細は [共有エージェントランタイム](../agents/index.ja.md) を参照してください。
 
 ### API 呼び出し設計
 

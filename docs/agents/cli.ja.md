@@ -36,7 +36,7 @@ uv run agents-cli list
 出力例:
 
 ```json
-["echo", "langgraph-echo"]
+["echo", "langgraph-echo", "github-copilot-echo"]
 ```
 
 ### エージェント実行
@@ -60,11 +60,12 @@ uv run agents-cli invoke \
   --context '{"task_id": "00000000-0000-0000-0000-000000000001"}'
 ```
 
-組み込みの両エージェント（`echo` / `langgraph-echo`）はどちらも
+組み込みエージェント（`echo` / `langgraph-echo` / `github-copilot-echo`）は
 `payload.message` を読むので、同じショートカットが使えます。
 
 ```bash
 uv run agents-cli invoke --agent-type langgraph-echo --message "Hello LangGraph"
+uv run agents-cli invoke --agent-type github-copilot-echo --message "Hello Copilot"
 ```
 
 `langgraph-echo` の成功時レスポンス例:
@@ -96,6 +97,7 @@ uv run agents-cli invoke --agent-type langgraph-echo --message "Hello LangGraph"
 
 ```bash
 uv run agents-cli info --agent-type langgraph-echo
+uv run agents-cli info --agent-type github-copilot-echo
 ```
 
 出力例:
@@ -124,6 +126,8 @@ agents CLI が読むのは `AGENTS_*` 変数のみです。リポジトリ／キ
 |---------|-----------|------|
 | `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | `langgraph-echo` の `init_chat_model` で使うモデル文字列 |
 | `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(組み込み)_ | `langgraph-echo` のシステムプロンプト |
+| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | `github-copilot-echo` の `CopilotClient.create_session(model=...)` に渡すモデル名 |
+| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(組み込み)_ | `github-copilot-echo` のシステムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルト: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
 | `CONCIERGE_TRACING_ENABLED` | `false` | `--tracing` を渡さずに tracing を有効化 |
 | `CONCIERGE_MLFLOW_ENABLED` | `false` | `--mlflow` を渡さずに MLflow autologging を有効化 |
 
@@ -139,3 +143,28 @@ uv run agents-cli \
   --tracing --mlflow --verbose \
   invoke --agent-type langgraph-echo --message "trace me"
 ```
+
+`github-copilot-echo` の成功時レスポンス例（SDK セッションから
+返ってきたアシスタント応答が `reply` にそのまま入ります）:
+
+```json
+{
+  "status": "succeeded",
+  "result": {
+    "echo": "Hello Copilot",
+    "reply": "Hello Copilot",
+    "model": "gpt-5-mini"
+  },
+  "error": null
+}
+```
+
+> `github-copilot-echo` はリクエストごとに `CopilotClient` を生成し、
+> `create_session(model=..., system_message=...,
+> on_permission_request=PermissionHandler.approve_all)` でセッションを
+> 払い出し、ユーザーメッセージを `session.send` で送信、
+> `SessionIdleData` を受信してから応答を返します。
+> 受信した `AssistantMessageData.content` を連結したものが
+> `result.reply` になります。実行には
+> [GitHub Copilot CLI](https://github.com/github/copilot-cli) のインストール
+> と認証が必要です。

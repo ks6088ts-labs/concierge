@@ -16,10 +16,12 @@ flowchart LR
     cloud_agent[cloud_agent ワーカー] --> Registry
     Registry[AgentRegistry] --> Echo[EchoAgent]
     Registry --> LGE[LangGraphEchoAgent]
+    Registry --> GCE[GitHubCopilotEchoAgent]
     subgraph agents["concierge/agents (共有カーネル)"]
         Registry
         Echo
         LGE
+        GCE
     end
 ```
 
@@ -35,6 +37,7 @@ concierge/agents/
   infrastructure/
     echo_agent.py          # EchoAgent
     langgraph_echo_agent.py # LangGraphEchoAgent
+    github_copilot_echo_agent.py # GitHubCopilotEchoAgent
     registry_factory.py    # get_agent_registry() (lru_cache)
 ```
 
@@ -76,6 +79,7 @@ class MyAgent:
 |------------|--------|------|
 | `echo` | `EchoAgent` | `payload.message` をそのまま返す。LLM 不要。 |
 | `langgraph-echo` | `LangGraphEchoAgent` | `echo` ツールを持つ LangGraph エージェント。Azure AI チャットモデルを使用。 |
+| `github-copilot-echo` | `GitHubCopilotEchoAgent` | リクエストごとに GitHub Copilot SDK セッションを開き、ユーザーメッセージを `send` し、アシスタント応答を返します。 |
 
 ## 設定
 
@@ -85,6 +89,8 @@ class MyAgent:
 |------|-----------|------|
 | `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | `init_chat_model` に渡すモデル文字列。 |
 | `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(組み込み)_ | LangGraph エージェントへのシステムプロンプト。 |
+| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | `CopilotClient.create_session(model=...)` に渡すモデル名。 |
+| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(組み込み)_ | `github-copilot-echo` 用システムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルト: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
 
 ## cloud_agent ワーカーからの利用
 
@@ -96,13 +102,22 @@ uv run cloud-agent-cli task dispatch \
 
 ## chat からの利用
 
-`CHAT_RESPONDER_BACKEND=agent` を設定すると、チャット返信が共有エージェント経由になります。
+`CHAT_BOT_AGENT_TYPE` に登録済みのエージェント名を設定すると、チャット返信が共有エージェント経由になります（デフォルトの `foundry` は従来通り Foundry ストリーミングを使用）。
 
 ```bash
-export CHAT_RESPONDER_BACKEND=agent
 export CHAT_BOT_AGENT_TYPE=echo   # LLM 不要のスモークテスト
 uv run chat-web
 ```
+
+`github-copilot-echo` を使う場合:
+
+```bash
+export CHAT_BOT_AGENT_TYPE=github-copilot-echo
+uv run chat-web
+```
+
+`github-copilot-echo` は LangChain/LangGraph ベースではないため、MLflow の
+LangChain autologging では内部 SDK スパンは自動収集されません。
 
 ## 依存方向
 

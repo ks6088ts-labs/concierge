@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import logging
 import os
 import uuid
 from datetime import datetime
@@ -38,6 +37,7 @@ from concierge.chat.infrastructure.persistence.postgres import (
     SqlAlchemyConversationRepository,
     SqlAlchemyMessageRepository,
 )
+from concierge.loggers import enable_verbose_logging
 from concierge.observability import disable_tracing, enable_mlflow, enable_tracing
 from concierge.settings import ChatRepositoryBackend, get_chat_settings
 
@@ -97,7 +97,7 @@ def _bootstrap(
     else:
         disable_tracing()
     if verbose:
-        logging.basicConfig(level=logging.DEBUG)
+        enable_verbose_logging()
     if mlflow:
         enable_mlflow()
 

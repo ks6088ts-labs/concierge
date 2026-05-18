@@ -14,6 +14,10 @@ class AgentsSettings(BaseSettings):
         "When you receive any user input, call the `echo` tool with the user's text verbatim, "
         "then return the tool result as your final answer in one sentence."
     )
+    github_copilot_model: str = "gpt-5-mini"
+    github_copilot_system_prompt: str = (
+        "You are a helpful coding assistant that provides code suggestions and explanations to users."
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",

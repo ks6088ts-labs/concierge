@@ -162,6 +162,12 @@ endpoint so client apps can opt-in explicitly. See
 [AI chatbot replies (optional)](index.md#ai-chatbot-replies-optional) for
 the setup steps.
 
+To route this endpoint through the shared agents runtime, set:
+
+```bash
+export CHAT_BOT_AGENT_TYPE=github-copilot-echo
+```
+
 ### Streaming reply via `POST .../agent-replies`
 
 The endpoint returns a **Server-Sent Events** stream so the client can

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import logging
 import uuid
 from typing import Annotated
 
@@ -32,7 +31,7 @@ from concierge.cloud_agent.domain.exceptions import (
 from concierge.cloud_agent.domain.value_objects import TaskStatus
 from concierge.cloud_agent.infrastructure.persistence.factory import get_task_repository
 from concierge.cloud_agent.infrastructure.queue.factory import get_task_queue
-from concierge.loggers import get_logger
+from concierge.loggers import enable_verbose_logging, get_logger
 from concierge.observability import bootstrap_from_env, disable_tracing, enable_mlflow, enable_tracing
 
 app = typer.Typer(add_completion=False, help="Cloud Agent CLI")
@@ -81,7 +80,7 @@ def _bootstrap(
     else:
         disable_tracing()
     if verbose:
-        logging.basicConfig(level=logging.DEBUG)
+        enable_verbose_logging()
     if mlflow:
         enable_mlflow()
 

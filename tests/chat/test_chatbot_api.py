@@ -176,3 +176,60 @@ async def test_agent_replies_404_for_unknown_conversation() -> None:
             headers=headers,
         )
         assert reply.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_get_agents_returns_default_and_available() -> None:
+    """GET /agents returns the configured default and the list of selectable types."""
+    _app = _make_app(responder=FakeStreamingResponder([]))
+
+    async with AsyncClient(transport=ASGITransport(app=_app), base_url="http://test") as client:
+        resp = await client.get("/agents")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert "default" in body
+        assert isinstance(body.get("available"), list)
+        # The configured default must always appear in the available list so
+        # the UI can render it even when not currently usable.
+        assert body["default"] in body["available"]
+        # Built-in agents are always registered and selectable.
+        for built_in in ("echo", "langgraph-echo", "github-copilot-echo"):
+            assert built_in in body["available"]
+
+
+@pytest.mark.anyio
+async def test_agent_replies_accepts_agent_type_query_parameter() -> None:
+    """POST /agent-replies?agent_type=<type> selects the per-request responder.
+
+    The dependency override is keyed by function identity, not the runtime
+    parameters, so the test verifies that the route still works when the
+    ``agent_type`` query parameter is supplied. The actual selection logic is
+    covered by ``create_chatbot_responder`` unit tests.
+    """
+    chunks = ["hi"]
+    _app = _make_app(responder=FakeStreamingResponder(chunks))
+    user_id = str(uuid.uuid4())
+    headers = {"X-User-Id": user_id}
+
+    async with AsyncClient(transport=ASGITransport(app=_app), base_url="http://test") as client:
+        created = await client.post(
+            "/conversations",
+            headers=headers,
+            json={"title": "test"},
+        )
+        conversation_id = created.json()["id"]
+
+        await client.post(
+            f"/conversations/{conversation_id}/messages",
+            headers=headers,
+            json={"content": "hello"},
+        )
+
+        reply = await client.post(
+            f"/conversations/{conversation_id}/agent-replies",
+            headers=headers,
+            params={"agent_type": "echo"},
+        )
+        assert reply.status_code == 200
+        events = _parse_sse(reply.text)
+        assert any(name == "complete" for name, _ in events)

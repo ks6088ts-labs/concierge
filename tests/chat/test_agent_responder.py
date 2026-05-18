@@ -115,8 +115,8 @@ def test_stream_reply_empty_history() -> None:
 
 
 def test_create_chatbot_responder_returns_agent_responder(monkeypatch: pytest.MonkeyPatch) -> None:
-    """With CHAT_RESPONDER_BACKEND=agent + CHAT_BOT_AGENT_TYPE=echo, factory returns AgentChatbotResponder."""
-    monkeypatch.setenv("CHAT_RESPONDER_BACKEND", "agent")
+    """With CHAT_BOT_AGENT_TYPE=echo, factory returns an AgentChatbotResponder."""
+    monkeypatch.delenv("CHAT_RESPONDER_BACKEND", raising=False)
     monkeypatch.setenv("CHAT_BOT_AGENT_TYPE", "echo")
 
     from concierge.agents.infrastructure.registry_factory import get_agent_registry
@@ -137,7 +137,7 @@ def test_create_chatbot_responder_returns_agent_responder(monkeypatch: pytest.Mo
 
 def test_create_chatbot_responder_unknown_agent_type_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     """With CHAT_BOT_AGENT_TYPE set to an unregistered type, ChatbotNotConfiguredError is raised."""
-    monkeypatch.setenv("CHAT_RESPONDER_BACKEND", "agent")
+    monkeypatch.delenv("CHAT_RESPONDER_BACKEND", raising=False)
     monkeypatch.setenv("CHAT_BOT_AGENT_TYPE", "nonexistent-agent")
 
     from concierge.agents.infrastructure.registry_factory import get_agent_registry
@@ -152,4 +152,154 @@ def test_create_chatbot_responder_unknown_agent_type_raises(monkeypatch: pytest.
 
     # Cleanup
     chat_settings_module.get_chat_settings.cache_clear()
+    get_agent_registry.cache_clear()
+
+
+def test_create_chatbot_responder_foundry_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """CHAT_BOT_AGENT_TYPE=foundry builds a FoundryChatbotResponder when endpoint settings are populated."""
+    monkeypatch.delenv("CHAT_RESPONDER_BACKEND", raising=False)
+    monkeypatch.setenv("CHAT_BOT_AGENT_TYPE", "foundry")
+
+    from concierge.chat.infrastructure.ai import factory as factory_module
+    from concierge.chat.infrastructure.ai.foundry_responder import FoundryChatbotResponder
+    from concierge.settings import chat as chat_settings_module
+    from concierge.settings.microsoft_foundry import MicrosoftFoundrySettings
+
+    chat_settings_module.get_chat_settings.cache_clear()
+    # Inject an in-memory Foundry settings instance so the test is independent
+    # of the developer's local .env (which may or may not have the endpoint set).
+    populated = MicrosoftFoundrySettings(
+        _env_file=None,  # ty: ignore[unknown-argument]
+        azure_ai_project_endpoint="https://example.invalid/api/projects/test",
+    )
+    monkeypatch.setattr(factory_module, "get_microsoft_foundry_settings", lambda: populated)
+
+    responder = factory_module.create_chatbot_responder()
+    assert isinstance(responder, FoundryChatbotResponder)
+
+    chat_settings_module.get_chat_settings.cache_clear()
+
+
+def test_create_chatbot_responder_foundry_missing_endpoint_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    """CHAT_BOT_AGENT_TYPE=foundry without AZURE_AI_PROJECT_ENDPOINT raises ChatbotNotConfiguredError."""
+    monkeypatch.delenv("CHAT_RESPONDER_BACKEND", raising=False)
+    monkeypatch.setenv("CHAT_BOT_AGENT_TYPE", "foundry")
+
+    from concierge.chat.infrastructure.ai import factory as factory_module
+    from concierge.settings import chat as chat_settings_module
+    from concierge.settings.microsoft_foundry import MicrosoftFoundrySettings
+
+    chat_settings_module.get_chat_settings.cache_clear()
+    # Inject an empty endpoint so the test is independent of the developer's .env.
+    empty = MicrosoftFoundrySettings(
+        _env_file=None,  # ty: ignore[unknown-argument]
+        azure_ai_project_endpoint="",
+    )
+    monkeypatch.setattr(factory_module, "get_microsoft_foundry_settings", lambda: empty)
+
+    with pytest.raises(ChatbotNotConfiguredError):
+        factory_module.create_chatbot_responder()
+
+    chat_settings_module.get_chat_settings.cache_clear()
+
+
+def test_legacy_responder_backend_env_emits_deprecation_warning(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Setting the obsolete CHAT_RESPONDER_BACKEND env var should emit a DeprecationWarning."""
+    monkeypatch.setenv("CHAT_RESPONDER_BACKEND", "agent")
+    monkeypatch.setenv("CHAT_BOT_AGENT_TYPE", "echo")
+
+    from concierge.agents.infrastructure.registry_factory import get_agent_registry
+    from concierge.chat.infrastructure.ai import factory as factory_module
+    from concierge.settings import chat as chat_settings_module
+
+    chat_settings_module.get_chat_settings.cache_clear()
+    get_agent_registry.cache_clear()
+    # Reset the module-level flag so the warning is emitted within this test.
+    factory_module._legacy_warning_emitted = False
+
+    with pytest.warns(DeprecationWarning, match="CHAT_RESPONDER_BACKEND"):
+        factory_module.create_chatbot_responder()
+
+    chat_settings_module.get_chat_settings.cache_clear()
+    get_agent_registry.cache_clear()
+    factory_module._legacy_warning_emitted = False
+
+
+def test_create_chatbot_responder_agent_type_override(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An explicit ``agent_type`` overrides ``CHAT_BOT_AGENT_TYPE`` for the call."""
+    monkeypatch.delenv("CHAT_RESPONDER_BACKEND", raising=False)
+    monkeypatch.setenv("CHAT_BOT_AGENT_TYPE", "foundry")
+
+    from concierge.agents.infrastructure.registry_factory import get_agent_registry
+    from concierge.chat.infrastructure.ai import factory as factory_module
+    from concierge.settings import chat as chat_settings_module
+
+    chat_settings_module.get_chat_settings.cache_clear()
+    get_agent_registry.cache_clear()
+
+    # ``foundry`` is configured but the override should bypass it entirely.
+    responder = factory_module.create_chatbot_responder(agent_type="echo")
+    assert isinstance(responder, AgentChatbotResponder)
+
+    chat_settings_module.get_chat_settings.cache_clear()
+    get_agent_registry.cache_clear()
+
+
+def test_create_chatbot_responder_agent_type_override_unknown_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An override with an unregistered agent_type raises ChatbotNotConfiguredError."""
+    monkeypatch.delenv("CHAT_RESPONDER_BACKEND", raising=False)
+    monkeypatch.setenv("CHAT_BOT_AGENT_TYPE", "echo")
+
+    from concierge.agents.infrastructure.registry_factory import get_agent_registry
+    from concierge.chat.infrastructure.ai import factory as factory_module
+    from concierge.settings import chat as chat_settings_module
+
+    chat_settings_module.get_chat_settings.cache_clear()
+    get_agent_registry.cache_clear()
+
+    with pytest.raises(ChatbotNotConfiguredError):
+        factory_module.create_chatbot_responder(agent_type="nonexistent-agent")
+
+    chat_settings_module.get_chat_settings.cache_clear()
+    get_agent_registry.cache_clear()
+
+
+def test_list_available_agent_types_includes_registry(monkeypatch: pytest.MonkeyPatch) -> None:
+    """``list_available_agent_types`` always returns the registered agents."""
+    from concierge.agents.infrastructure.registry_factory import get_agent_registry
+    from concierge.chat.infrastructure.ai import factory as factory_module
+    from concierge.settings.microsoft_foundry import MicrosoftFoundrySettings
+
+    get_agent_registry.cache_clear()
+    # Force foundry to be absent so the result only contains registry entries.
+    empty = MicrosoftFoundrySettings(
+        _env_file=None,  # ty: ignore[unknown-argument]
+        azure_ai_project_endpoint="",
+    )
+    monkeypatch.setattr(factory_module, "get_microsoft_foundry_settings", lambda: empty)
+
+    types = factory_module.list_available_agent_types()
+    assert "foundry" not in types
+    for built_in in ("echo", "langgraph-echo", "github-copilot-echo"):
+        assert built_in in types
+
+    get_agent_registry.cache_clear()
+
+
+def test_list_available_agent_types_includes_foundry_when_configured(monkeypatch: pytest.MonkeyPatch) -> None:
+    """``foundry`` appears when ``AZURE_AI_PROJECT_ENDPOINT`` is populated."""
+    from concierge.agents.infrastructure.registry_factory import get_agent_registry
+    from concierge.chat.infrastructure.ai import factory as factory_module
+    from concierge.settings.microsoft_foundry import MicrosoftFoundrySettings
+
+    get_agent_registry.cache_clear()
+    populated = MicrosoftFoundrySettings(
+        _env_file=None,  # ty: ignore[unknown-argument]
+        azure_ai_project_endpoint="https://example.invalid/api/projects/test",
+    )
+    monkeypatch.setattr(factory_module, "get_microsoft_foundry_settings", lambda: populated)
+
+    types = factory_module.list_available_agent_types()
+    assert types[0] == "foundry"
+
     get_agent_registry.cache_clear()

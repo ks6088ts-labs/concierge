@@ -7,6 +7,7 @@ from typer.testing import CliRunner
 
 from concierge.agents.infrastructure.cli.app import app
 from concierge.agents.infrastructure.github_copilot_echo_agent import GitHubCopilotEchoAgent
+from concierge.agents.infrastructure.microsoft_agent_framework_echo_agent import MicrosoftAgentFrameworkEchoAgent
 
 runner = CliRunner()
 
@@ -26,6 +27,7 @@ def test_cli_list_returns_registered_agent_types() -> None:
     assert "echo" in agent_types
     assert "langgraph-echo" in agent_types
     assert "github-copilot-echo" in agent_types
+    assert "microsoft-agent-framework-echo" in agent_types
 
 
 def test_cli_invoke_echo_with_payload_succeeds() -> None:
@@ -75,6 +77,29 @@ def test_cli_invoke_github_copilot_echo_with_message_shortcut() -> None:
         "echo": "Hello Copilot",
         "reply": "Hello Copilot",
         "model": "gpt-5-mini",
+    }
+
+
+def test_cli_invoke_microsoft_agent_framework_echo_with_message_shortcut() -> None:
+    with patch.object(
+        MicrosoftAgentFrameworkEchoAgent,
+        "_build_agent",
+    ) as mock_build_agent:
+        mock_framework_agent = AsyncMock()
+        mock_framework_agent.run = AsyncMock(return_value=type("Response", (), {"text": "hello"})())
+        mock_build_agent.return_value = mock_framework_agent
+        result = runner.invoke(
+            app,
+            ["invoke", "--agent-type", "microsoft-agent-framework-echo", "--message", "hello"],
+        )
+
+    assert result.exit_code == 0, result.output
+    response = json.loads(result.output)
+    assert response["status"] == "succeeded"
+    assert response["result"] == {
+        "echo": "hello",
+        "reply": "hello",
+        "model": "gpt-5",
     }
 
 
@@ -144,6 +169,17 @@ def test_cli_info_for_github_copilot_echo_includes_settings() -> None:
     assert "settings" in info
     assert "github_copilot_model" in info["settings"]
     assert "github_copilot_system_prompt" in info["settings"]
+
+
+def test_cli_info_for_microsoft_agent_framework_echo_includes_settings() -> None:
+    result = runner.invoke(app, ["info", "--agent-type", "microsoft-agent-framework-echo"])
+    assert result.exit_code == 0, result.output
+    info = json.loads(result.output)
+    assert info["agent_type"] == "microsoft-agent-framework-echo"
+    assert info["class"] == "MicrosoftAgentFrameworkEchoAgent"
+    assert "settings" in info
+    assert "microsoft_agent_framework_model" in info["settings"]
+    assert "microsoft_agent_framework_system_prompt" in info["settings"]
 
 
 def test_cli_info_unknown_agent_type_returns_error() -> None:

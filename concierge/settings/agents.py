@@ -18,6 +18,12 @@ class AgentsSettings(BaseSettings):
     github_copilot_system_prompt: str = (
         "You are a helpful coding assistant that provides code suggestions and explanations to users."
     )
+    microsoft_agent_framework_model: str = "gpt-5"
+    microsoft_agent_framework_system_prompt: str = (
+        "You are a minimal echo agent. "
+        "When you receive any user input, call the `echo` tool with the user's text verbatim, "
+        "then return the tool result as your final answer in one sentence."
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",

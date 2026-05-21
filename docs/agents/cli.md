@@ -37,7 +37,7 @@ uv run agents-cli list
 Output:
 
 ```json
-["echo", "langgraph-echo", "github-copilot-echo"]
+["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo"]
 ```
 
 ### Invoke an agent
@@ -61,12 +61,13 @@ uv run agents-cli invoke \
   --context '{"task_id": "00000000-0000-0000-0000-000000000001"}'
 ```
 
-All built-in agents (`echo`, `langgraph-echo`, and `github-copilot-echo`) read `payload.message`,
+All built-in agents (`echo`, `langgraph-echo`, `github-copilot-echo`, and `microsoft-agent-framework-echo`) read `payload.message`,
 so the same shortcut works for both:
 
 ```bash
 uv run agents-cli invoke --agent-type langgraph-echo --message "Hello LangGraph"
 uv run agents-cli invoke --agent-type github-copilot-echo --message "Hello Copilot"
+uv run agents-cli invoke --agent-type microsoft-agent-framework-echo --message "Hello MAF"
 ```
 
 A successful `langgraph-echo` response looks like:
@@ -99,6 +100,7 @@ Options:
 ```bash
 uv run agents-cli info --agent-type langgraph-echo
 uv run agents-cli info --agent-type github-copilot-echo
+uv run agents-cli info --agent-type microsoft-agent-framework-echo
 ```
 
 Output:
@@ -129,6 +131,8 @@ belong to the `cloud_agent` and `chat` services and are not relevant here.
 | `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `langgraph-echo` |
 | `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | Model name passed to `CopilotClient.create_session(model=...)` for `github-copilot-echo` |
 | `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-echo` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Default: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | Model string passed to `FoundryChatClient(model=...)` for `microsoft-agent-framework-echo` |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `microsoft-agent-framework-echo` (passed as `Agent(instructions=...)`) |
 | `CONCIERGE_TRACING_ENABLED` | `false` | Enable tracing without passing `--tracing` |
 | `CONCIERGE_MLFLOW_ENABLED` | `false` | Enable MLflow autologging without passing `--mlflow` |
 

@@ -291,7 +291,7 @@ flowchart LR
 `create_chatbot_responder()` selects the responder via `CHAT_BOT_AGENT_TYPE`
 (default `foundry`). For `foundry`, `AZURE_AI_PROJECT_ENDPOINT` must be set;
 otherwise `ChatbotNotConfiguredError` is raised (HTTP 503 / exit 1). Any other
-value (e.g. `echo`, `langgraph-echo`, `github-copilot-echo`) is resolved from
+value (e.g. `echo`, `langgraph-echo`, `github-copilot-echo`, `microsoft-agent-framework-echo`) is resolved from
 the shared `AgentRegistry`.
 
 ### Settings reference
@@ -306,7 +306,7 @@ All chatbot settings are part of `ChatSettings` (prefix `CHAT_`).
 | `CHAT_BOT_PARTICIPANT_ID` | `00000000-0000-0000-0000-000000000001` | Stable UUID for the agent participant |
 | `CHAT_BOT_HISTORY_LIMIT` | `20` | Maximum number of past messages forwarded as context |
 | `AZURE_AI_PROJECT_ENDPOINT` | unset | Required when `CHAT_BOT_AGENT_TYPE=foundry` |
-| `CHAT_BOT_AGENT_TYPE` | `foundry` | Responder selector: `foundry` (default, streaming) or a registered agent type (`echo`, `langgraph-echo`, `github-copilot-echo`) |
+| `CHAT_BOT_AGENT_TYPE` | `foundry` | Responder selector: `foundry` (default, streaming) or a registered agent type (`echo`, `langgraph-echo`, `github-copilot-echo`, `microsoft-agent-framework-echo`) |
 
 > **Note:** The previous `CHAT_RESPONDER_BACKEND` variable has been removed.
 > If it is still present in your `.env`, it is silently ignored and a

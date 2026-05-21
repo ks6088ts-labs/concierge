@@ -149,7 +149,7 @@ List all registered agent types.
 
 ```json
 {
-  "agent_types": ["echo", "langgraph-echo"]
+  "agent_types": ["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo"]
 }
 ```
 

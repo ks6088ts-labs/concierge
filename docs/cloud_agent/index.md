@@ -158,7 +158,7 @@ docker compose up -d postgres
 
 # 3. Confirm the agent is registered
 uv run cloud-agent-cli agents
-# → ["echo", "langgraph-echo"]
+# → ["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo"]
 
 # 4. Start the worker (terminal 1)
 uv run cloud-agent-cli worker

@@ -36,7 +36,7 @@ uv run agents-cli list
 出力例:
 
 ```json
-["echo", "langgraph-echo", "github-copilot-echo"]
+["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo"]
 ```
 
 ### エージェント実行
@@ -60,12 +60,13 @@ uv run agents-cli invoke \
   --context '{"task_id": "00000000-0000-0000-0000-000000000001"}'
 ```
 
-組み込みエージェント（`echo` / `langgraph-echo` / `github-copilot-echo`）は
+組み込みエージェント（`echo` / `langgraph-echo` / `github-copilot-echo` / `microsoft-agent-framework-echo`）は
 `payload.message` を読むので、同じショートカットが使えます。
 
 ```bash
 uv run agents-cli invoke --agent-type langgraph-echo --message "Hello LangGraph"
 uv run agents-cli invoke --agent-type github-copilot-echo --message "Hello Copilot"
+uv run agents-cli invoke --agent-type microsoft-agent-framework-echo --message "Hello MAF"
 ```
 
 `langgraph-echo` の成功時レスポンス例:
@@ -98,6 +99,7 @@ uv run agents-cli invoke --agent-type github-copilot-echo --message "Hello Copil
 ```bash
 uv run agents-cli info --agent-type langgraph-echo
 uv run agents-cli info --agent-type github-copilot-echo
+uv run agents-cli info --agent-type microsoft-agent-framework-echo
 ```
 
 出力例:
@@ -128,6 +130,8 @@ agents CLI が読むのは `AGENTS_*` 変数のみです。リポジトリ／キ
 | `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(組み込み)_ | `langgraph-echo` のシステムプロンプト |
 | `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | `github-copilot-echo` の `CopilotClient.create_session(model=...)` に渡すモデル名 |
 | `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(組み込み)_ | `github-copilot-echo` のシステムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルト: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | `microsoft-agent-framework-echo` の `FoundryChatClient(model=...)` に渡すモデル文字列 |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(組み込み)_ | `microsoft-agent-framework-echo` のシステムプロンプト（`Agent(instructions=...)` に渡される） |
 | `CONCIERGE_TRACING_ENABLED` | `false` | `--tracing` を渡さずに tracing を有効化 |
 | `CONCIERGE_MLFLOW_ENABLED` | `false` | `--mlflow` を渡さずに MLflow autologging を有効化 |
 

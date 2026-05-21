@@ -22,7 +22,7 @@ uv run cloud-agent-cli --help
 
 ### Dispatch a task
 
-Both built-in agents (`echo` and `langgraph-echo`) share the same payload
+All built-in agents (`echo`, `langgraph-echo`, `github-copilot-echo`, and `microsoft-agent-framework-echo`) share the same payload
 contract: a non-empty `message` string is required.
 
 ```bash
@@ -134,7 +134,7 @@ uv run cloud-agent-cli agents
 Output:
 
 ```json
-["echo", "langgraph-echo"]
+["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo"]
 ```
 
 ## Configuration
@@ -155,6 +155,10 @@ All settings are controlled by environment variables (or a `.env` file).
 | `CLOUD_AGENT_POLL_INTERVAL_SECONDS` | `1.0` | Polling interval when queue empty |
 | `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | Model string for `init_chat_model` used by LangGraph agents |
 | `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(built-in)_ | System prompt for LangGraph agents |
+| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | Model name for `github-copilot-echo` |
+| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-echo` |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | Model string for `microsoft-agent-framework-echo` |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `microsoft-agent-framework-echo` |
 
 See the [Configuration section in the Overview](index.md#configuration) for
 backend selection tables and end-to-end `.env` examples.

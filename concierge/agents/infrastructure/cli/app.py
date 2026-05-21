@@ -216,6 +216,12 @@ def agent_info(
             "github_copilot_model": agents_settings.github_copilot_model,
             "github_copilot_system_prompt": agents_settings.github_copilot_system_prompt,
         }
+    if agent_type == "microsoft-agent-framework-echo":
+        agents_settings = get_agents_settings()
+        info["settings"] = {
+            "microsoft_agent_framework_model": agents_settings.microsoft_agent_framework_model,
+            "microsoft_agent_framework_system_prompt": agents_settings.microsoft_agent_framework_system_prompt,
+        }
 
     _print_json(info)
 

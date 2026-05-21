@@ -17,11 +17,13 @@ flowchart LR
     Registry[AgentRegistry] --> Echo[EchoAgent]
     Registry --> LGE[LangGraphEchoAgent]
     Registry --> GCE[GitHubCopilotEchoAgent]
+    Registry --> MAF[MicrosoftAgentFrameworkEchoAgent]
     subgraph agents["concierge/agents (共有カーネル)"]
         Registry
         Echo
         LGE
         GCE
+        MAF
     end
 ```
 
@@ -38,6 +40,7 @@ concierge/agents/
     echo_agent.py          # EchoAgent
     langgraph_echo_agent.py # LangGraphEchoAgent
     github_copilot_echo_agent.py # GitHubCopilotEchoAgent
+    microsoft_agent_framework_echo_agent.py # MicrosoftAgentFrameworkEchoAgent
     registry_factory.py    # get_agent_registry() (lru_cache)
 ```
 
@@ -80,6 +83,7 @@ class MyAgent:
 | `echo` | `EchoAgent` | `payload.message` をそのまま返す。LLM 不要。 |
 | `langgraph-echo` | `LangGraphEchoAgent` | `echo` ツールを持つ LangGraph エージェント。Azure AI チャットモデルを使用。 |
 | `github-copilot-echo` | `GitHubCopilotEchoAgent` | リクエストごとに GitHub Copilot SDK セッションを開き、ユーザーメッセージを `send` し、アシスタント応答を返します。 |
+| `microsoft-agent-framework-echo` | `MicrosoftAgentFrameworkEchoAgent` | Microsoft Agent Framework の `Agent` を `echo` ツール付きで実行し、最終応答テキストを返します。 |
 
 ## 設定
 
@@ -91,6 +95,8 @@ class MyAgent:
 | `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(組み込み)_ | LangGraph エージェントへのシステムプロンプト。 |
 | `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | `CopilotClient.create_session(model=...)` に渡すモデル名。 |
 | `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(組み込み)_ | `github-copilot-echo` 用システムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルト: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | `microsoft-agent-framework-echo` の `FoundryChatClient(model=...)` に渡すモデル名。 |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(組み込み)_ | `microsoft-agent-framework-echo` の `Agent(instructions=...)` に渡すシステムプロンプト。 |
 
 ## cloud_agent ワーカーからの利用
 
@@ -116,8 +122,19 @@ export CHAT_BOT_AGENT_TYPE=github-copilot-echo
 uv run chat-web
 ```
 
+`microsoft-agent-framework-echo` を使う場合:
+
+```bash
+export CHAT_BOT_AGENT_TYPE=microsoft-agent-framework-echo
+uv run chat-web
+```
+
 `github-copilot-echo` は LangChain/LangGraph ベースではないため、MLflow の
 LangChain autologging では内部 SDK スパンは自動収集されません。
+`microsoft-agent-framework-echo` も LangChain/LangGraph ではなく Microsoft
+Agent Framework（`agent_framework.Agent` + `agent_framework.foundry.FoundryChatClient`）
+で実装されているため同様で、内部スパンが必要な場合は Microsoft Agent
+Framework 側の OTLP / Foundry トレーシングを有効化してください。
 
 ## 依存方向
 

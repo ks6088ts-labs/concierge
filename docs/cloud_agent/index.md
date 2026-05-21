@@ -21,6 +21,8 @@ flowchart LR
     UC --> Registry[AgentRegistry]
     Registry --> Echo[EchoAgent]
     Registry --> LGE[LangGraphEchoAgent]
+    Registry --> GCE[GitHubCopilotEchoAgent]
+    Registry --> MAF[MicrosoftAgentFrameworkEchoAgent]
 ```
 
 ## Agent Extension Point
@@ -54,8 +56,19 @@ classDiagram
         +handle(request) AgentResponse
         -_build_agent()
     }
+    class GitHubCopilotEchoAgent {
+        +agent_type = "github-copilot-echo"
+        +handle(request) AgentResponse
+    }
+    class MicrosoftAgentFrameworkEchoAgent {
+        +agent_type = "microsoft-agent-framework-echo"
+        +handle(request) AgentResponse
+        -_build_agent()
+    }
     Agent <|.. EchoAgent
     Agent <|.. LangGraphEchoAgent
+    Agent <|.. GitHubCopilotEchoAgent
+    Agent <|.. MicrosoftAgentFrameworkEchoAgent
 ```
 
 ## Key Design Principles
@@ -158,7 +171,7 @@ docker compose up -d postgres
 
 # 3. Confirm the agent is registered
 uv run cloud-agent-cli agents
-# → ["echo", "langgraph-echo"]
+# → ["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo"]
 
 # 4. Start the worker (terminal 1)
 uv run cloud-agent-cli worker

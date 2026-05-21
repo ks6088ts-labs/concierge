@@ -17,11 +17,13 @@ flowchart LR
     Registry[AgentRegistry] --> Echo[EchoAgent]
     Registry --> LGE[LangGraphEchoAgent]
     Registry --> GCE[GitHubCopilotEchoAgent]
+    Registry --> MAF[MicrosoftAgentFrameworkEchoAgent]
     subgraph agents["concierge/agents (shared kernel)"]
         Registry
         Echo
         LGE
         GCE
+        MAF
     end
 ```
 
@@ -38,6 +40,7 @@ concierge/agents/
     echo_agent.py          # EchoAgent
     langgraph_echo_agent.py # LangGraphEchoAgent
     github_copilot_echo_agent.py # GitHubCopilotEchoAgent
+    microsoft_agent_framework_echo_agent.py # MicrosoftAgentFrameworkEchoAgent
     registry_factory.py    # get_agent_registry() (lru_cache)
 ```
 
@@ -90,6 +93,7 @@ agent = registry.resolve("my-agent")
 | `echo` | `EchoAgent` | Returns `payload.message` verbatim. No LLM required. |
 | `langgraph-echo` | `LangGraphEchoAgent` | LangGraph agent with `echo` tool backed by an Azure AI chat model. |
 | `github-copilot-echo` | `GitHubCopilotEchoAgent` | Opens a GitHub Copilot SDK session per request, `send`s the user message, and returns the assistant reply. |
+| `microsoft-agent-framework-echo` | `MicrosoftAgentFrameworkEchoAgent` | Runs a Microsoft Agent Framework `Agent` with an `echo` tool and returns the final reply text. |
 
 ## Configuration
 
@@ -101,6 +105,8 @@ Agent settings are read from environment variables with the **`AGENTS_`** prefix
 | `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(built-in)_ | System prompt for LangGraph agents. |
 | `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | Model name passed to `CopilotClient.create_session(model=...)`. |
 | `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-echo` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Default: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | Model string passed to `FoundryChatClient(model=...)` for `microsoft-agent-framework-echo`. |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(built-in)_ | System prompt passed as `Agent(instructions=...)` for `microsoft-agent-framework-echo`. |
 
 ## Using from cloud_agent worker
 
@@ -132,8 +138,20 @@ export CHAT_BOT_AGENT_TYPE=github-copilot-echo
 uv run chat-web
 ```
 
+Or `microsoft-agent-framework-echo`:
+
+```bash
+export CHAT_BOT_AGENT_TYPE=microsoft-agent-framework-echo
+uv run chat-web
+```
+
 `github-copilot-echo` is not a LangChain/LangGraph agent, so MLflow LangChain
 autologging does not capture its internal SDK spans automatically.
+`microsoft-agent-framework-echo` is built on Microsoft Agent Framework
+(`agent_framework.Agent` + `agent_framework.foundry.FoundryChatClient`) rather
+than LangChain/LangGraph, so the same caveat applies: enable Microsoft Agent
+Framework's own OTLP / Foundry tracing if you need internal spans for that
+agent.
 
 Verify with:
 

@@ -5,6 +5,8 @@ description = "Microsoft Foundry and LangChain/LangGraph hands-on examples with 
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "agent-framework-core>=1.5.0",
+    "agent-framework-foundry>=1.5.0",
     "azure-identity>=1.25.3",
     "azure-storage-queue>=12.16.0",
     "fastapi>=0.136.1",
@@ -254,7 +256,7 @@ source_modules = ["concierge.agents.domain"]
 forbidden_modules = [
     "fastapi", "uvicorn", "typer", "httpx", "pydantic", "pydantic_settings",
     "sqlalchemy", "psycopg", "azure", "langchain", "langchain_core",
-    "langchain_postgres", "langgraph", "mlflow", "copilot",
+    "langchain_postgres", "langgraph", "mlflow", "copilot", "agent_framework",
     "concierge.settings", "concierge.loggers", "concierge.core",
 ]
 

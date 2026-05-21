@@ -21,6 +21,8 @@ flowchart LR
     UC --> Registry[AgentRegistry]
     Registry --> Echo[EchoAgent]
     Registry --> LGE[LangGraphEchoAgent]
+    Registry --> GCE[GitHubCopilotEchoAgent]
+    Registry --> MAF[MicrosoftAgentFrameworkEchoAgent]
 ```
 
 ## エージェント拡張ポイント
@@ -54,8 +56,19 @@ classDiagram
         +handle(request) AgentResponse
         -_build_agent()
     }
+    class GitHubCopilotEchoAgent {
+        +agent_type = "github-copilot-echo"
+        +handle(request) AgentResponse
+    }
+    class MicrosoftAgentFrameworkEchoAgent {
+        +agent_type = "microsoft-agent-framework-echo"
+        +handle(request) AgentResponse
+        -_build_agent()
+    }
     Agent <|.. EchoAgent
     Agent <|.. LangGraphEchoAgent
+    Agent <|.. GitHubCopilotEchoAgent
+    Agent <|.. MicrosoftAgentFrameworkEchoAgent
 ```
 
 ## 主要な設計方針
@@ -152,7 +165,7 @@ docker compose up -d postgres
 
 # 3. エージェントが登録されていることを確認
 uv run cloud-agent-cli agents
-# → ["echo", "langgraph-echo"]
+# → ["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo"]
 
 # 4. ワーカー起動（ターミナル 1）
 uv run cloud-agent-cli worker

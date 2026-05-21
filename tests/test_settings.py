@@ -100,6 +100,8 @@ def test_agents_settings_defaults(monkeypatch):
     monkeypatch.delenv("AGENTS_LANGGRAPH_SYSTEM_PROMPT", raising=False)
     monkeypatch.delenv("AGENTS_GITHUB_COPILOT_MODEL", raising=False)
     monkeypatch.delenv("AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT", raising=False)
+    monkeypatch.delenv("AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL", raising=False)
+    monkeypatch.delenv("AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT", raising=False)
 
     settings = AgentsSettings(_env_file=None)  # ty: ignore[unknown-argument]
 
@@ -107,6 +109,8 @@ def test_agents_settings_defaults(monkeypatch):
     assert "echo" in settings.langgraph_system_prompt.lower()
     assert settings.github_copilot_model == "gpt-5-mini"
     assert "helpful coding assistant" in settings.github_copilot_system_prompt.lower()
+    assert settings.microsoft_agent_framework_model == "gpt-5"
+    assert "echo" in settings.microsoft_agent_framework_system_prompt.lower()
 
 
 def test_agents_settings_reads_env(monkeypatch):
@@ -115,6 +119,8 @@ def test_agents_settings_reads_env(monkeypatch):
     monkeypatch.setenv("AGENTS_LANGGRAPH_SYSTEM_PROMPT", "custom prompt")
     monkeypatch.setenv("AGENTS_GITHUB_COPILOT_MODEL", "gpt-4.1")
     monkeypatch.setenv("AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT", "custom copilot prompt")
+    monkeypatch.setenv("AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL", "gpt-4.1-mini")
+    monkeypatch.setenv("AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT", "custom maf prompt")
 
     settings = AgentsSettings(_env_file=None)  # ty: ignore[unknown-argument]
 
@@ -122,6 +128,8 @@ def test_agents_settings_reads_env(monkeypatch):
     assert settings.langgraph_system_prompt == "custom prompt"
     assert settings.github_copilot_model == "gpt-4.1"
     assert settings.github_copilot_system_prompt == "custom copilot prompt"
+    assert settings.microsoft_agent_framework_model == "gpt-4.1-mini"
+    assert settings.microsoft_agent_framework_system_prompt == "custom maf prompt"
 
 
 def test_cloud_agent_settings_no_langgraph_fields(monkeypatch):

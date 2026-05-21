@@ -18,6 +18,7 @@ FRAMEWORK_IMPORTS = {
     "langgraph",
     "langchain_core",
     "langchain_azure_ai",
+    "agent_framework",
     "copilot",
 }
 BASE_PATH = Path("concierge/agents")

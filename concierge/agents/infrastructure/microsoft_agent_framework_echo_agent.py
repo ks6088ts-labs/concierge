@@ -66,7 +66,7 @@ class MicrosoftAgentFrameworkEchoAgent:
         value = payload.get("message")
         return value if isinstance(value, str) and value.strip() else ""
 
-    def _build_agent(self) -> Agent:
+    def _build_agent(self) -> Any:
         client = FoundryChatClient(
             model=self._model,
             credential=DefaultAzureCredential(),

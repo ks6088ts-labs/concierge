@@ -24,6 +24,7 @@ from concierge.agents.infrastructure.microsoft_agent_framework_echo_agent import
 )
 from concierge.observability import trace_config
 from concierge.settings.agents import get_agents_settings
+from concierge.settings.microsoft_foundry import get_microsoft_foundry_settings
 
 
 def _langgraph_echo_run_config(request: AgentRequest) -> RunnableConfig:
@@ -86,6 +87,7 @@ def get_agent_registry() -> AgentRegistry:
         MicrosoftAgentFrameworkEchoAgent(
             model=settings.microsoft_agent_framework_model,
             system_prompt=settings.microsoft_agent_framework_system_prompt,
+            project_endpoint=get_microsoft_foundry_settings().azure_ai_project_endpoint,
             run_config_factory=_microsoft_agent_framework_echo_run_config,
         )
     )

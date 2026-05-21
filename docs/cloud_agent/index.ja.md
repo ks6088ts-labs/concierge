@@ -21,6 +21,8 @@ flowchart LR
     UC --> Registry[AgentRegistry]
     Registry --> Echo[EchoAgent]
     Registry --> LGE[LangGraphEchoAgent]
+    Registry --> GCE[GitHubCopilotEchoAgent]
+    Registry --> MAF[MicrosoftAgentFrameworkEchoAgent]
 ```
 
 ## エージェント拡張ポイント
@@ -54,8 +56,19 @@ classDiagram
         +handle(request) AgentResponse
         -_build_agent()
     }
+    class GitHubCopilotEchoAgent {
+        +agent_type = "github-copilot-echo"
+        +handle(request) AgentResponse
+    }
+    class MicrosoftAgentFrameworkEchoAgent {
+        +agent_type = "microsoft-agent-framework-echo"
+        +handle(request) AgentResponse
+        -_build_agent()
+    }
     Agent <|.. EchoAgent
     Agent <|.. LangGraphEchoAgent
+    Agent <|.. GitHubCopilotEchoAgent
+    Agent <|.. MicrosoftAgentFrameworkEchoAgent
 ```
 
 ## 主要な設計方針

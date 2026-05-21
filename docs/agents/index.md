@@ -17,11 +17,13 @@ flowchart LR
     Registry[AgentRegistry] --> Echo[EchoAgent]
     Registry --> LGE[LangGraphEchoAgent]
     Registry --> GCE[GitHubCopilotEchoAgent]
+    Registry --> MAF[MicrosoftAgentFrameworkEchoAgent]
     subgraph agents["concierge/agents (shared kernel)"]
         Registry
         Echo
         LGE
         GCE
+        MAF
     end
 ```
 
@@ -136,8 +138,20 @@ export CHAT_BOT_AGENT_TYPE=github-copilot-echo
 uv run chat-web
 ```
 
+Or `microsoft-agent-framework-echo`:
+
+```bash
+export CHAT_BOT_AGENT_TYPE=microsoft-agent-framework-echo
+uv run chat-web
+```
+
 `github-copilot-echo` is not a LangChain/LangGraph agent, so MLflow LangChain
 autologging does not capture its internal SDK spans automatically.
+`microsoft-agent-framework-echo` is built on Microsoft Agent Framework
+(`agent_framework.Agent` + `agent_framework.foundry.FoundryChatClient`) rather
+than LangChain/LangGraph, so the same caveat applies: enable Microsoft Agent
+Framework's own OTLP / Foundry tracing if you need internal spans for that
+agent.
 
 Verify with:
 

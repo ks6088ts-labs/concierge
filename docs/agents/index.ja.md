@@ -17,11 +17,13 @@ flowchart LR
     Registry[AgentRegistry] --> Echo[EchoAgent]
     Registry --> LGE[LangGraphEchoAgent]
     Registry --> GCE[GitHubCopilotEchoAgent]
+    Registry --> MAF[MicrosoftAgentFrameworkEchoAgent]
     subgraph agents["concierge/agents (共有カーネル)"]
         Registry
         Echo
         LGE
         GCE
+        MAF
     end
 ```
 
@@ -120,8 +122,19 @@ export CHAT_BOT_AGENT_TYPE=github-copilot-echo
 uv run chat-web
 ```
 
+`microsoft-agent-framework-echo` を使う場合:
+
+```bash
+export CHAT_BOT_AGENT_TYPE=microsoft-agent-framework-echo
+uv run chat-web
+```
+
 `github-copilot-echo` は LangChain/LangGraph ベースではないため、MLflow の
 LangChain autologging では内部 SDK スパンは自動収集されません。
+`microsoft-agent-framework-echo` も LangChain/LangGraph ではなく Microsoft
+Agent Framework（`agent_framework.Agent` + `agent_framework.foundry.FoundryChatClient`）
+で実装されているため同様で、内部スパンが必要な場合は Microsoft Agent
+Framework 側の OTLP / Foundry トレーシングを有効化してください。
 
 ## 依存方向
 

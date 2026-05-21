@@ -29,10 +29,12 @@ class MicrosoftAgentFrameworkEchoAgent:
         self,
         model: str,
         system_prompt: str,
+        project_endpoint: str = "",
         run_config_factory: RunConfigFactory | None = None,
     ) -> None:
         self._model = model
         self._system_prompt = system_prompt
+        self._project_endpoint = project_endpoint
         if run_config_factory is not None:
             self._run_config_factory = run_config_factory
 
@@ -68,6 +70,7 @@ class MicrosoftAgentFrameworkEchoAgent:
 
     def _build_agent(self) -> Any:
         client = FoundryChatClient(
+            project_endpoint=self._project_endpoint or None,
             model=self._model,
             credential=DefaultAzureCredential(),
         )

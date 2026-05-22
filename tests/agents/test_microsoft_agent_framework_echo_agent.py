@@ -9,6 +9,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from concierge.agents.application.contracts import AgentRequest, AgentResponse
+from concierge.agents.domain.agent_types import AgentType
 from concierge.agents.infrastructure.microsoft_agent_framework_echo_agent import MicrosoftAgentFrameworkEchoAgent
 
 _MODEL = "gpt-5"
@@ -17,7 +18,7 @@ _SYSTEM_PROMPT = "You are a minimal echo agent."
 
 def _make_request(payload: dict[str, Any]) -> AgentRequest:
     return AgentRequest(
-        agent_type="microsoft-agent-framework-echo",
+        agent_type=AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO,
         payload=payload,
         context={"task_id": "00000000-0000-0000-0000-000000000001"},
     )
@@ -84,7 +85,7 @@ async def test_handle_framework_exception_returns_failed() -> None:
 
 
 def test_agent_type() -> None:
-    assert MicrosoftAgentFrameworkEchoAgent.agent_type == "microsoft-agent-framework-echo"
+    assert MicrosoftAgentFrameworkEchoAgent.agent_type == AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO
 
 
 def test_registry_includes_microsoft_agent_framework_echo() -> None:
@@ -92,5 +93,5 @@ def test_registry_includes_microsoft_agent_framework_echo() -> None:
 
     get_agent_registry.cache_clear()
     registry = get_agent_registry()
-    assert "microsoft-agent-framework-echo" in registry.list_agent_types()
-    assert "echo" in registry.list_agent_types()
+    assert AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO in registry.list_agent_types()
+    assert AgentType.ECHO in registry.list_agent_types()

@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from concierge.agents.domain.agent_types import AgentType
 from concierge.agents.infrastructure.github_copilot_echo_agent import GitHubCopilotEchoAgent
 from concierge.agents.infrastructure.registry_factory import get_agent_registry
 from concierge.cloud_agent.application.use_cases import DispatchTaskUseCase, ProcessNextTaskUseCase
@@ -26,7 +27,7 @@ async def test_cloud_agent_processes_github_copilot_echo_task() -> None:
     queue = InMemoryTaskQueue()
 
     task = await DispatchTaskUseCase(repository, queue).execute(
-        agent_type="github-copilot-echo",
+        agent_type=AgentType.GITHUB_COPILOT_ECHO,
         payload={"message": "Hello Copilot"},
     )
 

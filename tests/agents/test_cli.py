@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, patch
 
 from typer.testing import CliRunner
 
+from concierge.agents.domain.agent_types import AgentType
 from concierge.agents.infrastructure.cli.app import app
 from concierge.agents.infrastructure.github_copilot_echo_agent import GitHubCopilotEchoAgent
 from concierge.agents.infrastructure.microsoft_agent_framework_echo_agent import MicrosoftAgentFrameworkEchoAgent
@@ -25,18 +26,14 @@ def test_cli_list_returns_registered_agent_types() -> None:
     result = runner.invoke(app, ["list"])
     assert result.exit_code == 0, result.output
     agent_types = json.loads(result.output)
-    assert "echo" in agent_types
-    assert "langgraph-echo" in agent_types
-    assert "github-copilot-echo" in agent_types
-    assert "microsoft-agent-framework-echo" in agent_types
-    assert "langgraph-image-gen" in agent_types
-    assert "microsoft-agent-framework-image-gen" in agent_types
+    for expected in AgentType:
+        assert expected in agent_types
 
 
 def test_cli_invoke_echo_with_payload_succeeds() -> None:
     result = runner.invoke(
         app,
-        ["invoke", "--agent-type", "echo", "--payload", '{"message": "hello"}'],
+        ["invoke", "--agent-type", AgentType.ECHO, "--payload", '{"message": "hello"}'],
     )
     assert result.exit_code == 0, result.output
     response = json.loads(result.output)
@@ -48,7 +45,7 @@ def test_cli_invoke_echo_with_payload_succeeds() -> None:
 def test_cli_invoke_echo_with_message_shortcut() -> None:
     result = runner.invoke(
         app,
-        ["invoke", "--agent-type", "echo", "--message", "shortcut"],
+        ["invoke", "--agent-type", AgentType.ECHO, "--message", "shortcut"],
     )
     assert result.exit_code == 0, result.output
     response = json.loads(result.output)
@@ -70,7 +67,7 @@ def test_cli_invoke_github_copilot_echo_with_message_shortcut() -> None:
     ):
         result = runner.invoke(
             app,
-            ["invoke", "--agent-type", "github-copilot-echo", "--message", "Hello Copilot"],
+            ["invoke", "--agent-type", AgentType.GITHUB_COPILOT_ECHO, "--message", "Hello Copilot"],
         )
 
     assert result.exit_code == 0, result.output
@@ -93,7 +90,7 @@ def test_cli_invoke_microsoft_agent_framework_echo_with_message_shortcut() -> No
         mock_build_agent.return_value = mock_framework_agent
         result = runner.invoke(
             app,
-            ["invoke", "--agent-type", "microsoft-agent-framework-echo", "--message", "hello"],
+            ["invoke", "--agent-type", AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO, "--message", "hello"],
         )
 
     assert result.exit_code == 0, result.output
@@ -112,7 +109,7 @@ def test_cli_invoke_echo_missing_message_fails_with_exit_code_1() -> None:
     The CLI must propagate that as a non-zero exit code so shell scripts can
     detect failures without parsing JSON.
     """
-    result = runner.invoke(app, ["invoke", "--agent-type", "echo"])
+    result = runner.invoke(app, ["invoke", "--agent-type", AgentType.ECHO])
     assert result.exit_code == 1, result.output
     response = json.loads(result.output)
     assert response["status"] == "failed"
@@ -128,7 +125,7 @@ def test_cli_invoke_unknown_agent_type_returns_error() -> None:
 def test_cli_invoke_rejects_invalid_payload_json() -> None:
     result = runner.invoke(
         app,
-        ["invoke", "--agent-type", "echo", "--payload", "not-json"],
+        ["invoke", "--agent-type", AgentType.ECHO, "--payload", "not-json"],
     )
     assert result.exit_code == 1
     assert "Invalid JSON" in result.output
@@ -137,26 +134,26 @@ def test_cli_invoke_rejects_invalid_payload_json() -> None:
 def test_cli_invoke_rejects_non_object_payload() -> None:
     result = runner.invoke(
         app,
-        ["invoke", "--agent-type", "echo", "--payload", "[1, 2, 3]"],
+        ["invoke", "--agent-type", AgentType.ECHO, "--payload", "[1, 2, 3]"],
     )
     assert result.exit_code == 1
     assert "must be a JSON object" in result.output
 
 
 def test_cli_info_for_echo_agent() -> None:
-    result = runner.invoke(app, ["info", "--agent-type", "echo"])
+    result = runner.invoke(app, ["info", "--agent-type", AgentType.ECHO])
     assert result.exit_code == 0, result.output
     info = json.loads(result.output)
-    assert info["agent_type"] == "echo"
+    assert info["agent_type"] == AgentType.ECHO
     assert info["class"] == "EchoAgent"
     assert info["module"].startswith("concierge.agents.infrastructure")
 
 
 def test_cli_info_for_langgraph_echo_includes_settings() -> None:
-    result = runner.invoke(app, ["info", "--agent-type", "langgraph-echo"])
+    result = runner.invoke(app, ["info", "--agent-type", AgentType.LANGGRAPH_ECHO])
     assert result.exit_code == 0, result.output
     info = json.loads(result.output)
-    assert info["agent_type"] == "langgraph-echo"
+    assert info["agent_type"] == AgentType.LANGGRAPH_ECHO
     assert info["class"] == "LangGraphEchoAgent"
     assert "settings" in info
     assert "langgraph_model" in info["settings"]
@@ -164,10 +161,10 @@ def test_cli_info_for_langgraph_echo_includes_settings() -> None:
 
 
 def test_cli_info_for_github_copilot_echo_includes_settings() -> None:
-    result = runner.invoke(app, ["info", "--agent-type", "github-copilot-echo"])
+    result = runner.invoke(app, ["info", "--agent-type", AgentType.GITHUB_COPILOT_ECHO])
     assert result.exit_code == 0, result.output
     info = json.loads(result.output)
-    assert info["agent_type"] == "github-copilot-echo"
+    assert info["agent_type"] == AgentType.GITHUB_COPILOT_ECHO
     assert info["class"] == "GitHubCopilotEchoAgent"
     assert "settings" in info
     assert "github_copilot_model" in info["settings"]
@@ -175,10 +172,10 @@ def test_cli_info_for_github_copilot_echo_includes_settings() -> None:
 
 
 def test_cli_info_for_microsoft_agent_framework_echo_includes_settings() -> None:
-    result = runner.invoke(app, ["info", "--agent-type", "microsoft-agent-framework-echo"])
+    result = runner.invoke(app, ["info", "--agent-type", AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO])
     assert result.exit_code == 0, result.output
     info = json.loads(result.output)
-    assert info["agent_type"] == "microsoft-agent-framework-echo"
+    assert info["agent_type"] == AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO
     assert info["class"] == "MicrosoftAgentFrameworkEchoAgent"
     assert "settings" in info
     assert "microsoft_agent_framework_model" in info["settings"]
@@ -186,10 +183,10 @@ def test_cli_info_for_microsoft_agent_framework_echo_includes_settings() -> None
 
 
 def test_cli_info_for_langgraph_image_gen_includes_settings() -> None:
-    result = runner.invoke(app, ["info", "--agent-type", "langgraph-image-gen"])
+    result = runner.invoke(app, ["info", "--agent-type", AgentType.LANGGRAPH_IMAGE_GEN])
     assert result.exit_code == 0, result.output
     info = json.loads(result.output)
-    assert info["agent_type"] == "langgraph-image-gen"
+    assert info["agent_type"] == AgentType.LANGGRAPH_IMAGE_GEN
     assert info["class"] == "LangGraphImageGenAgent"
     assert "settings" in info
     assert "image_model" in info["settings"]
@@ -199,10 +196,10 @@ def test_cli_info_for_langgraph_image_gen_includes_settings() -> None:
 
 
 def test_cli_info_for_microsoft_agent_framework_image_gen_includes_settings() -> None:
-    result = runner.invoke(app, ["info", "--agent-type", "microsoft-agent-framework-image-gen"])
+    result = runner.invoke(app, ["info", "--agent-type", AgentType.MICROSOFT_AGENT_FRAMEWORK_IMAGE_GEN])
     assert result.exit_code == 0, result.output
     info = json.loads(result.output)
-    assert info["agent_type"] == "microsoft-agent-framework-image-gen"
+    assert info["agent_type"] == AgentType.MICROSOFT_AGENT_FRAMEWORK_IMAGE_GEN
     assert info["class"] == "MicrosoftAgentFrameworkImageGenAgent"
     assert "settings" in info
     assert "image_model" in info["settings"]

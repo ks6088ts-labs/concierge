@@ -7,6 +7,7 @@ from collections.abc import Iterator
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from concierge.agents.domain.agent_types import AgentType
 from concierge.chat.domain.entities import Conversation, Message
 from concierge.chat.infrastructure.persistence.memory import InMemoryConversationRepository, InMemoryMessageRepository
 from concierge.chat.infrastructure.web.app import create_app
@@ -193,7 +194,7 @@ async def test_get_agents_returns_default_and_available() -> None:
         # the UI can render it even when not currently usable.
         assert body["default"] in body["available"]
         # Built-in agents are always registered and selectable.
-        for built_in in ("echo", "langgraph-echo", "github-copilot-echo"):
+        for built_in in (AgentType.ECHO, AgentType.LANGGRAPH_ECHO, AgentType.GITHUB_COPILOT_ECHO):
             assert built_in in body["available"]
 
 
@@ -228,7 +229,7 @@ async def test_agent_replies_accepts_agent_type_query_parameter() -> None:
         reply = await client.post(
             f"/conversations/{conversation_id}/agent-replies",
             headers=headers,
-            params={"agent_type": "echo"},
+            params={"agent_type": AgentType.ECHO},
         )
         assert reply.status_code == 200
         events = _parse_sse(reply.text)

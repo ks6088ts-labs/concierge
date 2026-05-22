@@ -14,6 +14,7 @@ from copilot.generated.session_events import AssistantMessageData, SessionEvent,
 from copilot.session import PermissionHandler
 
 from concierge.agents.application.contracts import AgentRequest, AgentResponse
+from concierge.agents.domain.agent_types import AgentType
 from concierge.agents.infrastructure.github_copilot_echo_agent import GitHubCopilotEchoAgent
 
 _MODEL = "gpt-5"
@@ -22,7 +23,7 @@ _SYSTEM_PROMPT = "You are a minimal echo agent."
 
 def _make_request(payload: dict[str, Any]) -> AgentRequest:
     return AgentRequest(
-        agent_type="github-copilot-echo",
+        agent_type=AgentType.GITHUB_COPILOT_ECHO,
         payload=payload,
         context={"task_id": "00000000-0000-0000-0000-000000000001"},
     )
@@ -227,9 +228,9 @@ def test_registry_includes_github_copilot_echo() -> None:
 
     get_agent_registry.cache_clear()
     registry = get_agent_registry()
-    assert "github-copilot-echo" in registry.list_agent_types()
-    assert "echo" in registry.list_agent_types()
+    assert AgentType.GITHUB_COPILOT_ECHO in registry.list_agent_types()
+    assert AgentType.ECHO in registry.list_agent_types()
 
 
 def test_agent_type() -> None:
-    assert GitHubCopilotEchoAgent.agent_type == "github-copilot-echo"
+    assert GitHubCopilotEchoAgent.agent_type == AgentType.GITHUB_COPILOT_ECHO

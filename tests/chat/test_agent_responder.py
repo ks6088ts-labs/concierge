@@ -8,6 +8,7 @@ from typing import ClassVar
 import pytest
 
 from concierge.agents.application.contracts import AgentRequest, AgentResponse
+from concierge.agents.domain.agent_types import AgentType
 from concierge.chat.infrastructure.ai.agent_responder import AgentChatbotResponder
 from concierge.chat.infrastructure.ai.exceptions import ChatbotNotConfiguredError
 
@@ -117,7 +118,7 @@ def test_stream_reply_empty_history() -> None:
 def test_create_chatbot_responder_returns_agent_responder(monkeypatch: pytest.MonkeyPatch) -> None:
     """With CHAT_BOT_AGENT_TYPE=echo, factory returns an AgentChatbotResponder."""
     monkeypatch.delenv("CHAT_RESPONDER_BACKEND", raising=False)
-    monkeypatch.setenv("CHAT_BOT_AGENT_TYPE", "echo")
+    monkeypatch.setenv("CHAT_BOT_AGENT_TYPE", AgentType.ECHO.value)
 
     from concierge.agents.infrastructure.registry_factory import get_agent_registry
     from concierge.chat.infrastructure.ai import factory as factory_module
@@ -206,7 +207,7 @@ def test_create_chatbot_responder_foundry_missing_endpoint_raises(monkeypatch: p
 def test_legacy_responder_backend_env_emits_deprecation_warning(monkeypatch: pytest.MonkeyPatch) -> None:
     """Setting the obsolete CHAT_RESPONDER_BACKEND env var should emit a DeprecationWarning."""
     monkeypatch.setenv("CHAT_RESPONDER_BACKEND", "agent")
-    monkeypatch.setenv("CHAT_BOT_AGENT_TYPE", "echo")
+    monkeypatch.setenv("CHAT_BOT_AGENT_TYPE", AgentType.ECHO.value)
 
     from concierge.agents.infrastructure.registry_factory import get_agent_registry
     from concierge.chat.infrastructure.ai import factory as factory_module
@@ -238,7 +239,7 @@ def test_create_chatbot_responder_agent_type_override(monkeypatch: pytest.Monkey
     get_agent_registry.cache_clear()
 
     # ``foundry`` is configured but the override should bypass it entirely.
-    responder = factory_module.create_chatbot_responder(agent_type="echo")
+    responder = factory_module.create_chatbot_responder(agent_type=AgentType.ECHO)
     assert isinstance(responder, AgentChatbotResponder)
 
     chat_settings_module.get_chat_settings.cache_clear()
@@ -248,7 +249,7 @@ def test_create_chatbot_responder_agent_type_override(monkeypatch: pytest.Monkey
 def test_create_chatbot_responder_agent_type_override_unknown_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     """An override with an unregistered agent_type raises ChatbotNotConfiguredError."""
     monkeypatch.delenv("CHAT_RESPONDER_BACKEND", raising=False)
-    monkeypatch.setenv("CHAT_BOT_AGENT_TYPE", "echo")
+    monkeypatch.setenv("CHAT_BOT_AGENT_TYPE", AgentType.ECHO.value)
 
     from concierge.agents.infrastructure.registry_factory import get_agent_registry
     from concierge.chat.infrastructure.ai import factory as factory_module
@@ -280,7 +281,7 @@ def test_list_available_agent_types_includes_registry(monkeypatch: pytest.Monkey
 
     types = factory_module.list_available_agent_types()
     assert "foundry" not in types
-    for built_in in ("echo", "langgraph-echo", "github-copilot-echo"):
+    for built_in in (AgentType.ECHO, AgentType.LANGGRAPH_ECHO, AgentType.GITHUB_COPILOT_ECHO):
         assert built_in in types
 
     get_agent_registry.cache_clear()

@@ -16,6 +16,7 @@ from langchain_core.runnables import RunnableConfig
 
 from concierge.agents.application.contracts import AgentRequest
 from concierge.agents.application.registry import AgentRegistry
+from concierge.agents.domain.agent_types import AgentType
 from concierge.agents.infrastructure.echo_agent import EchoAgent
 from concierge.agents.infrastructure.github_copilot_echo_agent import GitHubCopilotEchoAgent
 from concierge.agents.infrastructure.langgraph_echo_agent import LangGraphEchoAgent
@@ -41,7 +42,7 @@ def _langgraph_echo_run_config(request: AgentRequest) -> RunnableConfig:
     return trace_config(
         "cloud-agent-langgraph-echo",
         {
-            "run_name": "langgraph-echo",
+            "run_name": AgentType.LANGGRAPH_ECHO.value,
             "metadata": {"task_id": request.context.get("task_id", "")},
         },
     )
@@ -51,7 +52,7 @@ def _github_copilot_echo_run_config(request: AgentRequest) -> RunnableConfig:
     return trace_config(
         "cloud-agent-github-copilot-echo",
         {
-            "run_name": "github-copilot-echo",
+            "run_name": AgentType.GITHUB_COPILOT_ECHO.value,
             "metadata": {"task_id": request.context.get("task_id", "")},
         },
     )
@@ -61,7 +62,7 @@ def _microsoft_agent_framework_echo_run_config(request: AgentRequest) -> Runnabl
     return trace_config(
         "cloud-agent-microsoft-agent-framework-echo",
         {
-            "run_name": "microsoft-agent-framework-echo",
+            "run_name": AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO.value,
             "metadata": {"task_id": request.context.get("task_id", "")},
         },
     )
@@ -71,7 +72,7 @@ def _langgraph_image_gen_run_config(request: AgentRequest) -> RunnableConfig:
     return trace_config(
         "cloud-agent-langgraph-image-gen",
         {
-            "run_name": "langgraph-image-gen",
+            "run_name": AgentType.LANGGRAPH_IMAGE_GEN.value,
             "metadata": {"task_id": request.context.get("task_id", "")},
         },
     )
@@ -81,7 +82,7 @@ def _microsoft_agent_framework_image_gen_run_config(request: AgentRequest) -> Ru
     return trace_config(
         "cloud-agent-microsoft-agent-framework-image-gen",
         {
-            "run_name": "microsoft-agent-framework-image-gen",
+            "run_name": AgentType.MICROSOFT_AGENT_FRAMEWORK_IMAGE_GEN.value,
             "metadata": {"task_id": request.context.get("task_id", "")},
         },
     )

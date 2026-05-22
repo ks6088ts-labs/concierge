@@ -13,6 +13,7 @@ from langchain_core.messages import AIMessage
 from langchain_core.messages.tool import ToolCall
 
 from concierge.agents.application.contracts import AgentRequest, AgentResponse
+from concierge.agents.domain.agent_types import AgentType
 from concierge.agents.infrastructure.langgraph_echo_agent import LangGraphEchoAgent
 
 # ---------------------------------------------------------------------------
@@ -24,7 +25,7 @@ _FAKE_TASK_ID = "00000000-0000-0000-0000-000000000001"
 
 def _make_task_input(payload: dict[str, Any]) -> AgentRequest:
     return AgentRequest(
-        agent_type="langgraph-echo",
+        agent_type=AgentType.LANGGRAPH_ECHO,
         payload=payload,
         context={"task_id": _FAKE_TASK_ID},
     )
@@ -185,7 +186,7 @@ async def test_handle_llm_exception_returns_failed() -> None:
 
 
 def test_agent_type() -> None:
-    assert LangGraphEchoAgent.agent_type == "langgraph-echo"
+    assert LangGraphEchoAgent.agent_type == AgentType.LANGGRAPH_ECHO
 
 
 # ---------------------------------------------------------------------------
@@ -200,5 +201,5 @@ def test_registry_includes_langgraph_echo() -> None:
     # Clear lru_cache so we always get a fresh registry
     get_agent_registry.cache_clear()
     registry = get_agent_registry()
-    assert "langgraph-echo" in registry.list_agent_types()
-    assert "echo" in registry.list_agent_types()
+    assert AgentType.LANGGRAPH_ECHO in registry.list_agent_types()
+    assert AgentType.ECHO in registry.list_agent_types()

@@ -7,6 +7,7 @@ import uuid
 import pytest
 from sqlalchemy import create_engine, text
 
+from concierge.agents.domain.agent_types import AgentType
 from concierge.cloud_agent.domain.entities import Task
 from concierge.cloud_agent.domain.value_objects import TaskStatus
 from concierge.cloud_agent.infrastructure.persistence.postgres import SqlAlchemyTaskRepository
@@ -42,12 +43,12 @@ def _make_sqlite_repo() -> SqlAlchemyTaskRepository:
 class TestSqlAlchemyTaskRepositoryUnit:
     def test_save_and_find_by_id(self) -> None:
         repo = _make_sqlite_repo()
-        task = Task(agent_type="echo", payload={"k": "v"})
+        task = Task(agent_type=AgentType.ECHO, payload={"k": "v"})
         repo.save(task)
         found = repo.find_by_id(task.id)
         assert found is not None
         assert found.id == task.id
-        assert found.agent_type == "echo"
+        assert found.agent_type == AgentType.ECHO
         assert found.payload == {"k": "v"}
 
     def test_find_by_id_returns_none_for_missing(self) -> None:
@@ -60,8 +61,8 @@ class TestSqlAlchemyTaskRepositoryUnit:
 
     def test_find_all_with_status_filter(self) -> None:
         repo = _make_sqlite_repo()
-        t1 = Task(agent_type="echo", payload={})
-        t2 = Task(agent_type="echo", payload={})
+        t1 = Task(agent_type=AgentType.ECHO, payload={})
+        t2 = Task(agent_type=AgentType.ECHO, payload={})
         t2.mark_running()
         t2.mark_succeeded({"r": 1})
         repo.save(t1)
@@ -72,14 +73,14 @@ class TestSqlAlchemyTaskRepositoryUnit:
 
     def test_find_all_with_agent_type_filter(self) -> None:
         repo = _make_sqlite_repo()
-        repo.save(Task(agent_type="echo", payload={}))
+        repo.save(Task(agent_type=AgentType.ECHO, payload={}))
         repo.save(Task(agent_type="other", payload={}))
-        echo = repo.find_all(agent_type="echo")
+        echo = repo.find_all(agent_type=AgentType.ECHO)
         assert len(echo) == 1
 
     def test_save_updates_existing(self) -> None:
         repo = _make_sqlite_repo()
-        task = Task(agent_type="echo", payload={})
+        task = Task(agent_type=AgentType.ECHO, payload={})
         repo.save(task)
         task.mark_running()
         repo.save(task)
@@ -89,7 +90,7 @@ class TestSqlAlchemyTaskRepositoryUnit:
 
     def test_delete_existing(self) -> None:
         repo = _make_sqlite_repo()
-        task = Task(agent_type="echo", payload={})
+        task = Task(agent_type=AgentType.ECHO, payload={})
         repo.save(task)
         assert repo.delete(task.id) is True
         assert repo.find_by_id(task.id) is None
@@ -100,16 +101,16 @@ class TestSqlAlchemyTaskRepositoryUnit:
 
     def test_count(self) -> None:
         repo = _make_sqlite_repo()
-        repo.save(Task(agent_type="echo", payload={}))
-        repo.save(Task(agent_type="echo", payload={}))
+        repo.save(Task(agent_type=AgentType.ECHO, payload={}))
+        repo.save(Task(agent_type=AgentType.ECHO, payload={}))
         assert repo.count() == 2
-        assert repo.count(agent_type="echo") == 2
+        assert repo.count(agent_type=AgentType.ECHO) == 2
         assert repo.count(agent_type="other") == 0
 
     def test_limit_offset(self) -> None:
         repo = _make_sqlite_repo()
         for _ in range(5):
-            repo.save(Task(agent_type="echo", payload={}))
+            repo.save(Task(agent_type=AgentType.ECHO, payload={}))
         page1 = repo.find_all(limit=3, offset=0)
         page2 = repo.find_all(limit=3, offset=3)
         assert len(page1) == 3
@@ -146,14 +147,14 @@ def pg_repo():
 @pytest.mark.integration
 class TestSqlAlchemyTaskRepositoryIntegration:
     def test_save_and_find_by_id(self, pg_repo) -> None:
-        task = Task(agent_type="echo", payload={"pg": True})
+        task = Task(agent_type=AgentType.ECHO, payload={"pg": True})
         pg_repo.save(task)
         found = pg_repo.find_by_id(task.id)
         assert found is not None
         assert found.payload == {"pg": True}
 
     def test_find_all_with_status_filter(self, pg_repo) -> None:
-        t = Task(agent_type="echo", payload={})
+        t = Task(agent_type=AgentType.ECHO, payload={})
         t.mark_running()
         t.mark_succeeded({"ok": 1})
         pg_repo.save(t)
@@ -161,7 +162,7 @@ class TestSqlAlchemyTaskRepositoryIntegration:
         assert any(x.id == t.id for x in succeeded)
 
     def test_delete_task(self, pg_repo) -> None:
-        task = Task(agent_type="echo", payload={})
+        task = Task(agent_type=AgentType.ECHO, payload={})
         pg_repo.save(task)
         assert pg_repo.delete(task.id) is True
         assert pg_repo.find_by_id(task.id) is None

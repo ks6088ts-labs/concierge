@@ -18,6 +18,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
 from concierge.agents.application.contracts import AgentRequest, AgentResponse
+from concierge.agents.domain.agent_types import AgentType
 
 RunConfigFactory = Callable[[AgentRequest], RunnableConfig]
 """Factory that builds a ``RunnableConfig`` for a given request.
@@ -53,7 +54,7 @@ class LangGraphEchoAgent:
         empty config.
     """
 
-    agent_type: ClassVar[str] = "langgraph-echo"
+    agent_type: ClassVar[str] = AgentType.LANGGRAPH_ECHO.value
 
     # Class-level fallback so instances constructed via ``__new__`` (used in
     # some unit tests to bypass settings loading) still have a usable factory.

@@ -9,11 +9,16 @@ from __future__ import annotations
 import pytest
 
 from concierge.agents.application.contracts import AgentRequest
+from concierge.agents.domain.agent_types import AgentType
 from concierge.agents.infrastructure.echo_agent import EchoAgent
 
 
 def _make_request(payload: dict) -> AgentRequest:
-    return AgentRequest(agent_type="echo", payload=payload, context={"task_id": "00000000-0000-0000-0000-000000000001"})
+    return AgentRequest(
+        agent_type=AgentType.ECHO,
+        payload=payload,
+        context={"task_id": "00000000-0000-0000-0000-000000000001"},
+    )
 
 
 @pytest.mark.anyio

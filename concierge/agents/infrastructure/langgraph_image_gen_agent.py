@@ -12,6 +12,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
 from concierge.agents.application.contracts import AgentRequest, AgentResponse
+from concierge.agents.domain.agent_types import AgentType
 from concierge.agents.infrastructure.tools import generate_image
 
 RunConfigFactory = Callable[[AgentRequest], RunnableConfig]
@@ -22,7 +23,7 @@ def _empty_run_config(_request: AgentRequest) -> RunnableConfig:
 
 
 class LangGraphImageGenAgent:
-    agent_type: ClassVar[str] = "langgraph-image-gen"
+    agent_type: ClassVar[str] = AgentType.LANGGRAPH_IMAGE_GEN.value
     _run_config_factory: RunConfigFactory = staticmethod(_empty_run_config)
 
     def __init__(

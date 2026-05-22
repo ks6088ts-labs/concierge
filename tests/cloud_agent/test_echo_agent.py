@@ -11,13 +11,14 @@ import uuid
 import pytest
 
 from concierge.agents.application.contracts import AgentRequest
+from concierge.agents.domain.agent_types import AgentType
 from concierge.agents.infrastructure.echo_agent import EchoAgent
 
 _FAKE_TASK_ID = uuid.UUID("00000000-0000-0000-0000-000000000001")
 
 
 def _make_task_input(payload: dict) -> AgentRequest:
-    return AgentRequest(agent_type="echo", payload=payload, context={"task_id": str(_FAKE_TASK_ID)})
+    return AgentRequest(agent_type=AgentType.ECHO, payload=payload, context={"task_id": str(_FAKE_TASK_ID)})
 
 
 @pytest.mark.anyio

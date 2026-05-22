@@ -29,6 +29,7 @@ from copilot.session import PermissionHandler
 from langchain_core.runnables import RunnableConfig
 
 from concierge.agents.application.contracts import AgentRequest, AgentResponse
+from concierge.agents.domain.agent_types import AgentType
 
 RunConfigFactory = Callable[[AgentRequest], RunnableConfig]
 """Factory that builds a ``RunnableConfig`` for a given request.
@@ -68,7 +69,7 @@ class GitHubCopilotEchoAgent:
         config.
     """
 
-    agent_type: ClassVar[str] = "github-copilot-echo"
+    agent_type: ClassVar[str] = AgentType.GITHUB_COPILOT_ECHO.value
 
     # Class-level fallback so instances constructed via ``__new__`` (used in
     # some unit tests to bypass settings loading) still have a usable factory.

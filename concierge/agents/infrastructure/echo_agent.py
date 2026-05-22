@@ -11,12 +11,13 @@ from __future__ import annotations
 from typing import Any, ClassVar
 
 from concierge.agents.application.contracts import AgentRequest, AgentResponse
+from concierge.agents.domain.agent_types import AgentType
 
 
 class EchoAgent:
     """Agent that echoes ``payload.message`` back as the result."""
 
-    agent_type: ClassVar[str] = "echo"
+    agent_type: ClassVar[str] = AgentType.ECHO.value
 
     async def handle(self, request: AgentRequest) -> AgentResponse:
         message = self._extract_message(request.payload)

@@ -19,6 +19,7 @@ import typer
 from dotenv import load_dotenv
 
 from concierge.agents.application.contracts import AgentRequest, AgentResponse
+from concierge.agents.domain.agent_types import AgentType
 from concierge.agents.domain.exceptions import AgentNotFoundError
 from concierge.agents.infrastructure.registry_factory import get_agent_registry
 from concierge.agents.infrastructure.tools import ImageGenerationResult, generate_image
@@ -271,25 +272,25 @@ def agent_info(
     # Surface langgraph-specific settings when relevant. We read them from
     # the configured settings rather than introspecting private attributes
     # so the output stays stable regardless of how the agent was wired.
-    if agent_type == "langgraph-echo":
+    if agent_type == AgentType.LANGGRAPH_ECHO:
         agents_settings = get_agents_settings()
         info["settings"] = {
             "langgraph_model": agents_settings.langgraph_model,
             "langgraph_system_prompt": agents_settings.langgraph_system_prompt,
         }
-    if agent_type == "github-copilot-echo":
+    if agent_type == AgentType.GITHUB_COPILOT_ECHO:
         agents_settings = get_agents_settings()
         info["settings"] = {
             "github_copilot_model": agents_settings.github_copilot_model,
             "github_copilot_system_prompt": agents_settings.github_copilot_system_prompt,
         }
-    if agent_type == "microsoft-agent-framework-echo":
+    if agent_type == AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO:
         agents_settings = get_agents_settings()
         info["settings"] = {
             "microsoft_agent_framework_model": agents_settings.microsoft_agent_framework_model,
             "microsoft_agent_framework_system_prompt": agents_settings.microsoft_agent_framework_system_prompt,
         }
-    if agent_type == "langgraph-image-gen":
+    if agent_type == AgentType.LANGGRAPH_IMAGE_GEN:
         agents_settings = get_agents_settings()
         info["settings"] = {
             "langgraph_model": agents_settings.langgraph_model,
@@ -299,7 +300,7 @@ def agent_info(
             "image_n": agents_settings.image_n,
             "image_api_version": agents_settings.image_api_version,
         }
-    if agent_type == "microsoft-agent-framework-image-gen":
+    if agent_type == AgentType.MICROSOFT_AGENT_FRAMEWORK_IMAGE_GEN:
         agents_settings = get_agents_settings()
         info["settings"] = {
             "microsoft_agent_framework_model": agents_settings.microsoft_agent_framework_model,

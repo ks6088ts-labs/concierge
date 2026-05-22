@@ -11,6 +11,7 @@ from azure.identity import DefaultAzureCredential
 from langchain_core.runnables import RunnableConfig
 
 from concierge.agents.application.contracts import AgentRequest, AgentResponse
+from concierge.agents.domain.agent_types import AgentType
 
 RunConfigFactory = Callable[[AgentRequest], RunnableConfig]
 
@@ -22,7 +23,7 @@ def _empty_run_config(_request: AgentRequest) -> RunnableConfig:
 class MicrosoftAgentFrameworkEchoAgent:
     """Microsoft Agent Framework backed minimal echo agent."""
 
-    agent_type: ClassVar[str] = "microsoft-agent-framework-echo"
+    agent_type: ClassVar[str] = AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO.value
     _run_config_factory: RunConfigFactory = staticmethod(_empty_run_config)
 
     def __init__(

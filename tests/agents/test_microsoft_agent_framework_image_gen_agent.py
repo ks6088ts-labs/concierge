@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from concierge.agents.application.contracts import AgentRequest
+from concierge.agents.domain.agent_types import AgentType
 from concierge.agents.infrastructure.microsoft_agent_framework_image_gen_agent import (
     MicrosoftAgentFrameworkImageGenAgent,
 )
@@ -17,7 +18,7 @@ _SYSTEM_PROMPT = "You are an image generation assistant."
 
 def _make_request(payload: dict[str, Any]) -> AgentRequest:
     return AgentRequest(
-        agent_type="microsoft-agent-framework-image-gen",
+        agent_type=AgentType.MICROSOFT_AGENT_FRAMEWORK_IMAGE_GEN,
         payload=payload,
         context={"task_id": "00000000-0000-0000-0000-000000000001"},
     )
@@ -108,4 +109,4 @@ async def test_tool_calls_generate_image_with_expected_arguments() -> None:
 
 
 def test_agent_type() -> None:
-    assert MicrosoftAgentFrameworkImageGenAgent.agent_type == "microsoft-agent-framework-image-gen"
+    assert MicrosoftAgentFrameworkImageGenAgent.agent_type == AgentType.MICROSOFT_AGENT_FRAMEWORK_IMAGE_GEN

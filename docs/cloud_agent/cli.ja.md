@@ -21,7 +21,7 @@ uv run cloud-agent-cli --help
 
 ### タスクのディスパッチ
 
-組み込みエージェント（`echo` / `langgraph` / `github-copilot-echo` / `microsoft-agent-framework`）は同じ payload 仕様で、
+組み込みエージェント（`echo` / `langgraph` / `github-copilot-sdk` / `microsoft-agent-framework`）は同じ payload 仕様で、
 非空文字列の `message` が必須です。
 
 ```bash
@@ -129,8 +129,8 @@ uv run cloud-agent-cli agents
 | `CLOUD_AGENT_POLL_INTERVAL_SECONDS` | `1.0` | キューが空のときのポーリング間隔 |
 | `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | LangGraph エージェントで使う `init_chat_model` のモデル文字列 |
 | `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(組み込み)_ | LangGraph エージェントのシステムプロンプト |
-| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | `github-copilot-echo` のモデル名 |
-| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(組み込み)_ | `github-copilot-echo` のシステムプロンプト |
+| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | `github-copilot-sdk` のモデル名 |
+| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(組み込み)_ | `github-copilot-sdk` のシステムプロンプト |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | `microsoft-agent-framework` のモデル文字列 |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(組み込み)_ | `microsoft-agent-framework` のシステムプロンプト |
 

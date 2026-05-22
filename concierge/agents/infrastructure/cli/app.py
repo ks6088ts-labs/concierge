@@ -282,7 +282,7 @@ def agent_info(
             "image_n": agents_settings.image_n,
             "image_api_version": agents_settings.image_api_version,
         }
-    if agent_type == AgentType.GITHUB_COPILOT_ECHO:
+    if agent_type == AgentType.GITHUB_COPILOT_SDK:
         agents_settings = get_agents_settings()
         info["settings"] = {
             "github_copilot_model": agents_settings.github_copilot_model,

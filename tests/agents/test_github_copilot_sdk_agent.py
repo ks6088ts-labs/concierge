@@ -1,4 +1,4 @@
-"""Unit tests for GitHubCopilotEchoAgent (shared agents package).
+"""Unit tests for GitHubCopilotSdkAgent (shared agents package).
 
 The Copilot SDK ``CopilotClient`` / ``CopilotSession`` chain is fully mocked
 so the tests do not spawn the GitHub Copilot CLI subprocess.
@@ -15,7 +15,7 @@ from copilot.session import PermissionHandler
 
 from concierge.agents.application.contracts import AgentRequest, AgentResponse
 from concierge.agents.domain.agent_types import AgentType
-from concierge.agents.infrastructure.github_copilot_echo_agent import GitHubCopilotEchoAgent
+from concierge.agents.infrastructure.github_copilot_sdk_agent import GitHubCopilotSdkAgent
 
 _MODEL = "gpt-5"
 _SYSTEM_PROMPT = "You are a minimal echo agent."
@@ -23,7 +23,7 @@ _SYSTEM_PROMPT = "You are a minimal echo agent."
 
 def _make_request(payload: dict[str, Any]) -> AgentRequest:
     return AgentRequest(
-        agent_type=AgentType.GITHUB_COPILOT_ECHO,
+        agent_type=AgentType.GITHUB_COPILOT_SDK,
         payload=payload,
         context={"task_id": "00000000-0000-0000-0000-000000000001"},
     )
@@ -102,22 +102,22 @@ class _FakeClient:
 
 
 def test_extract_message_returns_message_string() -> None:
-    agent = GitHubCopilotEchoAgent.__new__(GitHubCopilotEchoAgent)
+    agent = GitHubCopilotSdkAgent.__new__(GitHubCopilotSdkAgent)
     assert agent._extract_message({"message": "hello"}) == "hello"
 
 
 def test_extract_message_strips_whitespace() -> None:
-    agent = GitHubCopilotEchoAgent.__new__(GitHubCopilotEchoAgent)
+    agent = GitHubCopilotSdkAgent.__new__(GitHubCopilotSdkAgent)
     assert agent._extract_message({"message": "   "}) == ""
 
 
 def test_extract_message_missing_key() -> None:
-    agent = GitHubCopilotEchoAgent.__new__(GitHubCopilotEchoAgent)
+    agent = GitHubCopilotSdkAgent.__new__(GitHubCopilotSdkAgent)
     assert agent._extract_message({}) == ""
 
 
 def test_extract_message_non_string_value() -> None:
-    agent = GitHubCopilotEchoAgent.__new__(GitHubCopilotEchoAgent)
+    agent = GitHubCopilotSdkAgent.__new__(GitHubCopilotSdkAgent)
     assert agent._extract_message({"message": 42}) == ""  # type: ignore[arg-type]
 
 
@@ -129,7 +129,7 @@ def test_extract_message_non_string_value() -> None:
 @pytest.mark.anyio
 async def test_handle_success_returns_session_reply() -> None:
     """Reply is the concatenation of AssistantMessageData.content chunks."""
-    agent = GitHubCopilotEchoAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT)
+    agent = GitHubCopilotSdkAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT)
 
     session = _FakeSession(
         events=[
@@ -165,7 +165,7 @@ async def test_handle_success_returns_session_reply() -> None:
 
 @pytest.mark.anyio
 async def test_handle_missing_message_returns_failed() -> None:
-    agent = GitHubCopilotEchoAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT)
+    agent = GitHubCopilotSdkAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT)
 
     output: AgentResponse = await agent.handle(_make_request({}))
 
@@ -176,7 +176,7 @@ async def test_handle_missing_message_returns_failed() -> None:
 @pytest.mark.anyio
 async def test_handle_sdk_initialization_error_returns_failed() -> None:
     """Errors raised while opening the session are captured in AgentResponse.error."""
-    agent = GitHubCopilotEchoAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT)
+    agent = GitHubCopilotSdkAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT)
 
     with patch.object(agent, "_build_client", side_effect=RuntimeError("sdk init failed")):
         output: AgentResponse = await agent.handle(_make_request({"message": "hello"}))
@@ -188,7 +188,7 @@ async def test_handle_sdk_initialization_error_returns_failed() -> None:
 @pytest.mark.anyio
 async def test_handle_session_send_error_returns_failed() -> None:
     """Errors raised inside the session (e.g. ``send`` failure) are surfaced."""
-    agent = GitHubCopilotEchoAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT)
+    agent = GitHubCopilotSdkAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT)
 
     failing_session = AsyncMock()
     failing_session.__aenter__.return_value = failing_session
@@ -211,7 +211,7 @@ async def test_handle_session_send_error_returns_failed() -> None:
 @pytest.mark.anyio
 async def test_handle_empty_reply_chunks_returns_empty_reply() -> None:
     """An idle event with no AssistantMessageData yields an empty reply string."""
-    agent = GitHubCopilotEchoAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT)
+    agent = GitHubCopilotSdkAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT)
 
     session = _FakeSession(events=[SessionIdleData()])
     client = _FakeClient(session)
@@ -223,14 +223,14 @@ async def test_handle_empty_reply_chunks_returns_empty_reply() -> None:
     assert output.result == {"echo": "hi", "reply": "", "model": _MODEL}
 
 
-def test_registry_includes_github_copilot_echo() -> None:
+def test_registry_includes_github_copilot_sdk() -> None:
     from concierge.agents.infrastructure.registry_factory import get_agent_registry
 
     get_agent_registry.cache_clear()
     registry = get_agent_registry()
-    assert AgentType.GITHUB_COPILOT_ECHO in registry.list_agent_types()
+    assert AgentType.GITHUB_COPILOT_SDK in registry.list_agent_types()
     assert AgentType.ECHO in registry.list_agent_types()
 
 
 def test_agent_type() -> None:
-    assert GitHubCopilotEchoAgent.agent_type == AgentType.GITHUB_COPILOT_ECHO
+    assert GitHubCopilotSdkAgent.agent_type == AgentType.GITHUB_COPILOT_SDK

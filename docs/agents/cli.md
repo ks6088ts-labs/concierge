@@ -37,7 +37,7 @@ uv run agents-cli list
 Output:
 
 ```json
-["echo", "langgraph", "github-copilot-echo", "microsoft-agent-framework"]
+["echo", "langgraph", "github-copilot-sdk", "microsoft-agent-framework"]
 ```
 
 ### Invoke an agent
@@ -61,7 +61,7 @@ uv run agents-cli invoke \
   --context '{"task_id": "00000000-0000-0000-0000-000000000001"}'
 ```
 
-All built-in agents (`echo`, `langgraph`, `github-copilot-echo`, and `microsoft-agent-framework`) read `payload.message`,
+All built-in agents (`echo`, `langgraph`, `github-copilot-sdk`, and `microsoft-agent-framework`) read `payload.message`,
 so the same shortcut works for all of them. The framework-backed agents
 (`langgraph` / `microsoft-agent-framework`) carry both the `echo` and
 `generate_image_tool` tools — the LLM picks the right one based on the
@@ -69,7 +69,7 @@ user's request:
 
 ```bash
 uv run agents-cli invoke --agent-type langgraph --message "Hello LangGraph"
-uv run agents-cli invoke --agent-type github-copilot-echo --message "Hello Copilot"
+uv run agents-cli invoke --agent-type github-copilot-sdk --message "Hello Copilot"
 uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Hello MAF"
 uv run agents-cli invoke --agent-type langgraph --message "Create an image of a red fox in watercolor style"
 uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Create an image of a red fox in watercolor style"
@@ -104,7 +104,7 @@ Options:
 
 ```bash
 uv run agents-cli info --agent-type langgraph
-uv run agents-cli info --agent-type github-copilot-echo
+uv run agents-cli info --agent-type github-copilot-sdk
 uv run agents-cli info --agent-type microsoft-agent-framework
 ```
 
@@ -134,8 +134,8 @@ belong to the `cloud_agent` and `chat` services and are not relevant here.
 |----------|---------|-------------|
 | `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | Model string for `init_chat_model` used by `langgraph` |
 | `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `langgraph`. Default tells the LLM to pick between `echo` and `generate_image_tool` based on the user's request. |
-| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | Model name passed to `CopilotClient.create_session(model=...)` for `github-copilot-echo` |
-| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-echo` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Default: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
+| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | Model name passed to `CopilotClient.create_session(model=...)` for `github-copilot-sdk` |
+| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-sdk` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Default: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | Model string passed to `FoundryChatClient(model=...)` for `microsoft-agent-framework` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `microsoft-agent-framework` (passed as `Agent(instructions=...)`). Default tells the LLM to pick between `echo` and `generate_image_tool` based on the user's request. |
 | `AGENTS_IMAGE_MODEL` | `gpt-image-2` | Foundry image model deployment name |
@@ -179,7 +179,7 @@ uv run agents-cli \
   invoke --agent-type langgraph --message "trace me"
 ```
 
-Successful `github-copilot-echo` output (the assistant reply text
+Successful `github-copilot-sdk` output (the assistant reply text
 returned by the SDK session is surfaced under `reply`):
 
 ```json
@@ -194,7 +194,7 @@ returned by the SDK session is surfaced under `reply`):
 }
 ```
 
-> The `github-copilot-echo` agent opens a fresh `CopilotClient` per
+> The `github-copilot-sdk` agent opens a fresh `CopilotClient` per
 > request, calls `create_session(model=..., system_message=...,
 > on_permission_request=PermissionHandler.approve_all)`, sends the user
 > message over the session and waits for `SessionIdleData` before

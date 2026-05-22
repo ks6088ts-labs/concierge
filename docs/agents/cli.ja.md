@@ -36,7 +36,7 @@ uv run agents-cli list
 出力例:
 
 ```json
-["echo", "langgraph", "github-copilot-echo", "microsoft-agent-framework"]
+["echo", "langgraph", "github-copilot-sdk", "microsoft-agent-framework"]
 ```
 
 ### エージェント実行
@@ -60,7 +60,7 @@ uv run agents-cli invoke \
   --context '{"task_id": "00000000-0000-0000-0000-000000000001"}'
 ```
 
-組み込みエージェント（`echo` / `langgraph` / `github-copilot-echo` / `microsoft-agent-framework`）は
+組み込みエージェント（`echo` / `langgraph` / `github-copilot-sdk` / `microsoft-agent-framework`）は
 `payload.message` を読むので、同じショートカットが使えます。フレームワークベースの
 エージェント (`langgraph` / `microsoft-agent-framework`) には `echo` と
 `generate_image_tool` の両方のツールが載っており、LLM がユーザーの
@@ -68,7 +68,7 @@ uv run agents-cli invoke \
 
 ```bash
 uv run agents-cli invoke --agent-type langgraph --message "Hello LangGraph"
-uv run agents-cli invoke --agent-type github-copilot-echo --message "Hello Copilot"
+uv run agents-cli invoke --agent-type github-copilot-sdk --message "Hello Copilot"
 uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Hello MAF"
 uv run agents-cli invoke --agent-type langgraph --message "Create an image of a red fox in watercolor style"
 uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Create an image of a red fox in watercolor style"
@@ -103,7 +103,7 @@ uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Creat
 
 ```bash
 uv run agents-cli info --agent-type langgraph
-uv run agents-cli info --agent-type github-copilot-echo
+uv run agents-cli info --agent-type github-copilot-sdk
 uv run agents-cli info --agent-type microsoft-agent-framework
 ```
 
@@ -133,8 +133,8 @@ agents CLI が読むのは `AGENTS_*` 変数のみです。リポジトリ／キ
 |---------|-----------|------|
 | `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | `langgraph` の `init_chat_model` で使うモデル文字列 |
 | `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(組み込み)_ | `langgraph` のシステムプロンプト。デフォルトでは `echo` と `generate_image_tool` を使い分けるよう LLM に指示します。 |
-| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | `github-copilot-echo` の `CopilotClient.create_session(model=...)` に渡すモデル名 |
-| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(組み込み)_ | `github-copilot-echo` のシステムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルト: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
+| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | `github-copilot-sdk` の `CopilotClient.create_session(model=...)` に渡すモデル名 |
+| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(組み込み)_ | `github-copilot-sdk` のシステムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルト: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | `microsoft-agent-framework` の `FoundryChatClient(model=...)` に渡すモデル文字列 |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(組み込み)_ | `microsoft-agent-framework` のシステムプロンプト（`Agent(instructions=...)` に渡される）。デフォルトでは `echo` と `generate_image_tool` を使い分けるよう LLM に指示します。 |
 | `AGENTS_IMAGE_MODEL` | `gpt-image-2` | Foundry 画像モデルのデプロイ名 |
@@ -178,7 +178,7 @@ uv run agents-cli \
   invoke --agent-type langgraph --message "trace me"
 ```
 
-`github-copilot-echo` の成功時レスポンス例（SDK セッションから
+`github-copilot-sdk` の成功時レスポンス例（SDK セッションから
 返ってきたアシスタント応答が `reply` にそのまま入ります）:
 
 ```json
@@ -193,7 +193,7 @@ uv run agents-cli \
 }
 ```
 
-> `github-copilot-echo` はリクエストごとに `CopilotClient` を生成し、
+> `github-copilot-sdk` はリクエストごとに `CopilotClient` を生成し、
 > `create_session(model=..., system_message=...,
 > on_permission_request=PermissionHandler.approve_all)` でセッションを
 > 払い出し、ユーザーメッセージを `session.send` で送信、

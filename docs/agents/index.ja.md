@@ -16,7 +16,7 @@ flowchart LR
     cloud_agent[cloud_agent ワーカー] --> Registry
     Registry[AgentRegistry] --> Echo[EchoAgent]
     Registry --> LG["LangGraphAgent\n(langgraph)"]
-    Registry --> GCE[GitHubCopilotEchoAgent]
+    Registry --> GCE[GitHubCopilotSdkAgent]
     Registry --> MAF["MicrosoftAgentFrameworkAgent\n(microsoft-agent-framework)"]
     subgraph agents["concierge/agents (共有カーネル)"]
         Registry
@@ -39,7 +39,7 @@ concierge/agents/
     registry.py            # AgentRegistry
   infrastructure/
     echo_agent.py                          # EchoAgent (LLM 不要)
-    github_copilot_echo_agent.py           # GitHubCopilotEchoAgent
+    github_copilot_sdk_agent.py           # GitHubCopilotSdkAgent
     langgraph_agent.py                     # LangGraphAgent (preset ごとに tools を代入)
     microsoft_agent_framework_agent.py     # MicrosoftAgentFrameworkAgent (preset 構成可)
     tools/
@@ -89,7 +89,7 @@ class MyAgent:
 |------------|--------|------|
 | `echo` | `EchoAgent` | `payload.message` をそのまま返す。LLM 不要。 |
 | `langgraph` | `LangGraphAgent` | `echo` と `generate_image_tool` の両方を備える LangGraph (`create_agent`) preset。LLM がユーザー入力に応じてツールを選択します。 |
-| `github-copilot-echo` | `GitHubCopilotEchoAgent` | リクエストごとに GitHub Copilot SDK セッションを開き、ユーザーメッセージを `send` し、アシスタント応答を返します。 |
+| `github-copilot-sdk` | `GitHubCopilotSdkAgent` | リクエストごとに GitHub Copilot SDK セッションを開き、ユーザーメッセージを `send` し、アシスタント応答を返します。 |
 | `microsoft-agent-framework` | `MicrosoftAgentFrameworkAgent` | `echo` と `generate_image_tool` の両方を備える Microsoft Agent Framework preset。LLM がユーザー入力に応じてツールを選択します。 |
 
 フレームワークベースの 2 つのエージェント (`langgraph` /
@@ -107,7 +107,7 @@ class MyAgent:
 | `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | `init_chat_model` に渡すモデル文字列。 |
 | `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | *(組み込み)* | `langgraph` エージェントのシステムプロンプト。デフォルトでは `echo` と `generate_image_tool` を使い分けるよう指示します。 |
 | `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | `CopilotClient.create_session(model=...)` に渡すモデル名。 |
-| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | *(組み込み)* | `github-copilot-echo` 用システムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルト: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
+| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | *(組み込み)* | `github-copilot-sdk` 用システムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルト: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | `microsoft-agent-framework` の `FoundryChatClient(model=...)` に渡すモデル名。 |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | *(組み込み)* | `microsoft-agent-framework` の `Agent(instructions=...)` に渡すシステムプロンプト。デフォルトでは `echo` と `generate_image_tool` を使い分けるよう指示します。 |
 | `AGENTS_IMAGE_MODEL` | `gpt-image-2` | 共有画像生成ツールが使う Foundry デプロイ名。 |
@@ -132,10 +132,10 @@ export CHAT_BOT_AGENT_TYPE=echo   # LLM 不要のスモークテスト
 uv run chat-web
 ```
 
-`github-copilot-echo` を使う場合:
+`github-copilot-sdk` を使う場合:
 
 ```bash
-export CHAT_BOT_AGENT_TYPE=github-copilot-echo
+export CHAT_BOT_AGENT_TYPE=github-copilot-sdk
 uv run chat-web
 ```
 
@@ -146,7 +146,7 @@ export CHAT_BOT_AGENT_TYPE=microsoft-agent-framework
 uv run chat-web
 ```
 
-`github-copilot-echo` は LangChain/LangGraph ベースではないため、MLflow の
+`github-copilot-sdk` は LangChain/LangGraph ベースではないため、MLflow の
 LangChain autologging では内部 SDK スパンは自動収集されません。
 `microsoft-agent-framework` も LangChain/LangGraph ではなく Microsoft
 Agent Framework（`agent_framework.Agent` + `agent_framework.foundry.FoundryChatClient`）

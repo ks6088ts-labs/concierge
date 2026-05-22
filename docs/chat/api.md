@@ -165,7 +165,7 @@ the setup steps.
 To route this endpoint through the shared agents runtime, set:
 
 ```bash
-export CHAT_BOT_AGENT_TYPE=github-copilot-echo
+export CHAT_BOT_AGENT_TYPE=github-copilot-sdk
 ```
 
 ### Streaming reply via `POST .../agent-replies`

@@ -281,7 +281,7 @@ def test_list_available_agent_types_includes_registry(monkeypatch: pytest.Monkey
 
     types = factory_module.list_available_agent_types()
     assert "foundry" not in types
-    for built_in in (AgentType.ECHO, AgentType.LANGGRAPH, AgentType.GITHUB_COPILOT_ECHO):
+    for built_in in (AgentType.ECHO, AgentType.LANGGRAPH, AgentType.GITHUB_COPILOT_SDK):
         assert built_in in types
 
     get_agent_registry.cache_clear()

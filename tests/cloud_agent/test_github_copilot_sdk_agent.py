@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from concierge.agents.domain.agent_types import AgentType
-from concierge.agents.infrastructure.github_copilot_echo_agent import GitHubCopilotEchoAgent
+from concierge.agents.infrastructure.github_copilot_sdk_agent import GitHubCopilotSdkAgent
 from concierge.agents.infrastructure.registry_factory import get_agent_registry
 from concierge.cloud_agent.application.use_cases import DispatchTaskUseCase, ProcessNextTaskUseCase
 from concierge.cloud_agent.domain.value_objects import TaskStatus
@@ -14,8 +14,8 @@ from concierge.cloud_agent.infrastructure.queue.memory import InMemoryTaskQueue
 
 
 @pytest.mark.anyio
-async def test_cloud_agent_processes_github_copilot_echo_task() -> None:
-    """End-to-end dispatch path: cloud_agent worker drives the github-copilot-echo agent.
+async def test_cloud_agent_processes_github_copilot_sdk_task() -> None:
+    """End-to-end dispatch path: cloud_agent worker drives the github-copilot-sdk agent.
 
     The Copilot SDK session is mocked at ``_run_session`` to keep the test
     hermetic — the cloud_agent layer should be agnostic to how the agent
@@ -27,12 +27,12 @@ async def test_cloud_agent_processes_github_copilot_echo_task() -> None:
     queue = InMemoryTaskQueue()
 
     task = await DispatchTaskUseCase(repository, queue).execute(
-        agent_type=AgentType.GITHUB_COPILOT_ECHO,
+        agent_type=AgentType.GITHUB_COPILOT_SDK,
         payload={"message": "Hello Copilot"},
     )
 
     with patch.object(
-        GitHubCopilotEchoAgent,
+        GitHubCopilotSdkAgent,
         "_run_session",
         new=AsyncMock(return_value="Hello Copilot"),
     ):

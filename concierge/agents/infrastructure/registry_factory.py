@@ -25,7 +25,7 @@ from concierge.agents.application.contracts import AgentRequest
 from concierge.agents.application.registry import AgentRegistry
 from concierge.agents.domain.agent_types import AgentType
 from concierge.agents.infrastructure.echo_agent import EchoAgent
-from concierge.agents.infrastructure.github_copilot_echo_agent import GitHubCopilotEchoAgent
+from concierge.agents.infrastructure.github_copilot_sdk_agent import GitHubCopilotSdkAgent
 from concierge.agents.infrastructure.langgraph_agent import LangGraphAgent
 from concierge.agents.infrastructure.microsoft_agent_framework_agent import MicrosoftAgentFrameworkAgent
 from concierge.agents.infrastructure.tools import (
@@ -50,11 +50,11 @@ def _langgraph_run_config(request: AgentRequest) -> RunnableConfig:
     )
 
 
-def _github_copilot_echo_run_config(request: AgentRequest) -> RunnableConfig:
+def _github_copilot_sdk_run_config(request: AgentRequest) -> RunnableConfig:
     return trace_config(
-        "cloud-agent-github-copilot-echo",
+        "cloud-agent-github-copilot-sdk",
         {
-            "run_name": AgentType.GITHUB_COPILOT_ECHO.value,
+            "run_name": AgentType.GITHUB_COPILOT_SDK.value,
             "metadata": {"task_id": request.context.get("task_id", "")},
         },
     )
@@ -96,10 +96,10 @@ def get_agent_registry() -> AgentRegistry:
         )
     )
     registry.register(
-        GitHubCopilotEchoAgent(
+        GitHubCopilotSdkAgent(
             model=settings.github_copilot_model,
             system_prompt=settings.github_copilot_system_prompt,
-            run_config_factory=_github_copilot_echo_run_config,
+            run_config_factory=_github_copilot_sdk_run_config,
         )
     )
     registry.register(

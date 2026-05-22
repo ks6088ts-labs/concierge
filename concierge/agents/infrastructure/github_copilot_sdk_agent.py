@@ -1,4 +1,4 @@
-"""GitHub Copilot SDK based echo agent.
+"""GitHub Copilot SDK based agent.
 
 Drives a real Copilot session per request, mirroring the README example:
 open a :class:`CopilotClient` context, ``create_session`` (also as an async
@@ -45,8 +45,8 @@ def _empty_run_config(_request: AgentRequest) -> RunnableConfig:
     return RunnableConfig()
 
 
-class GitHubCopilotEchoAgent:
-    """GitHub Copilot SDK-backed minimal agent.
+class GitHubCopilotSdkAgent:
+    """GitHub Copilot SDK-backed agent.
 
     For every ``handle()`` call the agent:
 
@@ -69,7 +69,7 @@ class GitHubCopilotEchoAgent:
         config.
     """
 
-    agent_type: str = AgentType.GITHUB_COPILOT_ECHO.value
+    agent_type: str = AgentType.GITHUB_COPILOT_SDK.value
 
     # Class-level fallback so instances constructed via ``__new__`` (used in
     # some unit tests to bypass settings loading) still have a usable factory.

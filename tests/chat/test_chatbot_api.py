@@ -194,7 +194,7 @@ async def test_get_agents_returns_default_and_available() -> None:
         # the UI can render it even when not currently usable.
         assert body["default"] in body["available"]
         # Built-in agents are always registered and selectable.
-        for built_in in (AgentType.ECHO, AgentType.LANGGRAPH, AgentType.GITHUB_COPILOT_ECHO):
+        for built_in in (AgentType.ECHO, AgentType.LANGGRAPH, AgentType.GITHUB_COPILOT_SDK):
             assert built_in in body["available"]
 
 

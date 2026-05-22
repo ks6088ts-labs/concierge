@@ -7,7 +7,7 @@ from typer.testing import CliRunner
 
 from concierge.agents.domain.agent_types import AgentType
 from concierge.agents.infrastructure.cli.app import app
-from concierge.agents.infrastructure.github_copilot_echo_agent import GitHubCopilotEchoAgent
+from concierge.agents.infrastructure.github_copilot_sdk_agent import GitHubCopilotSdkAgent
 from concierge.agents.infrastructure.microsoft_agent_framework_agent import MicrosoftAgentFrameworkAgent
 from concierge.agents.infrastructure.tools.image_generation import GeneratedImage, ImageGenerationResult
 
@@ -53,21 +53,21 @@ def test_cli_invoke_echo_with_message_shortcut() -> None:
     assert response["result"] == {"echo": "shortcut", "reply": "shortcut"}
 
 
-def test_cli_invoke_github_copilot_echo_with_message_shortcut() -> None:
-    """The CLI runs the github-copilot-echo agent end-to-end, with the SDK session mocked.
+def test_cli_invoke_github_copilot_sdk_with_message_shortcut() -> None:
+    """The CLI runs the github-copilot-sdk agent end-to-end, with the SDK session mocked.
 
     The Copilot SDK opens a real CLI subprocess on ``CopilotClient.__aenter__``,
     so the unit test patches ``_run_session`` to return a canned reply. The
     rest of the CLI ↔ agent ↔ registry chain still runs unmodified.
     """
     with patch.object(
-        GitHubCopilotEchoAgent,
+        GitHubCopilotSdkAgent,
         "_run_session",
         new=AsyncMock(return_value="Hello Copilot"),
     ):
         result = runner.invoke(
             app,
-            ["invoke", "--agent-type", AgentType.GITHUB_COPILOT_ECHO, "--message", "Hello Copilot"],
+            ["invoke", "--agent-type", AgentType.GITHUB_COPILOT_SDK, "--message", "Hello Copilot"],
         )
 
     assert result.exit_code == 0, result.output
@@ -162,12 +162,12 @@ def test_cli_info_for_langgraph_includes_settings() -> None:
     assert "image_api_version" in info["settings"]
 
 
-def test_cli_info_for_github_copilot_echo_includes_settings() -> None:
-    result = runner.invoke(app, ["info", "--agent-type", AgentType.GITHUB_COPILOT_ECHO])
+def test_cli_info_for_github_copilot_sdk_includes_settings() -> None:
+    result = runner.invoke(app, ["info", "--agent-type", AgentType.GITHUB_COPILOT_SDK])
     assert result.exit_code == 0, result.output
     info = json.loads(result.output)
-    assert info["agent_type"] == AgentType.GITHUB_COPILOT_ECHO
-    assert info["class"] == "GitHubCopilotEchoAgent"
+    assert info["agent_type"] == AgentType.GITHUB_COPILOT_SDK
+    assert info["class"] == "GitHubCopilotSdkAgent"
     assert "settings" in info
     assert "github_copilot_model" in info["settings"]
     assert "github_copilot_system_prompt" in info["settings"]

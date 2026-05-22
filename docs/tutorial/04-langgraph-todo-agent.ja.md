@@ -88,7 +88,9 @@ Todo API が接続失敗や 4xx/5xx を返した場合、ツールは例外を�
 このチュートリアルと同じ LangGraph エージェントパターンを
 [Cloud Agent サービス](../cloud_agent/index.ja.md) に組み込み、
 非同期バックグラウンドタスクとして実行することもできます。
-`concierge/cloud_agent/infrastructure/agents/langgraph_echo_agent.py` の
-`LangGraphEchoAgent` は、本チュートリアルと同じ `create_agent` API を使った
-最小リファレンス実装です。ディスパッチ例は
+`concierge/agents/infrastructure/langgraph_agent.py` の
+`LangGraphAgent` は、本チュートリアルと同じ `create_agent` API を
+使った最小リファレンス実装で、`registry_factory.py` で
+`echo` ツールビルダを 1 つ配線した preset として
+`langgraph-echo` が登録されています。ディスパッチ例は
 [Cloud Agent CLI ドキュメント](../cloud_agent/cli.ja.md) を参照してください。

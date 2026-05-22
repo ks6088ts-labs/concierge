@@ -134,7 +134,7 @@ uv run cloud-agent-cli agents
 Output:
 
 ```json
-["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo"]
+["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo", "langgraph-image-gen", "microsoft-agent-framework-image-gen"]
 ```
 
 ## Configuration

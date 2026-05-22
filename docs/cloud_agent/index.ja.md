@@ -20,9 +20,9 @@ flowchart LR
     UC --> Queue[TaskQueue]
     UC --> Registry[AgentRegistry]
     Registry --> Echo[EchoAgent]
-    Registry --> LGE[LangGraphEchoAgent]
+    Registry --> LG["LangGraphAgent\n(langgraph-echo / langgraph-image-gen)"]
     Registry --> GCE[GitHubCopilotEchoAgent]
-    Registry --> MAF[MicrosoftAgentFrameworkEchoAgent]
+    Registry --> MAF["MicrosoftAgentFrameworkAgent\n(microsoft-agent-framework-echo /\nmicrosoft-agent-framework-image-gen)"]
 ```
 
 ## エージェント拡張ポイント
@@ -32,7 +32,9 @@ flowchart LR
 
 ```python
 class Agent(Protocol):
-    agent_type: ClassVar[str]
+    # ``ClassVar[str]`` とインスタンス属性のどちらも受け入れるよう
+    # プレーンな属性宣言にしてある。
+    agent_type: str
     async def handle(self, request: AgentRequest) -> AgentResponse: ...
 ```
 
@@ -51,24 +53,26 @@ classDiagram
         +agent_type = "echo"
         +handle(request) AgentResponse
     }
-    class LangGraphEchoAgent {
-        +agent_type = "langgraph-echo"
+    class LangGraphAgent {
+        +agent_type (インスタンス)
+        +tool_builders
         +handle(request) AgentResponse
-        -_build_agent()
+        -_build_agent(side_outputs)
     }
     class GitHubCopilotEchoAgent {
         +agent_type = "github-copilot-echo"
         +handle(request) AgentResponse
     }
-    class MicrosoftAgentFrameworkEchoAgent {
-        +agent_type = "microsoft-agent-framework-echo"
+    class MicrosoftAgentFrameworkAgent {
+        +agent_type (インスタンス)
+        +tool_builders
         +handle(request) AgentResponse
-        -_build_agent()
+        -_build_agent(side_outputs)
     }
     Agent <|.. EchoAgent
-    Agent <|.. LangGraphEchoAgent
+    Agent <|.. LangGraphAgent
     Agent <|.. GitHubCopilotEchoAgent
-    Agent <|.. MicrosoftAgentFrameworkEchoAgent
+    Agent <|.. MicrosoftAgentFrameworkAgent
 ```
 
 ## 主要な設計方針
@@ -120,10 +124,14 @@ uv run cloud-agent-cli agents
 
 ## LangGraph エコーエージェントの実行
 
-`LangGraphEchoAgent`（`agent_type = "langgraph-echo"`）は、LangChain / LangGraph
-エージェントを `cloud_agent` タスクパイプラインに統合するためのリファレンス実装です。
-[`langchain.agents.create_agent`](https://python.langchain.com/) で構築され、
-`echo` ツールを 1 つだけ持ち、`init_chat_model` 経由で Azure 上のチャットモデルを利用します。
+`langgraph-echo` preset は、LangChain / LangGraph エージェントを
+`cloud_agent` タスクパイプラインに統合するためのリファレンス設定です。
+統合クラス `LangGraphAgent` で構築され、
+[`langchain.agents.create_agent`](https://python.langchain.com/) と
+`echo` ツールビルダ、`init_chat_model` 経由で Azure 上の
+チャットモデルを使用します。新しいツールのバリエーションを追加
+したい場合は、異なる `tool_builders` を渡して preset をもう 1 つ
+登録するだけで、エージェントクラスを新規作成する必要はありません。
 
 ### 前提条件
 
@@ -165,7 +173,7 @@ docker compose up -d postgres
 
 # 3. エージェントが登録されていることを確認
 uv run cloud-agent-cli agents
-# → ["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo"]
+# → ["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo", "langgraph-image-gen", "microsoft-agent-framework-image-gen"]
 
 # 4. ワーカー起動（ターミナル 1）
 uv run cloud-agent-cli worker
@@ -195,22 +203,24 @@ uv run cloud-agent-cli task get <task-id>
   "reply": "<最終 AI メッセージ>",
   "tool_calls": [
     {"name": "echo", "args": {"text": "Hello LangGraph"}}
-  ]
+  ],
+  "model": "azure_ai:gpt-5"
 }
 ```
 
 `reply` はグラフが出力した最後の `AIMessage.content`、`tool_calls` は処理中に
-モデルが発行した `(name, args)` のペアです。
+モデルが発行した `(name, args)` のペアです。`model` フィールドは設定した
+`AGENTS_LANGGRAPH_MODEL` をそのまま返します。
 
 ### カスタマイズ
 
 - `AGENTS_LANGGRAPH_MODEL`: 利用するチャットモデルを変更（例: `azure_ai:gpt-4o-mini`）。
 - `AGENTS_LANGGRAPH_SYSTEM_PROMPT`: 組み込みシステムプロンプトを差し替えてコード変更なしで挙動を変更。
-- 新しいエージェントを追加する場合は
-  [`concierge/agents/infrastructure/langgraph_echo_agent.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/agents/infrastructure/langgraph_echo_agent.py)
-  を雛形にツールを追加し、
+- 新しいツールバリエーションを追加する場合は、
+  [`concierge/agents/infrastructure/tools/`](https://github.com/ks6088ts-labs/concierge/tree/main/concierge/agents/infrastructure/tools)
+  にツールビルダを追加し、
   [`concierge/agents/infrastructure/registry_factory.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/agents/infrastructure/registry_factory.py)
-  に登録してください。
+  で `LangGraphAgent(...)` preset をもう 1 つ登録してください。
 
 ### トラブルシューティング
 

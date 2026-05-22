@@ -15,19 +15,15 @@ flowchart LR
     chat[chat ChatbotResponder] --> Registry
     cloud_agent[cloud_agent ワーカー] --> Registry
     Registry[AgentRegistry] --> Echo[EchoAgent]
-    Registry --> LGE[LangGraphEchoAgent]
+    Registry --> LG["LangGraphAgent\n(langgraph-echo / langgraph-image-gen)"]
     Registry --> GCE[GitHubCopilotEchoAgent]
-    Registry --> MAF[MicrosoftAgentFrameworkEchoAgent]
-    Registry --> LGIG[LangGraphImageGenAgent]
-    Registry --> MAFIG[MicrosoftAgentFrameworkImageGenAgent]
+    Registry --> MAF["MicrosoftAgentFrameworkAgent\n(microsoft-agent-framework-echo /\nmicrosoft-agent-framework-image-gen)"]
     subgraph agents["concierge/agents (共有カーネル)"]
         Registry
         Echo
-        LGE
+        LG
         GCE
         MAF
-        LGIG
-        MAFIG
     end
 ```
 
@@ -36,20 +32,21 @@ flowchart LR
 ```
 concierge/agents/
   domain/
+    agent_types.py         # AgentType (StrEnum) — agent_type 定数・preset 識別子
     exceptions.py          # AgentNotFoundError, AgentExecutionError
   application/
     contracts.py           # AgentRequest, AgentResponse, AgentChunk, Agent, StreamingAgent
     registry.py            # AgentRegistry
   infrastructure/
-    echo_agent.py          # EchoAgent
-    langgraph_echo_agent.py # LangGraphEchoAgent
-    github_copilot_echo_agent.py # GitHubCopilotEchoAgent
-    microsoft_agent_framework_echo_agent.py # MicrosoftAgentFrameworkEchoAgent
-    langgraph_image_gen_agent.py # LangGraphImageGenAgent
-    microsoft_agent_framework_image_gen_agent.py # MicrosoftAgentFrameworkImageGenAgent
+    echo_agent.py                          # EchoAgent (LLM 不要)
+    github_copilot_echo_agent.py           # GitHubCopilotEchoAgent
+    langgraph_agent.py                     # LangGraphAgent (preset ごとに tools を代入)
+    microsoft_agent_framework_agent.py     # MicrosoftAgentFrameworkAgent (preset 構成可)
     tools/
-      image_generation.py      # 共有 gpt-image-2 ツール
-    registry_factory.py    # get_agent_registry() (lru_cache)
+      echo_tool.py             # build_echo_langchain_tool / build_echo_maf_tool
+      image_generation.py      # フレームワーク不要の generate_image() 関数
+      image_generation_tool.py # image_gen_langchain_tool_factory / image_gen_maf_tool_factory
+    registry_factory.py    # get_agent_registry() — 統合クラス + preset を配線
 ```
 
 ## 契約
@@ -74,11 +71,13 @@ response: AgentResponse = await agent.handle(request)
 ### Agent Protocol
 
 ```python
-from typing import ClassVar
 from concierge.agents.application.contracts import Agent, AgentRequest, AgentResponse
 
 class MyAgent:
-    agent_type: ClassVar[str] = "my-agent"
+    # ``agent_type`` はクラス属性とインスタンス属性のどちらでも可。
+    # 複数 preset を同一クラスで提供する場合 (`LangGraphAgent` など) は
+    # インスタンス属性とする。
+    agent_type: str = "my-agent"
 
     async def handle(self, request: AgentRequest) -> AgentResponse:
         ...
@@ -89,11 +88,17 @@ class MyAgent:
 | agent_type | クラス | 説明 |
 |------------|--------|------|
 | `echo` | `EchoAgent` | `payload.message` をそのまま返す。LLM 不要。 |
-| `langgraph-echo` | `LangGraphEchoAgent` | `echo` ツールを持つ LangGraph エージェント。Azure AI チャットモデルを使用。 |
+| `langgraph-echo` | `LangGraphAgent` | `echo` ツールを持つ LangGraph (`create_agent`) preset。Azure AI チャットモデルを使用。 |
 | `github-copilot-echo` | `GitHubCopilotEchoAgent` | リクエストごとに GitHub Copilot SDK セッションを開き、ユーザーメッセージを `send` し、アシスタント応答を返します。 |
-| `microsoft-agent-framework-echo` | `MicrosoftAgentFrameworkEchoAgent` | Microsoft Agent Framework の `Agent` を `echo` ツール付きで実行し、最終応答テキストを返します。 |
-| `langgraph-image-gen` | `LangGraphImageGenAgent` | 共有 `generate_image()` ツールを呼ぶ LangGraph 画像生成エージェント。 |
-| `microsoft-agent-framework-image-gen` | `MicrosoftAgentFrameworkImageGenAgent` | 共有 `generate_image()` ツールを呼ぶ Microsoft Agent Framework 画像生成エージェント。 |
+| `microsoft-agent-framework-echo` | `MicrosoftAgentFrameworkAgent` | `echo` ツールを持つ Microsoft Agent Framework preset。最終応答テキストを返します。 |
+| `langgraph-image-gen` | `LangGraphAgent` | 共有 `generate_image()` ツールを配線した LangGraph 画像生成 preset。 |
+| `microsoft-agent-framework-image-gen` | `MicrosoftAgentFrameworkAgent` | 共有 `generate_image()` ツールを配線した Microsoft Agent Framework 画像生成 preset。 |
+
+フレームワークベースの 4 preset は 2 つの統合クラス
+(`LangGraphAgent` / `MicrosoftAgentFrameworkAgent`) を共有します。
+`registry_factory.py` で preset ごとに異なる `tool_builders` リストを
+渡して登録するため、新しいツールのバリエーションを追加する際に
+エージェントクラスを新規作成する必要はありません。
 
 ## 設定
 

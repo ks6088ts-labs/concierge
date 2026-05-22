@@ -92,6 +92,7 @@ curl -X POST http://localhost:8081/cloud-agent/tasks \
 ```
 
 **Error codes:**
+
 - `400` — unknown `agent_type`
 - `413` / `422` — validation error (payload too large, invalid fields)
 
@@ -149,7 +150,7 @@ List all registered agent types.
 
 ```json
 {
-  "agent_types": ["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo"]
+  "agent_types": ["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo", "langgraph-image-gen", "microsoft-agent-framework-image-gen"]
 }
 ```
 

@@ -8,7 +8,7 @@ from typer.testing import CliRunner
 from concierge.agents.domain.agent_types import AgentType
 from concierge.agents.infrastructure.cli.app import app
 from concierge.agents.infrastructure.github_copilot_echo_agent import GitHubCopilotEchoAgent
-from concierge.agents.infrastructure.microsoft_agent_framework_echo_agent import MicrosoftAgentFrameworkEchoAgent
+from concierge.agents.infrastructure.microsoft_agent_framework_agent import MicrosoftAgentFrameworkAgent
 from concierge.agents.infrastructure.tools.image_generation import GeneratedImage, ImageGenerationResult
 
 runner = CliRunner()
@@ -82,7 +82,7 @@ def test_cli_invoke_github_copilot_echo_with_message_shortcut() -> None:
 
 def test_cli_invoke_microsoft_agent_framework_echo_with_message_shortcut() -> None:
     with patch.object(
-        MicrosoftAgentFrameworkEchoAgent,
+        MicrosoftAgentFrameworkAgent,
         "_build_agent",
     ) as mock_build_agent:
         mock_framework_agent = AsyncMock()
@@ -96,11 +96,9 @@ def test_cli_invoke_microsoft_agent_framework_echo_with_message_shortcut() -> No
     assert result.exit_code == 0, result.output
     response = json.loads(result.output)
     assert response["status"] == "succeeded"
-    assert response["result"] == {
-        "echo": "hello",
-        "reply": "hello",
-        "model": "gpt-5",
-    }
+    assert response["result"]["echo"] == "hello"
+    assert response["result"]["reply"] == "hello"
+    assert response["result"]["model"] == "gpt-5"
 
 
 def test_cli_invoke_echo_missing_message_fails_with_exit_code_1() -> None:
@@ -154,7 +152,7 @@ def test_cli_info_for_langgraph_echo_includes_settings() -> None:
     assert result.exit_code == 0, result.output
     info = json.loads(result.output)
     assert info["agent_type"] == AgentType.LANGGRAPH_ECHO
-    assert info["class"] == "LangGraphEchoAgent"
+    assert info["class"] == "LangGraphAgent"
     assert "settings" in info
     assert "langgraph_model" in info["settings"]
     assert "langgraph_system_prompt" in info["settings"]
@@ -176,7 +174,7 @@ def test_cli_info_for_microsoft_agent_framework_echo_includes_settings() -> None
     assert result.exit_code == 0, result.output
     info = json.loads(result.output)
     assert info["agent_type"] == AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO
-    assert info["class"] == "MicrosoftAgentFrameworkEchoAgent"
+    assert info["class"] == "MicrosoftAgentFrameworkAgent"
     assert "settings" in info
     assert "microsoft_agent_framework_model" in info["settings"]
     assert "microsoft_agent_framework_system_prompt" in info["settings"]
@@ -187,7 +185,7 @@ def test_cli_info_for_langgraph_image_gen_includes_settings() -> None:
     assert result.exit_code == 0, result.output
     info = json.loads(result.output)
     assert info["agent_type"] == AgentType.LANGGRAPH_IMAGE_GEN
-    assert info["class"] == "LangGraphImageGenAgent"
+    assert info["class"] == "LangGraphAgent"
     assert "settings" in info
     assert "image_model" in info["settings"]
     assert "image_size" in info["settings"]
@@ -200,7 +198,7 @@ def test_cli_info_for_microsoft_agent_framework_image_gen_includes_settings() ->
     assert result.exit_code == 0, result.output
     info = json.loads(result.output)
     assert info["agent_type"] == AgentType.MICROSOFT_AGENT_FRAMEWORK_IMAGE_GEN
-    assert info["class"] == "MicrosoftAgentFrameworkImageGenAgent"
+    assert info["class"] == "MicrosoftAgentFrameworkAgent"
     assert "settings" in info
     assert "image_model" in info["settings"]
     assert "image_size" in info["settings"]

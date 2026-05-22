@@ -15,19 +15,15 @@ flowchart LR
     chat[chat ChatbotResponder] --> Registry
     cloud_agent[cloud_agent worker] --> Registry
     Registry[AgentRegistry] --> Echo[EchoAgent]
-    Registry --> LGE[LangGraphEchoAgent]
+    Registry --> LG["LangGraphAgent\n(langgraph-echo / langgraph-image-gen)"]
     Registry --> GCE[GitHubCopilotEchoAgent]
-    Registry --> MAF[MicrosoftAgentFrameworkEchoAgent]
-    Registry --> LGIG[LangGraphImageGenAgent]
-    Registry --> MAFIG[MicrosoftAgentFrameworkImageGenAgent]
+    Registry --> MAF["MicrosoftAgentFrameworkAgent\n(microsoft-agent-framework-echo /\nmicrosoft-agent-framework-image-gen)"]
     subgraph agents["concierge/agents (shared kernel)"]
         Registry
         Echo
-        LGE
+        LG
         GCE
         MAF
-        LGIG
-        MAFIG
     end
 ```
 
@@ -36,20 +32,21 @@ flowchart LR
 ```
 concierge/agents/
   domain/
+    agent_types.py         # AgentType (StrEnum) — canonical agent_type identifiers / presets
     exceptions.py          # AgentNotFoundError, AgentExecutionError
   application/
     contracts.py           # AgentRequest, AgentResponse, AgentChunk, Agent, StreamingAgent
     registry.py            # AgentRegistry
   infrastructure/
-    echo_agent.py          # EchoAgent
-    langgraph_echo_agent.py # LangGraphEchoAgent
-    github_copilot_echo_agent.py # GitHubCopilotEchoAgent
-    microsoft_agent_framework_echo_agent.py # MicrosoftAgentFrameworkEchoAgent
-    langgraph_image_gen_agent.py # LangGraphImageGenAgent
-    microsoft_agent_framework_image_gen_agent.py # MicrosoftAgentFrameworkImageGenAgent
+    echo_agent.py                          # EchoAgent (no LLM)
+    github_copilot_echo_agent.py           # GitHubCopilotEchoAgent
+    langgraph_agent.py                     # LangGraphAgent (configurable; tools supplied per preset)
+    microsoft_agent_framework_agent.py     # MicrosoftAgentFrameworkAgent (configurable)
     tools/
-      image_generation.py      # shared gpt-image-2 tool
-    registry_factory.py    # get_agent_registry() (lru_cache)
+      echo_tool.py             # build_echo_langchain_tool / build_echo_maf_tool
+      image_generation.py      # pure async generate_image() (no framework deps)
+      image_generation_tool.py # image_gen_langchain_tool_factory / image_gen_maf_tool_factory
+    registry_factory.py    # get_agent_registry() — wires presets onto unified classes
 ```
 
 ## Contracts
@@ -74,11 +71,13 @@ response: AgentResponse = await agent.handle(request)
 ### Agent Protocol
 
 ```python
-from typing import ClassVar
 from concierge.agents.application.contracts import Agent, AgentRequest, AgentResponse
 
 class MyAgent:
-    agent_type: ClassVar[str] = "my-agent"
+    # ``agent_type`` may be a class attribute (single-purpose agents) or an
+    # instance attribute (configurable agents that register as multiple
+    # presets under different ids — see ``LangGraphAgent``).
+    agent_type: str = "my-agent"
 
     async def handle(self, request: AgentRequest) -> AgentResponse:
         ...
@@ -99,11 +98,17 @@ agent = registry.resolve("my-agent")
 | agent_type | Class | Description |
 |------------|-------|-------------|
 | `echo` | `EchoAgent` | Returns `payload.message` verbatim. No LLM required. |
-| `langgraph-echo` | `LangGraphEchoAgent` | LangGraph agent with `echo` tool backed by an Azure AI chat model. |
+| `langgraph-echo` | `LangGraphAgent` | LangGraph (`create_agent`) preset wired with the `echo` tool, backed by an Azure AI chat model. |
 | `github-copilot-echo` | `GitHubCopilotEchoAgent` | Opens a GitHub Copilot SDK session per request, `send`s the user message, and returns the assistant reply. |
-| `microsoft-agent-framework-echo` | `MicrosoftAgentFrameworkEchoAgent` | Runs a Microsoft Agent Framework `Agent` with an `echo` tool and returns the final reply text. |
-| `langgraph-image-gen` | `LangGraphImageGenAgent` | LangGraph agent that calls shared `generate_image()` tool for gpt-image-2 image generation. |
-| `microsoft-agent-framework-image-gen` | `MicrosoftAgentFrameworkImageGenAgent` | Microsoft Agent Framework agent that calls shared `generate_image()` tool for gpt-image-2 image generation. |
+| `microsoft-agent-framework-echo` | `MicrosoftAgentFrameworkAgent` | Microsoft Agent Framework preset wired with the `echo` tool; returns the final reply text. |
+| `langgraph-image-gen` | `LangGraphAgent` | LangGraph preset wired with the shared `generate_image()` tool for gpt-image-2 image generation. |
+| `microsoft-agent-framework-image-gen` | `MicrosoftAgentFrameworkAgent` | Microsoft Agent Framework preset wired with the shared `generate_image()` tool for gpt-image-2 image generation. |
+
+The four framework-backed presets share two unified classes
+(`LangGraphAgent` and `MicrosoftAgentFrameworkAgent`). Each preset is
+registered with a different `tool_builders` list in
+`registry_factory.py`, so adding a new tool variant means adding another
+preset there — not adding another agent class.
 
 ## Configuration
 

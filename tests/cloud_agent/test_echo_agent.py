@@ -1,6 +1,6 @@
 """Unit tests for the built-in EchoAgent.
 
-The payload contract is intentionally aligned with LangGraphEchoAgent so the
+The payload contract is intentionally aligned with LangGraphAgent (echo preset) so the
 same dispatch payload (``{"message": "..."}``) works for either agent.
 """
 

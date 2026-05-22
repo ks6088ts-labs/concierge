@@ -1,39 +1,61 @@
+"""Unified LangGraph (LangChain ``create_agent``) agent.
+
+A single agent class that can be configured with any combination of tools.
+Different *presets* (echo, image generation, …) are produced by passing
+different tool builder lists at construction time; the framework wiring
+(chat model creation, message extraction, tool-call aggregation) is shared.
+
+The agent is instantiated (``_build_agent``) fresh on every ``handle()``
+call so that Azure credential acquisition does not block worker startup
+when the Foundry endpoint is not yet configured, and so per-call tool
+state (e.g. the ``images`` accumulator on the image-generation preset) is
+isolated between requests.
+
+Each tool builder is a ``Callable[[dict[str, Any]], BaseTool]``. The agent
+calls every builder once per ``handle()`` with a fresh ``side_outputs``
+dict; builders that emit side artifacts (such as generated images) attach
+them to that dict, which is merged into ``AgentResponse.result``.
+"""
+
 from __future__ import annotations
 
 from collections.abc import Callable
-from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any
 
 from azure.identity import DefaultAzureCredential
 from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import tool
 
 from concierge.agents.application.contracts import AgentRequest, AgentResponse
-from concierge.agents.domain.agent_types import AgentType
-from concierge.agents.infrastructure.tools import generate_image
 
 RunConfigFactory = Callable[[AgentRequest], RunnableConfig]
+LangChainToolBuilder = Callable[[dict[str, Any]], Any]
 
 
 def _empty_run_config(_request: AgentRequest) -> RunnableConfig:
     return RunnableConfig()
 
 
-class LangGraphImageGenAgent:
-    agent_type: ClassVar[str] = AgentType.LANGGRAPH_IMAGE_GEN.value
+class LangGraphAgent:
+    """Configurable LangChain ``create_agent``-based agent."""
+
     _run_config_factory: RunConfigFactory = staticmethod(_empty_run_config)
 
     def __init__(
         self,
+        *,
+        agent_type: str,
         model: str,
         system_prompt: str,
+        tool_builders: list[LangChainToolBuilder],
         run_config_factory: RunConfigFactory | None = None,
     ) -> None:
+        self.agent_type = agent_type
         self._model = model
         self._system_prompt = system_prompt
+        self._tool_builders = list(tool_builders)
         if run_config_factory is not None:
             self._run_config_factory = run_config_factory
 
@@ -45,71 +67,46 @@ class LangGraphImageGenAgent:
                 error="payload.message is required (non-empty string)",
             )
 
+        side_outputs: dict[str, Any] = {}
         try:
-            agent, generated_images = self._build_agent()
+            agent = self._build_agent(side_outputs)
+            config = self._run_config_factory(request)
             result = await agent.ainvoke(
                 {"messages": [("user", message)]},
-                config=self._run_config_factory(request),
+                config=config,
             )
         except Exception as exc:  # noqa: BLE001
             return AgentResponse(status="failed", error=f"{type(exc).__name__}: {exc}")
 
         messages = result.get("messages", []) if isinstance(result, dict) else []
-        return AgentResponse(
-            status="succeeded",
-            result={
-                "reply": self._final_text(messages),
-                "tool_calls": self._collect_tool_calls(messages),
-                "images": generated_images,
-                "model": self._model,
-            },
-        )
+        response_result: dict[str, Any] = {
+            "echo": message,
+            "reply": self._final_text(messages),
+            "tool_calls": self._collect_tool_calls(messages),
+            "model": self._model,
+        }
+        response_result.update(side_outputs)
+        return AgentResponse(status="succeeded", result=response_result)
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
 
     @staticmethod
     def _extract_message(payload: dict[str, Any]) -> str:
         value = payload.get("message")
         return value if isinstance(value, str) and value.strip() else ""
 
-    def _build_agent(self):
+    def _build_agent(self, side_outputs: dict[str, Any]):
         chat_model = init_chat_model(
             self._model,
             credential=DefaultAzureCredential(),
         )
-        save_dir = str((Path.cwd() / "generated_images").resolve())
-        generated_images: list[dict[str, Any]] = []
-
-        @tool
-        async def generate_image_tool(prompt: str, size: str = "1024x1024", n: int = 1) -> dict[str, Any]:
-            """Generate images with Foundry gpt-image-2 and return metadata."""
-            generated = await generate_image(prompt, size=size, n=n, save_dir=save_dir)
-            full_images = [
-                {
-                    "b64_json": image.b64_json,
-                    "path": image.path,
-                    "revised_prompt": image.revised_prompt,
-                }
-                for image in generated.images
-            ]
-            generated_images.extend(full_images)
-            return {
-                "images": [
-                    {
-                        "path": image["path"],
-                        "revised_prompt": image["revised_prompt"],
-                    }
-                    for image in full_images
-                ],
-                "size": generated.size,
-                "model": generated.model,
-            }
-
-        return (
-            create_agent(
-                model=chat_model,
-                tools=[generate_image_tool],
-                system_prompt=self._system_prompt,
-            ),
-            generated_images,
+        tools = [builder(side_outputs) for builder in self._tool_builders]
+        return create_agent(
+            model=chat_model,
+            tools=tools,
+            system_prompt=self._system_prompt,
         )
 
     @staticmethod

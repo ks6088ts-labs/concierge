@@ -1,4 +1,4 @@
-"""Unit tests for MicrosoftAgentFrameworkEchoAgent."""
+"""Unit tests for the unified MicrosoftAgentFrameworkAgent under its echo preset."""
 
 from __future__ import annotations
 
@@ -10,7 +10,8 @@ import pytest
 
 from concierge.agents.application.contracts import AgentRequest, AgentResponse
 from concierge.agents.domain.agent_types import AgentType
-from concierge.agents.infrastructure.microsoft_agent_framework_echo_agent import MicrosoftAgentFrameworkEchoAgent
+from concierge.agents.infrastructure.microsoft_agent_framework_agent import MicrosoftAgentFrameworkAgent
+from concierge.agents.infrastructure.tools import build_echo_maf_tool
 
 _MODEL = "gpt-5"
 _SYSTEM_PROMPT = "You are a minimal echo agent."
@@ -24,29 +25,34 @@ def _make_request(payload: dict[str, Any]) -> AgentRequest:
     )
 
 
+def _make_agent() -> MicrosoftAgentFrameworkAgent:
+    return MicrosoftAgentFrameworkAgent(
+        agent_type=AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO.value,
+        model=_MODEL,
+        system_prompt=_SYSTEM_PROMPT,
+        tool_builders=[build_echo_maf_tool],
+    )
+
+
 def test_extract_message_returns_message_string() -> None:
-    agent = MicrosoftAgentFrameworkEchoAgent.__new__(MicrosoftAgentFrameworkEchoAgent)
-    assert agent._extract_message({"message": "hello"}) == "hello"
+    assert MicrosoftAgentFrameworkAgent._extract_message({"message": "hello"}) == "hello"
 
 
 def test_extract_message_strips_whitespace() -> None:
-    agent = MicrosoftAgentFrameworkEchoAgent.__new__(MicrosoftAgentFrameworkEchoAgent)
-    assert agent._extract_message({"message": "   "}) == ""
+    assert MicrosoftAgentFrameworkAgent._extract_message({"message": "   "}) == ""
 
 
 def test_extract_message_missing_key() -> None:
-    agent = MicrosoftAgentFrameworkEchoAgent.__new__(MicrosoftAgentFrameworkEchoAgent)
-    assert agent._extract_message({}) == ""
+    assert MicrosoftAgentFrameworkAgent._extract_message({}) == ""
 
 
 def test_extract_message_non_string_value() -> None:
-    agent = MicrosoftAgentFrameworkEchoAgent.__new__(MicrosoftAgentFrameworkEchoAgent)
-    assert agent._extract_message({"message": 42}) == ""  # type: ignore[arg-type]
+    assert MicrosoftAgentFrameworkAgent._extract_message({"message": 42}) == ""  # type: ignore[arg-type]
 
 
 @pytest.mark.anyio
 async def test_handle_missing_message_returns_failed() -> None:
-    agent = MicrosoftAgentFrameworkEchoAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT)
+    agent = _make_agent()
     output: AgentResponse = await agent.handle(_make_request({}))
     assert output.status == "failed"
     assert output.error is not None
@@ -55,7 +61,7 @@ async def test_handle_missing_message_returns_failed() -> None:
 
 @pytest.mark.anyio
 async def test_handle_success() -> None:
-    agent = MicrosoftAgentFrameworkEchoAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT)
+    agent = _make_agent()
     mock_framework_agent = AsyncMock()
     mock_framework_agent.run = AsyncMock(return_value=SimpleNamespace(text="Hello MAF"))
 
@@ -71,7 +77,7 @@ async def test_handle_success() -> None:
 
 @pytest.mark.anyio
 async def test_handle_framework_exception_returns_failed() -> None:
-    agent = MicrosoftAgentFrameworkEchoAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT)
+    agent = _make_agent()
     mock_framework_agent = AsyncMock()
     mock_framework_agent.run = AsyncMock(side_effect=RuntimeError("framework error"))
 
@@ -84,8 +90,9 @@ async def test_handle_framework_exception_returns_failed() -> None:
     assert "framework error" in output.error
 
 
-def test_agent_type() -> None:
-    assert MicrosoftAgentFrameworkEchoAgent.agent_type == AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO
+def test_agent_type_is_instance_attribute() -> None:
+    agent = _make_agent()
+    assert agent.agent_type == AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO
 
 
 def test_registry_includes_microsoft_agent_framework_echo() -> None:

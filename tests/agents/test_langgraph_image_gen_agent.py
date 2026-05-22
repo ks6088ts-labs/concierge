@@ -1,3 +1,5 @@
+"""Unit tests for the unified LangGraphAgent under its image-generation preset."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -9,10 +11,12 @@ from langchain_core.messages.tool import ToolCall
 
 from concierge.agents.application.contracts import AgentRequest
 from concierge.agents.domain.agent_types import AgentType
-from concierge.agents.infrastructure.langgraph_image_gen_agent import LangGraphImageGenAgent
+from concierge.agents.infrastructure.langgraph_agent import LangGraphAgent
+from concierge.agents.infrastructure.tools import image_gen_langchain_tool_factory
 
 _MODEL = "azure_ai:gpt-5"
 _SYSTEM_PROMPT = "You are an image generation assistant."
+_SAVE_DIR = "/tmp/concierge-test-images"
 
 
 def _make_request(payload: dict[str, Any]) -> AgentRequest:
@@ -20,6 +24,15 @@ def _make_request(payload: dict[str, Any]) -> AgentRequest:
         agent_type=AgentType.LANGGRAPH_IMAGE_GEN,
         payload=payload,
         context={"task_id": "00000000-0000-0000-0000-000000000001"},
+    )
+
+
+def _make_agent() -> LangGraphAgent:
+    return LangGraphAgent(
+        agent_type=AgentType.LANGGRAPH_IMAGE_GEN.value,
+        model=_MODEL,
+        system_prompt=_SYSTEM_PROMPT,
+        tool_builders=[image_gen_langchain_tool_factory(_SAVE_DIR)],
     )
 
 
@@ -38,7 +51,7 @@ def _make_agent_result() -> dict[str, list[AIMessage]]:
 
 @pytest.mark.anyio
 async def test_handle_missing_message_returns_failed() -> None:
-    agent = LangGraphImageGenAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT)
+    agent = _make_agent()
     output = await agent.handle(_make_request({}))
     assert output.status == "failed"
     assert output.error is not None
@@ -47,12 +60,19 @@ async def test_handle_missing_message_returns_failed() -> None:
 
 @pytest.mark.anyio
 async def test_handle_success_returns_tool_calls_and_images() -> None:
-    agent = LangGraphImageGenAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT)
+    """The image-gen tool builder writes its captured ``generated_images`` list into
+    ``side_outputs["images"]``. We simulate that by stubbing ``_build_agent`` so it
+    populates the side outputs dict the same way the real implementation does."""
+    agent = _make_agent()
+    captured_images = [{"b64_json": "base64", "path": "/tmp/generated.png", "revised_prompt": "a cat"}]
     mock_compiled = AsyncMock()
     mock_compiled.ainvoke = AsyncMock(return_value=_make_agent_result())
-    captured_images = [{"b64_json": "base64", "path": "/tmp/generated.png", "revised_prompt": "a cat"}]
 
-    with patch.object(agent, "_build_agent", return_value=(mock_compiled, captured_images)):
+    def _fake_build_agent(side_outputs: dict[str, Any]):
+        side_outputs["images"] = captured_images
+        return mock_compiled
+
+    with patch.object(agent, "_build_agent", side_effect=_fake_build_agent):
         output = await agent.handle(_make_request({"message": "draw a cat"}))
 
     assert output.status == "succeeded"
@@ -67,9 +87,12 @@ async def test_handle_success_returns_tool_calls_and_images() -> None:
 
 @pytest.mark.anyio
 async def test_tool_calls_generate_image_with_expected_arguments() -> None:
-    agent = LangGraphImageGenAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT)
+    """End-to-end: the builder produces a real LangChain tool which forwards
+    its arguments to ``generate_image``. We patch ``create_agent`` to capture
+    that tool and invoke it directly."""
+    agent = _make_agent()
+    captured_tool: dict[str, Any] = {}
     mock_graph = AsyncMock()
-    captured_tool = {}
 
     async def _ainvoke(_inputs, **_kwargs):
         tool_fn = captured_tool["tool"]
@@ -83,12 +106,12 @@ async def test_tool_calls_generate_image_with_expected_arguments() -> None:
         return mock_graph
 
     with patch(
-        "concierge.agents.infrastructure.langgraph_image_gen_agent.create_agent",
+        "concierge.agents.infrastructure.langgraph_agent.create_agent",
         side_effect=_fake_create_agent,
     ):
-        with patch("concierge.agents.infrastructure.langgraph_image_gen_agent.init_chat_model"):
+        with patch("concierge.agents.infrastructure.langgraph_agent.init_chat_model"):
             with patch(
-                "concierge.agents.infrastructure.langgraph_image_gen_agent.generate_image",
+                "concierge.agents.infrastructure.tools.image_generation_tool.generate_image",
                 new=AsyncMock(
                     return_value=type(
                         "Result",
@@ -115,5 +138,6 @@ async def test_tool_calls_generate_image_with_expected_arguments() -> None:
     assert called_kwargs["n"] == 2
 
 
-def test_agent_type() -> None:
-    assert LangGraphImageGenAgent.agent_type == AgentType.LANGGRAPH_IMAGE_GEN
+def test_agent_type_is_instance_attribute() -> None:
+    agent = _make_agent()
+    assert agent.agent_type == AgentType.LANGGRAPH_IMAGE_GEN

@@ -109,8 +109,8 @@ uv run agents-cli info --agent-type microsoft-agent-framework-echo
 ```json
 {
   "agent_type": "langgraph-echo",
-  "class": "LangGraphEchoAgent",
-  "module": "concierge.agents.infrastructure.langgraph_echo_agent",
+  "class": "LangGraphAgent",
+  "module": "concierge.agents.infrastructure.langgraph_agent",
   "settings": {
     "langgraph_model": "azure_ai:gpt-5",
     "langgraph_system_prompt": "You are a minimal echo agent. ..."

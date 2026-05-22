@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
-from typing import Any, ClassVar
+from typing import Any
 
 from copilot import CopilotClient
 from copilot.generated.session_events import (
@@ -34,7 +34,7 @@ from concierge.agents.domain.agent_types import AgentType
 RunConfigFactory = Callable[[AgentRequest], RunnableConfig]
 """Factory that builds a ``RunnableConfig`` for a given request.
 
-Parity hook with :class:`LangGraphEchoAgent`. The Copilot SDK does not
+Parity hook with :class:`LangGraphAgent`. The Copilot SDK does not
 consume :class:`RunnableConfig` directly, but the registry / DI layer
 still passes a tracing-aware factory so cross-cutting concerns stay
 centralised.
@@ -69,7 +69,7 @@ class GitHubCopilotEchoAgent:
         config.
     """
 
-    agent_type: ClassVar[str] = AgentType.GITHUB_COPILOT_ECHO.value
+    agent_type: str = AgentType.GITHUB_COPILOT_ECHO.value
 
     # Class-level fallback so instances constructed via ``__new__`` (used in
     # some unit tests to bypass settings loading) still have a usable factory.

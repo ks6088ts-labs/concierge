@@ -36,7 +36,7 @@ uv run agents-cli list
 出力例:
 
 ```json
-["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo"]
+["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo", "langgraph-image-gen", "microsoft-agent-framework-image-gen"]
 ```
 
 ### エージェント実行
@@ -67,6 +67,8 @@ uv run agents-cli invoke \
 uv run agents-cli invoke --agent-type langgraph-echo --message "Hello LangGraph"
 uv run agents-cli invoke --agent-type github-copilot-echo --message "Hello Copilot"
 uv run agents-cli invoke --agent-type microsoft-agent-framework-echo --message "Hello MAF"
+uv run agents-cli invoke --agent-type langgraph-image-gen --message "Create an image of a red fox in watercolor style"
+uv run agents-cli invoke --agent-type microsoft-agent-framework-image-gen --message "Create an image of a red fox in watercolor style"
 ```
 
 `langgraph-echo` の成功時レスポンス例:
@@ -132,8 +134,35 @@ agents CLI が読むのは `AGENTS_*` 変数のみです。リポジトリ／キ
 | `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(組み込み)_ | `github-copilot-echo` のシステムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルト: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | `microsoft-agent-framework-echo` の `FoundryChatClient(model=...)` に渡すモデル文字列 |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(組み込み)_ | `microsoft-agent-framework-echo` のシステムプロンプト（`Agent(instructions=...)` に渡される） |
+| `AGENTS_IMAGE_MODEL` | `gpt-image-2` | Foundry 画像モデルのデプロイ名 |
+| `AGENTS_IMAGE_SIZE` | `1024x1024` | 既定サイズ（`1024x1024` / `1536x1024` / `1024x1536` / `4K`） |
+| `AGENTS_IMAGE_N` | `1` | 既定の生成枚数 |
+| `AGENTS_IMAGE_API_VERSION` | `2025-04-01-preview` | `openai.AzureOpenAI` に渡す API バージョン |
+| `AGENTS_LANGGRAPH_IMAGE_GEN_SYSTEM_PROMPT` | _(組み込み)_ | `langgraph-image-gen` 用システムプロンプト |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_IMAGE_GEN_SYSTEM_PROMPT` | _(組み込み)_ | `microsoft-agent-framework-image-gen` 用システムプロンプト |
 | `CONCIERGE_TRACING_ENABLED` | `false` | `--tracing` を渡さずに tracing を有効化 |
 | `CONCIERGE_MLFLOW_ENABLED` | `false` | `--mlflow` を渡さずに MLflow autologging を有効化 |
+
+### 画像を直接生成する（LLM 経由なし）
+
+```bash
+uv run agents-cli image generate \
+  --prompt "A photo of a Shibuya crossing at night" \
+  --size 1024x1024 \
+  --n 1 \
+  --output-dir ./out
+```
+
+オプション:
+
+| フラグ | 必須 | 説明 |
+|--------|------|------|
+| `--prompt` | 必須 | 画像生成プロンプト |
+| `--size` | 省略可 | 画像サイズ（既定: `AGENTS_IMAGE_SIZE`） |
+| `--n` | 省略可 | 生成枚数（既定: `AGENTS_IMAGE_N`） |
+| `--output-dir` | 省略可 | `.png` 出力先ディレクトリ（既定: `./generated_images`） |
+| `--json` | 省略可 | JSON 全体を出力 |
+| `--include-base64` | 省略可 | JSON 出力に `b64_json` を含める（未指定時は `null`） |
 
 エージェント一覧や契約の詳細は
 [Shared Agent Runtime 概要](index.ja.md) を参照してください。

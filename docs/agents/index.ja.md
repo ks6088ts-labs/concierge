@@ -18,12 +18,16 @@ flowchart LR
     Registry --> LGE[LangGraphEchoAgent]
     Registry --> GCE[GitHubCopilotEchoAgent]
     Registry --> MAF[MicrosoftAgentFrameworkEchoAgent]
+    Registry --> LGIG[LangGraphImageGenAgent]
+    Registry --> MAFIG[MicrosoftAgentFrameworkImageGenAgent]
     subgraph agents["concierge/agents (共有カーネル)"]
         Registry
         Echo
         LGE
         GCE
         MAF
+        LGIG
+        MAFIG
     end
 ```
 
@@ -41,6 +45,10 @@ concierge/agents/
     langgraph_echo_agent.py # LangGraphEchoAgent
     github_copilot_echo_agent.py # GitHubCopilotEchoAgent
     microsoft_agent_framework_echo_agent.py # MicrosoftAgentFrameworkEchoAgent
+    langgraph_image_gen_agent.py # LangGraphImageGenAgent
+    microsoft_agent_framework_image_gen_agent.py # MicrosoftAgentFrameworkImageGenAgent
+    tools/
+      image_generation.py      # 共有 gpt-image-2 ツール
     registry_factory.py    # get_agent_registry() (lru_cache)
 ```
 
@@ -84,6 +92,8 @@ class MyAgent:
 | `langgraph-echo` | `LangGraphEchoAgent` | `echo` ツールを持つ LangGraph エージェント。Azure AI チャットモデルを使用。 |
 | `github-copilot-echo` | `GitHubCopilotEchoAgent` | リクエストごとに GitHub Copilot SDK セッションを開き、ユーザーメッセージを `send` し、アシスタント応答を返します。 |
 | `microsoft-agent-framework-echo` | `MicrosoftAgentFrameworkEchoAgent` | Microsoft Agent Framework の `Agent` を `echo` ツール付きで実行し、最終応答テキストを返します。 |
+| `langgraph-image-gen` | `LangGraphImageGenAgent` | 共有 `generate_image()` ツールを呼ぶ LangGraph 画像生成エージェント。 |
+| `microsoft-agent-framework-image-gen` | `MicrosoftAgentFrameworkImageGenAgent` | 共有 `generate_image()` ツールを呼ぶ Microsoft Agent Framework 画像生成エージェント。 |
 
 ## 設定
 
@@ -97,6 +107,12 @@ class MyAgent:
 | `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(組み込み)_ | `github-copilot-echo` 用システムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルト: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | `microsoft-agent-framework-echo` の `FoundryChatClient(model=...)` に渡すモデル名。 |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(組み込み)_ | `microsoft-agent-framework-echo` の `Agent(instructions=...)` に渡すシステムプロンプト。 |
+| `AGENTS_IMAGE_MODEL` | `gpt-image-2` | 共有画像生成ツールが使う Foundry デプロイ名。 |
+| `AGENTS_IMAGE_SIZE` | `1024x1024` | 既定サイズ（`1024x1024` / `1536x1024` / `1024x1536` / `4K`）。 |
+| `AGENTS_IMAGE_N` | `1` | 1 回の呼び出しで要求する既定画像枚数。 |
+| `AGENTS_IMAGE_API_VERSION` | `2025-04-01-preview` | `openai.AzureOpenAI` に渡す API バージョン。 |
+| `AGENTS_LANGGRAPH_IMAGE_GEN_SYSTEM_PROMPT` | _(組み込み)_ | `langgraph-image-gen` 用システムプロンプト。 |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_IMAGE_GEN_SYSTEM_PROMPT` | _(組み込み)_ | `microsoft-agent-framework-image-gen` 用システムプロンプト。 |
 
 ## cloud_agent ワーカーからの利用
 

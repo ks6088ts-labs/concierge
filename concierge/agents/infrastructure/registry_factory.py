@@ -19,8 +19,12 @@ from concierge.agents.application.registry import AgentRegistry
 from concierge.agents.infrastructure.echo_agent import EchoAgent
 from concierge.agents.infrastructure.github_copilot_echo_agent import GitHubCopilotEchoAgent
 from concierge.agents.infrastructure.langgraph_echo_agent import LangGraphEchoAgent
+from concierge.agents.infrastructure.langgraph_image_gen_agent import LangGraphImageGenAgent
 from concierge.agents.infrastructure.microsoft_agent_framework_echo_agent import (
     MicrosoftAgentFrameworkEchoAgent,
+)
+from concierge.agents.infrastructure.microsoft_agent_framework_image_gen_agent import (
+    MicrosoftAgentFrameworkImageGenAgent,
 )
 from concierge.observability import trace_config
 from concierge.settings.agents import get_agents_settings
@@ -63,6 +67,26 @@ def _microsoft_agent_framework_echo_run_config(request: AgentRequest) -> Runnabl
     )
 
 
+def _langgraph_image_gen_run_config(request: AgentRequest) -> RunnableConfig:
+    return trace_config(
+        "cloud-agent-langgraph-image-gen",
+        {
+            "run_name": "langgraph-image-gen",
+            "metadata": {"task_id": request.context.get("task_id", "")},
+        },
+    )
+
+
+def _microsoft_agent_framework_image_gen_run_config(request: AgentRequest) -> RunnableConfig:
+    return trace_config(
+        "cloud-agent-microsoft-agent-framework-image-gen",
+        {
+            "run_name": "microsoft-agent-framework-image-gen",
+            "metadata": {"task_id": request.context.get("task_id", "")},
+        },
+    )
+
+
 @lru_cache(maxsize=1)
 def get_agent_registry() -> AgentRegistry:
     """Return the default AgentRegistry with all built-in agents registered."""
@@ -89,6 +113,21 @@ def get_agent_registry() -> AgentRegistry:
             system_prompt=settings.microsoft_agent_framework_system_prompt,
             project_endpoint=get_microsoft_foundry_settings().azure_ai_project_endpoint,
             run_config_factory=_microsoft_agent_framework_echo_run_config,
+        )
+    )
+    registry.register(
+        LangGraphImageGenAgent(
+            model=settings.langgraph_model,
+            system_prompt=settings.langgraph_image_gen_system_prompt,
+            run_config_factory=_langgraph_image_gen_run_config,
+        )
+    )
+    registry.register(
+        MicrosoftAgentFrameworkImageGenAgent(
+            model=settings.microsoft_agent_framework_model,
+            system_prompt=settings.microsoft_agent_framework_image_gen_system_prompt,
+            project_endpoint=get_microsoft_foundry_settings().azure_ai_project_endpoint,
+            run_config_factory=_microsoft_agent_framework_image_gen_run_config,
         )
     )
     return registry

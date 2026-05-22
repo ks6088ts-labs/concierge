@@ -8,6 +8,7 @@ from typer.testing import CliRunner
 from concierge.agents.infrastructure.cli.app import app
 from concierge.agents.infrastructure.github_copilot_echo_agent import GitHubCopilotEchoAgent
 from concierge.agents.infrastructure.microsoft_agent_framework_echo_agent import MicrosoftAgentFrameworkEchoAgent
+from concierge.agents.infrastructure.tools.image_generation import GeneratedImage, ImageGenerationResult
 
 runner = CliRunner()
 
@@ -28,6 +29,8 @@ def test_cli_list_returns_registered_agent_types() -> None:
     assert "langgraph-echo" in agent_types
     assert "github-copilot-echo" in agent_types
     assert "microsoft-agent-framework-echo" in agent_types
+    assert "langgraph-image-gen" in agent_types
+    assert "microsoft-agent-framework-image-gen" in agent_types
 
 
 def test_cli_invoke_echo_with_payload_succeeds() -> None:
@@ -180,6 +183,124 @@ def test_cli_info_for_microsoft_agent_framework_echo_includes_settings() -> None
     assert "settings" in info
     assert "microsoft_agent_framework_model" in info["settings"]
     assert "microsoft_agent_framework_system_prompt" in info["settings"]
+
+
+def test_cli_info_for_langgraph_image_gen_includes_settings() -> None:
+    result = runner.invoke(app, ["info", "--agent-type", "langgraph-image-gen"])
+    assert result.exit_code == 0, result.output
+    info = json.loads(result.output)
+    assert info["agent_type"] == "langgraph-image-gen"
+    assert info["class"] == "LangGraphImageGenAgent"
+    assert "settings" in info
+    assert "image_model" in info["settings"]
+    assert "image_size" in info["settings"]
+    assert "image_n" in info["settings"]
+    assert "image_api_version" in info["settings"]
+
+
+def test_cli_info_for_microsoft_agent_framework_image_gen_includes_settings() -> None:
+    result = runner.invoke(app, ["info", "--agent-type", "microsoft-agent-framework-image-gen"])
+    assert result.exit_code == 0, result.output
+    info = json.loads(result.output)
+    assert info["agent_type"] == "microsoft-agent-framework-image-gen"
+    assert info["class"] == "MicrosoftAgentFrameworkImageGenAgent"
+    assert "settings" in info
+    assert "image_model" in info["settings"]
+    assert "image_size" in info["settings"]
+    assert "image_n" in info["settings"]
+    assert "image_api_version" in info["settings"]
+
+
+def test_cli_image_generate_success_human_readable_output() -> None:
+    with patch(
+        "concierge.agents.infrastructure.cli.app.generate_image",
+        new=AsyncMock(
+            return_value=ImageGenerationResult(
+                images=[GeneratedImage(b64_json="abc", path="/tmp/generated.png", revised_prompt="revised prompt")],
+                model="gpt-image-2",
+                size="1024x1024",
+            )
+        ),
+    ):
+        result = runner.invoke(
+            app,
+            ["image", "generate", "--prompt", "A cat", "--output-dir", "/tmp/out"],
+        )
+
+    assert result.exit_code == 0, result.output
+    assert "Generated 1 image" in result.output
+    assert "/tmp/generated.png" in result.output
+
+
+def test_cli_image_generate_prompt_required() -> None:
+    result = runner.invoke(app, ["image", "generate"])
+    assert result.exit_code != 0
+
+
+def test_cli_image_generate_json_excludes_base64_by_default() -> None:
+    with patch(
+        "concierge.agents.infrastructure.cli.app.generate_image",
+        new=AsyncMock(
+            return_value=ImageGenerationResult(
+                images=[GeneratedImage(b64_json="abc", path="/tmp/generated.png", revised_prompt=None)],
+                model="gpt-image-2",
+                size="1024x1024",
+            )
+        ),
+    ):
+        result = runner.invoke(
+            app,
+            ["image", "generate", "--prompt", "A cat", "--json"],
+        )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["images"][0]["b64_json"] is None
+
+
+def test_cli_image_generate_json_includes_base64_when_requested() -> None:
+    with patch(
+        "concierge.agents.infrastructure.cli.app.generate_image",
+        new=AsyncMock(
+            return_value=ImageGenerationResult(
+                images=[GeneratedImage(b64_json="abc", path="/tmp/generated.png", revised_prompt=None)],
+                model="gpt-image-2",
+                size="1024x1024",
+            )
+        ),
+    ):
+        result = runner.invoke(
+            app,
+            ["image", "generate", "--prompt", "A cat", "--json", "--include-base64"],
+        )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["images"][0]["b64_json"] == "abc"
+
+
+def test_cli_image_generate_writes_file_in_output_dir(tmp_path) -> None:
+    out_file = tmp_path / "generated.png"
+    out_file.write_bytes(b"png-bytes")
+    with patch(
+        "concierge.agents.infrastructure.cli.app.generate_image",
+        new=AsyncMock(
+            return_value=ImageGenerationResult(
+                images=[GeneratedImage(b64_json=None, path=str(out_file), revised_prompt=None)],
+                model="gpt-image-2",
+                size="1024x1024",
+            )
+        ),
+    ):
+        result = runner.invoke(
+            app,
+            ["image", "generate", "--prompt", "A cat", "--output-dir", str(tmp_path), "--json"],
+        )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["images"][0]["path"] is not None
+    assert tmp_path.joinpath("generated.png").exists()
 
 
 def test_cli_info_unknown_agent_type_returns_error() -> None:

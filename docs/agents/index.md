@@ -18,12 +18,16 @@ flowchart LR
     Registry --> LGE[LangGraphEchoAgent]
     Registry --> GCE[GitHubCopilotEchoAgent]
     Registry --> MAF[MicrosoftAgentFrameworkEchoAgent]
+    Registry --> LGIG[LangGraphImageGenAgent]
+    Registry --> MAFIG[MicrosoftAgentFrameworkImageGenAgent]
     subgraph agents["concierge/agents (shared kernel)"]
         Registry
         Echo
         LGE
         GCE
         MAF
+        LGIG
+        MAFIG
     end
 ```
 
@@ -41,6 +45,10 @@ concierge/agents/
     langgraph_echo_agent.py # LangGraphEchoAgent
     github_copilot_echo_agent.py # GitHubCopilotEchoAgent
     microsoft_agent_framework_echo_agent.py # MicrosoftAgentFrameworkEchoAgent
+    langgraph_image_gen_agent.py # LangGraphImageGenAgent
+    microsoft_agent_framework_image_gen_agent.py # MicrosoftAgentFrameworkImageGenAgent
+    tools/
+      image_generation.py      # shared gpt-image-2 tool
     registry_factory.py    # get_agent_registry() (lru_cache)
 ```
 
@@ -94,6 +102,8 @@ agent = registry.resolve("my-agent")
 | `langgraph-echo` | `LangGraphEchoAgent` | LangGraph agent with `echo` tool backed by an Azure AI chat model. |
 | `github-copilot-echo` | `GitHubCopilotEchoAgent` | Opens a GitHub Copilot SDK session per request, `send`s the user message, and returns the assistant reply. |
 | `microsoft-agent-framework-echo` | `MicrosoftAgentFrameworkEchoAgent` | Runs a Microsoft Agent Framework `Agent` with an `echo` tool and returns the final reply text. |
+| `langgraph-image-gen` | `LangGraphImageGenAgent` | LangGraph agent that calls shared `generate_image()` tool for gpt-image-2 image generation. |
+| `microsoft-agent-framework-image-gen` | `MicrosoftAgentFrameworkImageGenAgent` | Microsoft Agent Framework agent that calls shared `generate_image()` tool for gpt-image-2 image generation. |
 
 ## Configuration
 
@@ -107,6 +117,12 @@ Agent settings are read from environment variables with the **`AGENTS_`** prefix
 | `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-echo` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Default: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | Model string passed to `FoundryChatClient(model=...)` for `microsoft-agent-framework-echo`. |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(built-in)_ | System prompt passed as `Agent(instructions=...)` for `microsoft-agent-framework-echo`. |
+| `AGENTS_IMAGE_MODEL` | `gpt-image-2` | Foundry deployment name used by shared image generation tool. |
+| `AGENTS_IMAGE_SIZE` | `1024x1024` | Default image size (`1024x1024` / `1536x1024` / `1024x1536` / `4K`). |
+| `AGENTS_IMAGE_N` | `1` | Default number of images requested per call. |
+| `AGENTS_IMAGE_API_VERSION` | `2025-04-01-preview` | API version passed to `openai.AzureOpenAI`. |
+| `AGENTS_LANGGRAPH_IMAGE_GEN_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `langgraph-image-gen`. |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_IMAGE_GEN_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `microsoft-agent-framework-image-gen`. |
 
 ## Using from cloud_agent worker
 

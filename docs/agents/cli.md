@@ -37,7 +37,7 @@ uv run agents-cli list
 Output:
 
 ```json
-["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo"]
+["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo", "langgraph-image-gen", "microsoft-agent-framework-image-gen"]
 ```
 
 ### Invoke an agent
@@ -68,6 +68,8 @@ so the same shortcut works for both:
 uv run agents-cli invoke --agent-type langgraph-echo --message "Hello LangGraph"
 uv run agents-cli invoke --agent-type github-copilot-echo --message "Hello Copilot"
 uv run agents-cli invoke --agent-type microsoft-agent-framework-echo --message "Hello MAF"
+uv run agents-cli invoke --agent-type langgraph-image-gen --message "Create an image of a red fox in watercolor style"
+uv run agents-cli invoke --agent-type microsoft-agent-framework-image-gen --message "Create an image of a red fox in watercolor style"
 ```
 
 A successful `langgraph-echo` response looks like:
@@ -133,8 +135,35 @@ belong to the `cloud_agent` and `chat` services and are not relevant here.
 | `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-echo` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Default: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | Model string passed to `FoundryChatClient(model=...)` for `microsoft-agent-framework-echo` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `microsoft-agent-framework-echo` (passed as `Agent(instructions=...)`) |
+| `AGENTS_IMAGE_MODEL` | `gpt-image-2` | Foundry image model deployment name |
+| `AGENTS_IMAGE_SIZE` | `1024x1024` | Default image size (`1024x1024` / `1536x1024` / `1024x1536` / `4K`) |
+| `AGENTS_IMAGE_N` | `1` | Default number of images per generation |
+| `AGENTS_IMAGE_API_VERSION` | `2025-04-01-preview` | API version passed to `openai.AzureOpenAI` |
+| `AGENTS_LANGGRAPH_IMAGE_GEN_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `langgraph-image-gen` |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_IMAGE_GEN_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `microsoft-agent-framework-image-gen` |
 | `CONCIERGE_TRACING_ENABLED` | `false` | Enable tracing without passing `--tracing` |
 | `CONCIERGE_MLFLOW_ENABLED` | `false` | Enable MLflow autologging without passing `--mlflow` |
+
+### Generate images directly (without LLM mediation)
+
+```bash
+uv run agents-cli image generate \
+  --prompt "A photo of a Shibuya crossing at night" \
+  --size 1024x1024 \
+  --n 1 \
+  --output-dir ./out
+```
+
+Options:
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--prompt` | Yes | Image prompt |
+| `--size` | No | Image size (defaults to `AGENTS_IMAGE_SIZE`) |
+| `--n` | No | Number of images (defaults to `AGENTS_IMAGE_N`) |
+| `--output-dir` | No | Output directory for `.png` files (defaults to `./generated_images`) |
+| `--json` | No | Print full JSON payload |
+| `--include-base64` | No | Include `b64_json` in JSON output (otherwise masked as `null`) |
 
 See the [Shared Agent Runtime overview](index.md) for the full agent
 catalogue and contract reference.

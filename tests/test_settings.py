@@ -102,6 +102,12 @@ def test_agents_settings_defaults(monkeypatch):
     monkeypatch.delenv("AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT", raising=False)
     monkeypatch.delenv("AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL", raising=False)
     monkeypatch.delenv("AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT", raising=False)
+    monkeypatch.delenv("AGENTS_IMAGE_MODEL", raising=False)
+    monkeypatch.delenv("AGENTS_IMAGE_SIZE", raising=False)
+    monkeypatch.delenv("AGENTS_IMAGE_N", raising=False)
+    monkeypatch.delenv("AGENTS_IMAGE_API_VERSION", raising=False)
+    monkeypatch.delenv("AGENTS_LANGGRAPH_IMAGE_GEN_SYSTEM_PROMPT", raising=False)
+    monkeypatch.delenv("AGENTS_MICROSOFT_AGENT_FRAMEWORK_IMAGE_GEN_SYSTEM_PROMPT", raising=False)
 
     settings = AgentsSettings(_env_file=None)  # ty: ignore[unknown-argument]
 
@@ -111,6 +117,12 @@ def test_agents_settings_defaults(monkeypatch):
     assert "helpful coding assistant" in settings.github_copilot_system_prompt.lower()
     assert settings.microsoft_agent_framework_model == "gpt-5"
     assert "echo" in settings.microsoft_agent_framework_system_prompt.lower()
+    assert settings.image_model == "gpt-image-2"
+    assert settings.image_size == "1024x1024"
+    assert settings.image_n == 1
+    assert settings.image_api_version == "2025-04-01-preview"
+    assert "generate_image_tool" in settings.langgraph_image_gen_system_prompt
+    assert "generate_image_tool" in settings.microsoft_agent_framework_image_gen_system_prompt
 
 
 def test_agents_settings_reads_env(monkeypatch):
@@ -121,6 +133,15 @@ def test_agents_settings_reads_env(monkeypatch):
     monkeypatch.setenv("AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT", "custom copilot prompt")
     monkeypatch.setenv("AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL", "gpt-4.1-mini")
     monkeypatch.setenv("AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT", "custom maf prompt")
+    monkeypatch.setenv("AGENTS_IMAGE_MODEL", "gpt-image-2-fast")
+    monkeypatch.setenv("AGENTS_IMAGE_SIZE", "1536x1024")
+    monkeypatch.setenv("AGENTS_IMAGE_N", "2")
+    monkeypatch.setenv("AGENTS_IMAGE_API_VERSION", "2025-05-01-preview")
+    monkeypatch.setenv("AGENTS_LANGGRAPH_IMAGE_GEN_SYSTEM_PROMPT", "custom lg image prompt")
+    monkeypatch.setenv(
+        "AGENTS_MICROSOFT_AGENT_FRAMEWORK_IMAGE_GEN_SYSTEM_PROMPT",
+        "custom maf image prompt",
+    )
 
     settings = AgentsSettings(_env_file=None)  # ty: ignore[unknown-argument]
 
@@ -130,6 +151,12 @@ def test_agents_settings_reads_env(monkeypatch):
     assert settings.github_copilot_system_prompt == "custom copilot prompt"
     assert settings.microsoft_agent_framework_model == "gpt-4.1-mini"
     assert settings.microsoft_agent_framework_system_prompt == "custom maf prompt"
+    assert settings.image_model == "gpt-image-2-fast"
+    assert settings.image_size == "1536x1024"
+    assert settings.image_n == 2
+    assert settings.image_api_version == "2025-05-01-preview"
+    assert settings.langgraph_image_gen_system_prompt == "custom lg image prompt"
+    assert settings.microsoft_agent_framework_image_gen_system_prompt == "custom maf image prompt"
 
 
 def test_cloud_agent_settings_no_langgraph_fields(monkeypatch):

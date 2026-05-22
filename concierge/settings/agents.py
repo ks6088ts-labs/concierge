@@ -24,6 +24,18 @@ class AgentsSettings(BaseSettings):
         "When you receive any user input, call the `echo` tool with the user's text verbatim, "
         "then return the tool result as your final answer in one sentence."
     )
+    image_model: str = "gpt-image-2"
+    image_size: str = "1024x1024"
+    image_n: int = 1
+    image_api_version: str = "2025-04-01-preview"
+    langgraph_image_gen_system_prompt: str = (
+        "You are an assistant that calls the `generate_image_tool` to produce images for the user. "
+        "Always call the tool with a concise English prompt."
+    )
+    microsoft_agent_framework_image_gen_system_prompt: str = (
+        "You are an assistant that calls the `generate_image_tool` to produce images for the user. "
+        "Always call the tool with a concise English prompt."
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",

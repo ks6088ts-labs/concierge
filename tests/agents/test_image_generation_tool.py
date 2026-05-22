@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -17,7 +18,7 @@ async def test_generate_image_calls_client_with_expected_arguments() -> None:
             data=[SimpleNamespace(b64_json=base64.b64encode(b"png-bytes").decode("utf-8"), revised_prompt="revised")]
         )
     )
-    client = SimpleNamespace(images=SimpleNamespace(generate=mock_generate))
+    client: Any = SimpleNamespace(images=SimpleNamespace(generate=mock_generate))
 
     result = await generate_image(
         "A cat",
@@ -43,7 +44,7 @@ async def test_generate_image_calls_client_with_expected_arguments() -> None:
 @pytest.mark.anyio
 async def test_generate_image_writes_png_when_save_dir_is_provided(tmp_path) -> None:
     png_b64 = base64.b64encode(b"fake-png").decode("utf-8")
-    client = SimpleNamespace(
+    client: Any = SimpleNamespace(
         images=SimpleNamespace(generate=Mock(return_value=SimpleNamespace(data=[SimpleNamespace(b64_json=png_b64)])))
     )
 
@@ -72,7 +73,7 @@ async def test_generate_image_rejects_invalid_n(n: int) -> None:
 
 @pytest.mark.anyio
 async def test_generate_image_wraps_client_errors() -> None:
-    client = SimpleNamespace(images=SimpleNamespace(generate=Mock(side_effect=RuntimeError("boom"))))
+    client: Any = SimpleNamespace(images=SimpleNamespace(generate=Mock(side_effect=RuntimeError("boom"))))
 
     with pytest.raises(ImageGenerationError, match="failed to generate image"):
         await generate_image("A cat", client=client, model="gpt-image-2")
@@ -80,9 +81,11 @@ async def test_generate_image_wraps_client_errors() -> None:
 
 @pytest.mark.anyio
 async def test_generate_image_wraps_processing_errors() -> None:
-    client = SimpleNamespace(
+    client: Any = SimpleNamespace(
         images=SimpleNamespace(
-            generate=Mock(return_value=SimpleNamespace(data=[SimpleNamespace(b64_json=base64.b64encode(b"x").decode())]))
+            generate=Mock(
+                return_value=SimpleNamespace(data=[SimpleNamespace(b64_json=base64.b64encode(b"x").decode())])
+            )
         )
     )
 

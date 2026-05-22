@@ -94,7 +94,9 @@ async def test_tool_calls_generate_image_with_expected_arguments() -> None:
                         (),
                         {
                             "images": [
-                                type("Image", (), {"b64_json": "b64", "path": "/tmp/out.png", "revised_prompt": "cat"})()
+                                type(
+                                    "Image", (), {"b64_json": "b64", "path": "/tmp/out.png", "revised_prompt": "cat"}
+                                )()
                             ],
                             "model": "gpt-image-2",
                             "size": "1536x1024",
@@ -106,6 +108,7 @@ async def test_tool_calls_generate_image_with_expected_arguments() -> None:
 
     assert output.status == "succeeded"
     mock_generate_image.assert_awaited_once()
+    assert mock_generate_image.await_args is not None
     called_kwargs = mock_generate_image.await_args.kwargs
     assert called_kwargs["size"] == "1536x1024"
     assert called_kwargs["n"] == 2

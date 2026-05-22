@@ -101,6 +101,7 @@ async def test_tool_calls_generate_image_with_expected_arguments() -> None:
 
     assert output.status == "succeeded"
     mock_generate_image.assert_awaited_once()
+    assert mock_generate_image.await_args is not None
     called_kwargs = mock_generate_image.await_args.kwargs
     assert called_kwargs["size"] == "1024x1536"
     assert called_kwargs["n"] == 2

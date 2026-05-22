@@ -20,9 +20,9 @@ flowchart LR
     UC --> Queue[TaskQueue]
     UC --> Registry[AgentRegistry]
     Registry --> Echo[EchoAgent]
-    Registry --> LG["LangGraphAgent\n(langgraph-echo / langgraph-image-gen)"]
+    Registry --> LG["LangGraphAgent\n(langgraph)"]
     Registry --> GCE[GitHubCopilotEchoAgent]
-    Registry --> MAF["MicrosoftAgentFrameworkAgent\n(microsoft-agent-framework-echo /\nmicrosoft-agent-framework-image-gen)"]
+    Registry --> MAF["MicrosoftAgentFrameworkAgent\n(microsoft-agent-framework)"]
 ```
 
 ## エージェント拡張ポイント
@@ -122,16 +122,17 @@ uv run cloud-agent-cli task dispatch --agent-type echo --payload '{"message": "h
 uv run cloud-agent-cli agents
 ```
 
-## LangGraph エコーエージェントの実行
+## LangGraph エージェントの実行
 
-`langgraph-echo` preset は、LangChain / LangGraph エージェントを
+`langgraph` preset は、LangChain / LangGraph エージェントを
 `cloud_agent` タスクパイプラインに統合するためのリファレンス設定です。
 統合クラス `LangGraphAgent` で構築され、
 [`langchain.agents.create_agent`](https://python.langchain.com/) と
-`echo` ツールビルダ、`init_chat_model` 経由で Azure 上の
-チャットモデルを使用します。新しいツールのバリエーションを追加
-したい場合は、異なる `tool_builders` を渡して preset をもう 1 つ
-登録するだけで、エージェントクラスを新規作成する必要はありません。
+`echo` / `generate_image_tool` のツールビルダ、`init_chat_model` 経由で
+Azure 上のチャットモデルを使用します。LLM がユーザーのリクエストに
+応じて適切なツールを選択します。ツールを追加したい場合は
+`tool_builders` に追加するだけで、エージェントクラスを新規作成する
+必要はありません。
 
 ### 前提条件
 
@@ -173,14 +174,14 @@ docker compose up -d postgres
 
 # 3. エージェントが登録されていることを確認
 uv run cloud-agent-cli agents
-# → ["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo", "langgraph-image-gen", "microsoft-agent-framework-image-gen"]
+# → ["echo", "langgraph", "github-copilot-echo", "microsoft-agent-framework"]
 
 # 4. ワーカー起動（ターミナル 1）
 uv run cloud-agent-cli worker
 
 # 5. タスク投入（ターミナル 2）
 uv run cloud-agent-cli task dispatch \
-  --agent-type langgraph-echo \
+  --agent-type langgraph \
   --payload '{"message": "Hello LangGraph"}'
 
 # 6. 上記で出力された task id で結果を取得

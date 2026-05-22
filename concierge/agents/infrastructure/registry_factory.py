@@ -7,11 +7,11 @@ callbacks, run metadata, ...): individual agent classes stay decoupled from
 :mod:`concierge.observability`, and the registry passes them a factory that
 builds a per-request :class:`RunnableConfig`.
 
-The framework-backed agents (LangGraph / Microsoft Agent Framework) are
-instantiated as *presets* of a single underlying class — different
-``agent_type`` ids share the same class but compose different tool
-builders. Adding a new tool variant means adding another preset here, not
-another agent class.
+The framework-backed agents (``langgraph`` / ``microsoft-agent-framework``)
+are *generic* — they are constructed once with the full set of tool
+builders and rely on the LLM to pick the right tool for each request.
+Adding a new tool means adding another builder to the lists below; no
+new ``agent_type`` is required.
 """
 
 from __future__ import annotations
@@ -39,17 +39,12 @@ from concierge.settings.agents import get_agents_settings
 from concierge.settings.microsoft_foundry import get_microsoft_foundry_settings
 
 
-def _langgraph_echo_run_config(request: AgentRequest) -> RunnableConfig:
-    """Build a tracing-aware ``RunnableConfig`` for langgraph-echo runs.
-
-    When tracing is disabled at the application level, ``trace_config``
-    returns a plain config without callbacks, so this factory is safe to
-    call unconditionally.
-    """
+def _langgraph_run_config(request: AgentRequest) -> RunnableConfig:
+    """Build a tracing-aware ``RunnableConfig`` for langgraph runs."""
     return trace_config(
-        "cloud-agent-langgraph-echo",
+        "cloud-agent-langgraph",
         {
-            "run_name": AgentType.LANGGRAPH_ECHO.value,
+            "run_name": AgentType.LANGGRAPH.value,
             "metadata": {"task_id": request.context.get("task_id", "")},
         },
     )
@@ -65,31 +60,11 @@ def _github_copilot_echo_run_config(request: AgentRequest) -> RunnableConfig:
     )
 
 
-def _microsoft_agent_framework_echo_run_config(request: AgentRequest) -> RunnableConfig:
+def _microsoft_agent_framework_run_config(request: AgentRequest) -> RunnableConfig:
     return trace_config(
-        "cloud-agent-microsoft-agent-framework-echo",
+        "cloud-agent-microsoft-agent-framework",
         {
-            "run_name": AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO.value,
-            "metadata": {"task_id": request.context.get("task_id", "")},
-        },
-    )
-
-
-def _langgraph_image_gen_run_config(request: AgentRequest) -> RunnableConfig:
-    return trace_config(
-        "cloud-agent-langgraph-image-gen",
-        {
-            "run_name": AgentType.LANGGRAPH_IMAGE_GEN.value,
-            "metadata": {"task_id": request.context.get("task_id", "")},
-        },
-    )
-
-
-def _microsoft_agent_framework_image_gen_run_config(request: AgentRequest) -> RunnableConfig:
-    return trace_config(
-        "cloud-agent-microsoft-agent-framework-image-gen",
-        {
-            "run_name": AgentType.MICROSOFT_AGENT_FRAMEWORK_IMAGE_GEN.value,
+            "run_name": AgentType.MICROSOFT_AGENT_FRAMEWORK.value,
             "metadata": {"task_id": request.context.get("task_id", "")},
         },
     )
@@ -110,11 +85,14 @@ def get_agent_registry() -> AgentRegistry:
     registry.register(EchoAgent())
     registry.register(
         LangGraphAgent(
-            agent_type=AgentType.LANGGRAPH_ECHO.value,
+            agent_type=AgentType.LANGGRAPH.value,
             model=settings.langgraph_model,
             system_prompt=settings.langgraph_system_prompt,
-            tool_builders=[build_echo_langchain_tool],
-            run_config_factory=_langgraph_echo_run_config,
+            tool_builders=[
+                build_echo_langchain_tool,
+                image_gen_langchain_tool_factory(save_dir),
+            ],
+            run_config_factory=_langgraph_run_config,
         )
     )
     registry.register(
@@ -126,31 +104,15 @@ def get_agent_registry() -> AgentRegistry:
     )
     registry.register(
         MicrosoftAgentFrameworkAgent(
-            agent_type=AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO.value,
+            agent_type=AgentType.MICROSOFT_AGENT_FRAMEWORK.value,
             model=settings.microsoft_agent_framework_model,
             system_prompt=settings.microsoft_agent_framework_system_prompt,
-            tool_builders=[build_echo_maf_tool],
+            tool_builders=[
+                build_echo_maf_tool,
+                image_gen_maf_tool_factory(save_dir),
+            ],
             project_endpoint=foundry_endpoint,
-            run_config_factory=_microsoft_agent_framework_echo_run_config,
-        )
-    )
-    registry.register(
-        LangGraphAgent(
-            agent_type=AgentType.LANGGRAPH_IMAGE_GEN.value,
-            model=settings.langgraph_model,
-            system_prompt=settings.langgraph_image_gen_system_prompt,
-            tool_builders=[image_gen_langchain_tool_factory(save_dir)],
-            run_config_factory=_langgraph_image_gen_run_config,
-        )
-    )
-    registry.register(
-        MicrosoftAgentFrameworkAgent(
-            agent_type=AgentType.MICROSOFT_AGENT_FRAMEWORK_IMAGE_GEN.value,
-            model=settings.microsoft_agent_framework_model,
-            system_prompt=settings.microsoft_agent_framework_image_gen_system_prompt,
-            tool_builders=[image_gen_maf_tool_factory(save_dir)],
-            project_endpoint=foundry_endpoint,
-            run_config_factory=_microsoft_agent_framework_image_gen_run_config,
+            run_config_factory=_microsoft_agent_framework_run_config,
         )
     )
     return registry

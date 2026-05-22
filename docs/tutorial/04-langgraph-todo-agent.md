@@ -91,8 +91,9 @@ The same LangGraph agent pattern can be integrated into the
 async background task.  The `LangGraphAgent` class in
 `concierge/agents/infrastructure/langgraph_agent.py` is a minimal
 reference implementation that follows the same `create_agent` API used
-in this tutorial; the `langgraph-echo` preset registered in
-`registry_factory.py` wires it up with a single `echo` tool builder.
+in this tutorial; the `langgraph` preset registered in
+`registry_factory.py` wires it up with `echo` and `generate_image_tool`
+tool builders so the LLM can pick the right one per request.
 See the
-[Cloud Agent CLI docs](../cloud_agent/cli.md#dispatch-a-langgraph-echo-task)
+[Cloud Agent CLI docs](../cloud_agent/cli.md#dispatch-a-langgraph-task)
 for a dispatch example.

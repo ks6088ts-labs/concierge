@@ -269,14 +269,18 @@ def agent_info(
         "module": cls.__module__,
     }
 
-    # Surface langgraph-specific settings when relevant. We read them from
+    # Surface framework-specific settings when relevant. We read them from
     # the configured settings rather than introspecting private attributes
     # so the output stays stable regardless of how the agent was wired.
-    if agent_type == AgentType.LANGGRAPH_ECHO:
+    if agent_type == AgentType.LANGGRAPH:
         agents_settings = get_agents_settings()
         info["settings"] = {
             "langgraph_model": agents_settings.langgraph_model,
             "langgraph_system_prompt": agents_settings.langgraph_system_prompt,
+            "image_model": agents_settings.image_model,
+            "image_size": agents_settings.image_size,
+            "image_n": agents_settings.image_n,
+            "image_api_version": agents_settings.image_api_version,
         }
     if agent_type == AgentType.GITHUB_COPILOT_ECHO:
         agents_settings = get_agents_settings()
@@ -284,29 +288,11 @@ def agent_info(
             "github_copilot_model": agents_settings.github_copilot_model,
             "github_copilot_system_prompt": agents_settings.github_copilot_system_prompt,
         }
-    if agent_type == AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO:
+    if agent_type == AgentType.MICROSOFT_AGENT_FRAMEWORK:
         agents_settings = get_agents_settings()
         info["settings"] = {
             "microsoft_agent_framework_model": agents_settings.microsoft_agent_framework_model,
             "microsoft_agent_framework_system_prompt": agents_settings.microsoft_agent_framework_system_prompt,
-        }
-    if agent_type == AgentType.LANGGRAPH_IMAGE_GEN:
-        agents_settings = get_agents_settings()
-        info["settings"] = {
-            "langgraph_model": agents_settings.langgraph_model,
-            "langgraph_image_gen_system_prompt": agents_settings.langgraph_image_gen_system_prompt,
-            "image_model": agents_settings.image_model,
-            "image_size": agents_settings.image_size,
-            "image_n": agents_settings.image_n,
-            "image_api_version": agents_settings.image_api_version,
-        }
-    if agent_type == AgentType.MICROSOFT_AGENT_FRAMEWORK_IMAGE_GEN:
-        agents_settings = get_agents_settings()
-        info["settings"] = {
-            "microsoft_agent_framework_model": agents_settings.microsoft_agent_framework_model,
-            "microsoft_agent_framework_image_gen_system_prompt": (
-                agents_settings.microsoft_agent_framework_image_gen_system_prompt
-            ),
             "image_model": agents_settings.image_model,
             "image_size": agents_settings.image_size,
             "image_n": agents_settings.image_n,

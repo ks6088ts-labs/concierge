@@ -23,7 +23,7 @@ _SYSTEM_PROMPT = "You are a minimal echo agent."
 
 def _make_request(payload: dict[str, Any]) -> AgentRequest:
     return AgentRequest(
-        agent_type=AgentType.LANGGRAPH_ECHO,
+        agent_type=AgentType.LANGGRAPH,
         payload=payload,
         context={"task_id": "00000000-0000-0000-0000-000000000001"},
     )
@@ -31,7 +31,7 @@ def _make_request(payload: dict[str, Any]) -> AgentRequest:
 
 def _make_agent() -> LangGraphAgent:
     return LangGraphAgent(
-        agent_type=AgentType.LANGGRAPH_ECHO.value,
+        agent_type=AgentType.LANGGRAPH.value,
         model=_MODEL,
         system_prompt=_SYSTEM_PROMPT,
         tool_builders=[build_echo_langchain_tool],
@@ -176,18 +176,18 @@ async def test_handle_llm_exception_returns_failed() -> None:
 def test_agent_type_is_instance_attribute() -> None:
     """``agent_type`` is set per-instance so the same class can power multiple presets."""
     agent = _make_agent()
-    assert agent.agent_type == AgentType.LANGGRAPH_ECHO
+    assert agent.agent_type == AgentType.LANGGRAPH
 
 
 # ---------------------------------------------------------------------------
-# Tests: registry includes langgraph-echo
+# Tests: registry includes langgraph
 # ---------------------------------------------------------------------------
 
 
-def test_registry_includes_langgraph_echo() -> None:
-    """langgraph-echo must be registered in the default AgentRegistry."""
+def test_registry_includes_langgraph() -> None:
+    """langgraph must be registered in the default AgentRegistry."""
     from concierge.agents.infrastructure.registry_factory import get_agent_registry
 
     get_agent_registry.cache_clear()
     registry = get_agent_registry()
-    assert AgentType.LANGGRAPH_ECHO in registry.list_agent_types()
+    assert AgentType.LANGGRAPH in registry.list_agent_types()

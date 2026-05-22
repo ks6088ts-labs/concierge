@@ -158,5 +158,5 @@ uv run chat-cli conversation delete "$CONV_ID"
 | `CHAT_BOT_DISPLAY_NAME` | `Concierge AI` | 文字列 | ボット参加者の表示名 |
 | `CHAT_BOT_PARTICIPANT_ID` | `00000000-0000-0000-0000-000000000001` | UUID | ボット参加者の固定 ID |
 | `CHAT_BOT_HISTORY_LIMIT` | `20` | int | モデルに渡すコンテキストの最大件数 |
-| `CHAT_BOT_AGENT_TYPE` | `foundry` | 文字列 | レスポンダ選択。`foundry`（既定、ストリーミング）か登録済みエージェント名（`echo` / `langgraph-echo` / `github-copilot-echo` / `microsoft-agent-framework-echo`） |
+| `CHAT_BOT_AGENT_TYPE` | `foundry` | 文字列 | レスポンダ選択。`foundry`（既定、ストリーミング）か登録済みエージェント名（`echo` / `langgraph` / `github-copilot-echo` / `microsoft-agent-framework`） |
 | `AZURE_AI_PROJECT_ENDPOINT` | 未設定 | URL 文字列 | Foundry レスポンダ有効化に必須（未設定のとき `message reply` は終了コード 1） |

@@ -80,7 +80,7 @@ def test_cli_invoke_github_copilot_echo_with_message_shortcut() -> None:
     }
 
 
-def test_cli_invoke_microsoft_agent_framework_echo_with_message_shortcut() -> None:
+def test_cli_invoke_microsoft_agent_framework_with_message_shortcut() -> None:
     with patch.object(
         MicrosoftAgentFrameworkAgent,
         "_build_agent",
@@ -90,7 +90,7 @@ def test_cli_invoke_microsoft_agent_framework_echo_with_message_shortcut() -> No
         mock_build_agent.return_value = mock_framework_agent
         result = runner.invoke(
             app,
-            ["invoke", "--agent-type", AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO, "--message", "hello"],
+            ["invoke", "--agent-type", AgentType.MICROSOFT_AGENT_FRAMEWORK, "--message", "hello"],
         )
 
     assert result.exit_code == 0, result.output
@@ -147,15 +147,19 @@ def test_cli_info_for_echo_agent() -> None:
     assert info["module"].startswith("concierge.agents.infrastructure")
 
 
-def test_cli_info_for_langgraph_echo_includes_settings() -> None:
-    result = runner.invoke(app, ["info", "--agent-type", AgentType.LANGGRAPH_ECHO])
+def test_cli_info_for_langgraph_includes_settings() -> None:
+    result = runner.invoke(app, ["info", "--agent-type", AgentType.LANGGRAPH])
     assert result.exit_code == 0, result.output
     info = json.loads(result.output)
-    assert info["agent_type"] == AgentType.LANGGRAPH_ECHO
+    assert info["agent_type"] == AgentType.LANGGRAPH
     assert info["class"] == "LangGraphAgent"
     assert "settings" in info
     assert "langgraph_model" in info["settings"]
     assert "langgraph_system_prompt" in info["settings"]
+    assert "image_model" in info["settings"]
+    assert "image_size" in info["settings"]
+    assert "image_n" in info["settings"]
+    assert "image_api_version" in info["settings"]
 
 
 def test_cli_info_for_github_copilot_echo_includes_settings() -> None:
@@ -169,37 +173,15 @@ def test_cli_info_for_github_copilot_echo_includes_settings() -> None:
     assert "github_copilot_system_prompt" in info["settings"]
 
 
-def test_cli_info_for_microsoft_agent_framework_echo_includes_settings() -> None:
-    result = runner.invoke(app, ["info", "--agent-type", AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO])
+def test_cli_info_for_microsoft_agent_framework_includes_settings() -> None:
+    result = runner.invoke(app, ["info", "--agent-type", AgentType.MICROSOFT_AGENT_FRAMEWORK])
     assert result.exit_code == 0, result.output
     info = json.loads(result.output)
-    assert info["agent_type"] == AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO
+    assert info["agent_type"] == AgentType.MICROSOFT_AGENT_FRAMEWORK
     assert info["class"] == "MicrosoftAgentFrameworkAgent"
     assert "settings" in info
     assert "microsoft_agent_framework_model" in info["settings"]
     assert "microsoft_agent_framework_system_prompt" in info["settings"]
-
-
-def test_cli_info_for_langgraph_image_gen_includes_settings() -> None:
-    result = runner.invoke(app, ["info", "--agent-type", AgentType.LANGGRAPH_IMAGE_GEN])
-    assert result.exit_code == 0, result.output
-    info = json.loads(result.output)
-    assert info["agent_type"] == AgentType.LANGGRAPH_IMAGE_GEN
-    assert info["class"] == "LangGraphAgent"
-    assert "settings" in info
-    assert "image_model" in info["settings"]
-    assert "image_size" in info["settings"]
-    assert "image_n" in info["settings"]
-    assert "image_api_version" in info["settings"]
-
-
-def test_cli_info_for_microsoft_agent_framework_image_gen_includes_settings() -> None:
-    result = runner.invoke(app, ["info", "--agent-type", AgentType.MICROSOFT_AGENT_FRAMEWORK_IMAGE_GEN])
-    assert result.exit_code == 0, result.output
-    info = json.loads(result.output)
-    assert info["agent_type"] == AgentType.MICROSOFT_AGENT_FRAMEWORK_IMAGE_GEN
-    assert info["class"] == "MicrosoftAgentFrameworkAgent"
-    assert "settings" in info
     assert "image_model" in info["settings"]
     assert "image_size" in info["settings"]
     assert "image_n" in info["settings"]

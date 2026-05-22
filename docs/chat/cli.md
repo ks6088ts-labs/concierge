@@ -171,5 +171,5 @@ Pass criteria:
 | `CHAT_BOT_DISPLAY_NAME` | `Concierge AI` | string | Display name for the bot participant |
 | `CHAT_BOT_PARTICIPANT_ID` | `00000000-0000-0000-0000-000000000001` | UUID | Stable id for the bot participant |
 | `CHAT_BOT_HISTORY_LIMIT` | `20` | int | Maximum context messages forwarded to the model |
-| `CHAT_BOT_AGENT_TYPE` | `foundry` | string | Responder selector: `foundry` (default, streaming) or a registered agent type (`echo`, `langgraph-echo`, `github-copilot-echo`, `microsoft-agent-framework-echo`) |
+| `CHAT_BOT_AGENT_TYPE` | `foundry` | string | Responder selector: `foundry` (default, streaming) or a registered agent type (`echo`, `langgraph`, `github-copilot-echo`, `microsoft-agent-framework`) |
 | `AZURE_AI_PROJECT_ENDPOINT` | unset | URL string | Required to enable the Foundry responder (otherwise `message reply` exits with code 1) |

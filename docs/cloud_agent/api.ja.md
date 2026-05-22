@@ -60,12 +60,12 @@ flowchart LR
 }
 ```
 
-`langgraph-echo` エージェントへのディスパッチ例:
+`langgraph` エージェントへのディスパッチ例:
 
 ```bash
 curl -X POST http://localhost:8081/cloud-agent/tasks \
   -H "Content-Type: application/json" \
-  -d '{"agent_type": "langgraph-echo", "payload": {"message": "Hello LangGraph"}}'
+  -d '{"agent_type": "langgraph", "payload": {"message": "Hello LangGraph"}}'
 ```
 
 - `agent_type` — 登録済みエージェント識別子（必須、1〜100 文字）
@@ -92,6 +92,7 @@ curl -X POST http://localhost:8081/cloud-agent/tasks \
 ```
 
 **エラーコード:**
+
 - `400` — 未登録の `agent_type`
 - `413` / `422` — バリデーションエラー（payload が大きすぎる、不正なフィールド）
 

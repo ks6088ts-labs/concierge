@@ -19,7 +19,7 @@ _SYSTEM_PROMPT = "You are a minimal echo agent."
 
 def _make_request(payload: dict[str, Any]) -> AgentRequest:
     return AgentRequest(
-        agent_type=AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO,
+        agent_type=AgentType.MICROSOFT_AGENT_FRAMEWORK,
         payload=payload,
         context={"task_id": "00000000-0000-0000-0000-000000000001"},
     )
@@ -27,7 +27,7 @@ def _make_request(payload: dict[str, Any]) -> AgentRequest:
 
 def _make_agent() -> MicrosoftAgentFrameworkAgent:
     return MicrosoftAgentFrameworkAgent(
-        agent_type=AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO.value,
+        agent_type=AgentType.MICROSOFT_AGENT_FRAMEWORK.value,
         model=_MODEL,
         system_prompt=_SYSTEM_PROMPT,
         tool_builders=[build_echo_maf_tool],
@@ -92,13 +92,13 @@ async def test_handle_framework_exception_returns_failed() -> None:
 
 def test_agent_type_is_instance_attribute() -> None:
     agent = _make_agent()
-    assert agent.agent_type == AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO
+    assert agent.agent_type == AgentType.MICROSOFT_AGENT_FRAMEWORK
 
 
-def test_registry_includes_microsoft_agent_framework_echo() -> None:
+def test_registry_includes_microsoft_agent_framework() -> None:
     from concierge.agents.infrastructure.registry_factory import get_agent_registry
 
     get_agent_registry.cache_clear()
     registry = get_agent_registry()
-    assert AgentType.MICROSOFT_AGENT_FRAMEWORK_ECHO in registry.list_agent_types()
+    assert AgentType.MICROSOFT_AGENT_FRAMEWORK in registry.list_agent_types()
     assert AgentType.ECHO in registry.list_agent_types()

@@ -91,6 +91,7 @@ Todo API が接続失敗や 4xx/5xx を返した場合、ツールは例外を�
 `concierge/agents/infrastructure/langgraph_agent.py` の
 `LangGraphAgent` は、本チュートリアルと同じ `create_agent` API を
 使った最小リファレンス実装で、`registry_factory.py` で
-`echo` ツールビルダを 1 つ配線した preset として
-`langgraph-echo` が登録されています。ディスパッチ例は
+`echo` と `generate_image_tool` のツールビルダを配線した preset として
+`langgraph` が登録されています。LLM がリクエストに応じて適切な
+ツールを選びます。ディスパッチ例は
 [Cloud Agent CLI ドキュメント](../cloud_agent/cli.ja.md) を参照してください。

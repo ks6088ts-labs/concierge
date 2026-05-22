@@ -20,9 +20,9 @@ flowchart LR
     UC --> Queue[TaskQueue]
     UC --> Registry[AgentRegistry]
     Registry --> Echo[EchoAgent]
-    Registry --> LG["LangGraphAgent\n(langgraph-echo / langgraph-image-gen)"]
+    Registry --> LG["LangGraphAgent\n(langgraph)"]
     Registry --> GCE[GitHubCopilotEchoAgent]
-    Registry --> MAF["MicrosoftAgentFrameworkAgent\n(microsoft-agent-framework-echo /\nmicrosoft-agent-framework-image-gen)"]
+    Registry --> MAF["MicrosoftAgentFrameworkAgent\n(microsoft-agent-framework)"]
 ```
 
 ## Agent Extension Point
@@ -124,16 +124,16 @@ uv run cloud-agent-cli task dispatch --agent-type echo --payload '{"message": "h
 uv run cloud-agent-cli agents
 ```
 
-## Running the LangGraph Echo Agent
+## Running the LangGraph Agent
 
-The `langgraph-echo` preset is the reference setup for integrating
+The `langgraph` preset is the reference setup for integrating
 LangChain / LangGraph agents with the `cloud_agent` task pipeline. It is
 built on the unified `LangGraphAgent` class, which uses
-[`langchain.agents.create_agent`](https://python.langchain.com/) with a
-`echo` tool builder and an Azure-hosted chat model resolved through
-`init_chat_model`. Adding a different tool variant means registering
-another preset with a different `tool_builders` list — not creating a
-new agent class.
+[`langchain.agents.create_agent`](https://python.langchain.com/) with the
+`echo` and `generate_image_tool` tool builders and an Azure-hosted chat
+model resolved through `init_chat_model`. The LLM picks the appropriate
+tool based on the user's request. Adding additional tools means extending
+the `tool_builders` list — not creating a new agent class.
 
 ### Prerequisites
 
@@ -177,14 +177,14 @@ docker compose up -d postgres
 
 # 3. Confirm the agent is registered
 uv run cloud-agent-cli agents
-# → ["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo", "langgraph-image-gen", "microsoft-agent-framework-image-gen"]
+# → ["echo", "langgraph", "github-copilot-echo", "microsoft-agent-framework"]
 
 # 4. Start the worker (terminal 1)
 uv run cloud-agent-cli worker
 
 # 5. Dispatch a task (terminal 2)
 uv run cloud-agent-cli task dispatch \
-  --agent-type langgraph-echo \
+  --agent-type langgraph \
   --payload '{"message": "Hello LangGraph"}'
 
 # 6. Poll for the result using the task id printed above

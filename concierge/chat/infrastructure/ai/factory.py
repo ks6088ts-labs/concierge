@@ -39,7 +39,7 @@ def _warn_if_legacy_responder_backend_set() -> None:
             f"{_LEGACY_RESPONDER_BACKEND_ENV} is deprecated and ignored. "
             f"Use CHAT_BOT_AGENT_TYPE={FOUNDRY_BOT_AGENT_TYPE!r} for the Foundry "
             "responder, or one of the registered agent types (e.g. "
-            "'echo', 'langgraph-echo', 'github-copilot-echo').",
+            "'echo', 'langgraph', 'github-copilot-echo', 'microsoft-agent-framework').",
             DeprecationWarning,
             stacklevel=3,
         )
@@ -55,7 +55,7 @@ def create_chatbot_responder(agent_type: str | None = None) -> ChatbotResponder:
       ``AZURE_AI_PROJECT_ENDPOINT``.
     * Any other value — resolved from the shared :class:`AgentRegistry` and
       wrapped in :class:`AgentChatbotResponder`. Built-in values: ``echo``,
-      ``langgraph-echo``, ``github-copilot-echo``.
+      ``langgraph``, ``github-copilot-echo``, ``microsoft-agent-framework``.
 
     When ``agent_type`` is ``None`` (or an empty string) the value of
     ``CHAT_BOT_AGENT_TYPE`` (``ChatSettings.bot_agent_type``) is used. Passing
@@ -102,7 +102,8 @@ def list_available_agent_types() -> list[str]:
     """Return all agent types selectable by the web UI.
 
     The list always includes the entries from the shared :class:`AgentRegistry`
-    (e.g. ``echo``, ``langgraph-echo``, ``github-copilot-echo``). The Foundry
+    (e.g. ``echo``, ``langgraph``, ``github-copilot-echo``,
+    ``microsoft-agent-framework``). The Foundry
     streaming responder is only included when ``AZURE_AI_PROJECT_ENDPOINT`` is
     configured, because attempting to use it would otherwise fail at request
     time with a 503.

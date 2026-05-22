@@ -34,7 +34,7 @@ class ChatSettings(BaseSettings):
     # Selects the chat reply responder. ``foundry`` (default) uses the streaming
     # ``FoundryChatbotResponder`` (requires ``AZURE_AI_PROJECT_ENDPOINT``). Any
     # other value is resolved against the shared ``AgentRegistry`` (built-ins:
-    # ``echo``, ``langgraph-echo``, ``github-copilot-echo``).
+    # ``echo``, ``langgraph``, ``github-copilot-echo``, ``microsoft-agent-framework``).
     bot_agent_type: str = FOUNDRY_BOT_AGENT_TYPE
 
     realtime_model: str = "gpt-realtime-1.5"

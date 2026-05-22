@@ -16,11 +16,16 @@ from enum import StrEnum
 
 
 class AgentType(StrEnum):
-    """Registered ``agent_type`` identifiers for built-in agents."""
+    """Registered ``agent_type`` identifiers for built-in agents.
+
+    The framework-backed agents (``langgraph`` / ``microsoft-agent-framework``)
+    are generic: their behaviour is controlled by the tools mounted in
+    :mod:`concierge.agents.infrastructure.registry_factory`. The LLM picks
+    the appropriate tool based on the user input, so a single agent_type
+    can serve echo, image generation, etc.
+    """
 
     ECHO = "echo"
-    LANGGRAPH_ECHO = "langgraph-echo"
+    LANGGRAPH = "langgraph"
     GITHUB_COPILOT_ECHO = "github-copilot-echo"
-    MICROSOFT_AGENT_FRAMEWORK_ECHO = "microsoft-agent-framework-echo"
-    LANGGRAPH_IMAGE_GEN = "langgraph-image-gen"
-    MICROSOFT_AGENT_FRAMEWORK_IMAGE_GEN = "microsoft-agent-framework-image-gen"
+    MICROSOFT_AGENT_FRAMEWORK = "microsoft-agent-framework"

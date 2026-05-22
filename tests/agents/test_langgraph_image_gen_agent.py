@@ -21,7 +21,7 @@ _SAVE_DIR = "/tmp/concierge-test-images"
 
 def _make_request(payload: dict[str, Any]) -> AgentRequest:
     return AgentRequest(
-        agent_type=AgentType.LANGGRAPH_IMAGE_GEN,
+        agent_type=AgentType.LANGGRAPH,
         payload=payload,
         context={"task_id": "00000000-0000-0000-0000-000000000001"},
     )
@@ -29,7 +29,7 @@ def _make_request(payload: dict[str, Any]) -> AgentRequest:
 
 def _make_agent() -> LangGraphAgent:
     return LangGraphAgent(
-        agent_type=AgentType.LANGGRAPH_IMAGE_GEN.value,
+        agent_type=AgentType.LANGGRAPH.value,
         model=_MODEL,
         system_prompt=_SYSTEM_PROMPT,
         tool_builders=[image_gen_langchain_tool_factory(_SAVE_DIR)],
@@ -140,4 +140,4 @@ async def test_tool_calls_generate_image_with_expected_arguments() -> None:
 
 def test_agent_type_is_instance_attribute() -> None:
     agent = _make_agent()
-    assert agent.agent_type == AgentType.LANGGRAPH_IMAGE_GEN
+    assert agent.agent_type == AgentType.LANGGRAPH

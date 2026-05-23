@@ -64,8 +64,9 @@ uv run agents-cli invoke \
 `payload.message` を読むので、同じショートカットが使えます。フレームワークベースの
 エージェント (`langgraph` / `microsoft-agent-framework`) には `echo` /
 `generate_image_tool` に加えてサンドボックス化されたファイル操作ツール
-（デフォルト: `read_file` / `list_directory` / `file_search`）も載っており、
-LLM がユーザーのリクエストに応じて適切なツールを選択します。
+（デフォルト: `read_file` / `list_directory` / `file_search`）と、任意有効化の
+許可リスト方式 shell 実行ツール（`shell_exec`）も載せられます。LLM がユーザーの
+リクエストに応じて適切なツールを選択します。
 
 ```bash
 uv run agents-cli invoke --agent-type langgraph --message "Hello LangGraph"
@@ -76,6 +77,8 @@ uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Creat
 # ファイル操作（AGENTS_FILE_ROOT_DIR 配下のみ）
 uv run agents-cli invoke --agent-type langgraph --message "ワークスペース直下のファイルを一覧表示して"
 uv run agents-cli invoke --agent-type microsoft-agent-framework --message "ワークスペースの README.md を読んで"
+# shell ツール（AGENTS_SHELL_TOOLS_ENABLED / AGENTS_SHELL_ALLOWED_COMMANDS が必要）
+uv run agents-cli invoke --agent-type langgraph --message "shell_exec で terraform plan を実行して"
 ```
 
 `langgraph` の echo 成功時レスポンス例:
@@ -143,6 +146,11 @@ agents CLI が読むのは `AGENTS_*` 変数のみです。リポジトリ／キ
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(組み込み)_ | `microsoft-agent-framework` のシステムプロンプト（`Agent(instructions=...)` に渡される）。デフォルトでは `echo` と `generate_image_tool` を使い分けるよう LLM に指示します。 |
 | `AGENTS_FILE_ROOT_DIR` | `""`（`<cwd>/workspace`） | ファイル操作ツール（`read_file` / `list_directory` / `file_search` / 任意の書き込み系）の sandbox root |
 | `AGENTS_FILE_TOOLS_ENABLED` | `read_file,list_directory,file_search` | 有効化するファイル操作ツールのカンマ区切り。`""` で全無効化 |
+| `AGENTS_SHELL_TOOLS_ENABLED` | `""` | 有効化する shell ツール名のカンマ区切り。空なら無効（デフォルト・opt-in） |
+| `AGENTS_SHELL_ALLOWED_COMMANDS` | `""` | `shell_exec` で許可するコマンド名のカンマ区切り（shell ツール有効時は必須） |
+| `AGENTS_SHELL_ROOT_DIR` | `""`（`AGENTS_FILE_ROOT_DIR` にフォールバック） | shell 実行時の固定作業ディレクトリ |
+| `AGENTS_SHELL_TIMEOUT_SECONDS` | `30` | コマンド実行タイムアウト（秒） |
+| `AGENTS_SHELL_MAX_OUTPUT_BYTES` | `65536` | stdout/stderr 各ストリームの最大出力バイト数（超過時に truncate） |
 | `AGENTS_IMAGE_MODEL` | `gpt-image-2` | Foundry 画像モデルのデプロイ名 |
 | `AGENTS_IMAGE_SIZE` | `1024x1024` | 既定サイズ（`1024x1024` / `1536x1024` / `1024x1536` / `4K`） |
 | `AGENTS_IMAGE_N` | `1` | 既定の生成枚数 |
@@ -179,6 +187,17 @@ uv run agents-cli image generate \
 
 エージェント一覧や契約の詳細は
 [Shared Agent Runtime 概要](index.ja.md) を参照してください。
+
+shell ツールを有効化する `.env` 設定例:
+
+```bash
+AGENTS_SHELL_TOOLS_ENABLED=shell_exec
+AGENTS_SHELL_ALLOWED_COMMANDS=terraform
+# 任意:
+# AGENTS_SHELL_ROOT_DIR=./workspace
+# AGENTS_SHELL_TIMEOUT_SECONDS=30
+# AGENTS_SHELL_MAX_OUTPUT_BYTES=65536
+```
 
 ## tracing / MLflow を有効にして実行する例
 

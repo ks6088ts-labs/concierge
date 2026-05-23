@@ -29,16 +29,21 @@ from concierge.agents.infrastructure.github_copilot_sdk_agent import GitHubCopil
 from concierge.agents.infrastructure.langgraph_agent import LangGraphAgent
 from concierge.agents.infrastructure.microsoft_agent_framework_agent import MicrosoftAgentFrameworkAgent
 from concierge.agents.infrastructure.tools import (
+    ShellCommandConfig,
     build_echo_copilot_sdk_tool,
     build_echo_langchain_tool,
     build_echo_maf_tool,
     build_file_copilot_sdk_tool_builders,
     build_file_langchain_tool_builders,
     build_file_maf_tool_builders,
+    build_shell_copilot_sdk_tool_builders,
+    build_shell_langchain_tool_builders,
+    build_shell_maf_tool_builders,
     image_gen_copilot_sdk_tool_factory,
     image_gen_langchain_tool_factory,
     image_gen_maf_tool_factory,
     resolve_file_root_dir,
+    resolve_shell_root_dir,
 )
 from concierge.observability import trace_config
 from concierge.settings.agents import get_agents_settings
@@ -60,6 +65,10 @@ def _image_save_dir() -> str:
     return str((Path.cwd() / "generated_images").resolve())
 
 
+def _parse_allowed_commands(value: str) -> tuple[str, ...]:
+    return tuple(item.strip() for item in value.split(",") if item.strip())
+
+
 @lru_cache(maxsize=1)
 def get_agent_registry() -> AgentRegistry:
     """Return the default AgentRegistry with all built-in agents registered."""
@@ -70,6 +79,22 @@ def get_agent_registry() -> AgentRegistry:
     file_builders_lc = build_file_langchain_tool_builders(file_root_dir, settings.file_tools_enabled)
     file_builders_maf = build_file_maf_tool_builders(file_root_dir, settings.file_tools_enabled)
     file_builders_copilot = build_file_copilot_sdk_tool_builders(file_root_dir, settings.file_tools_enabled)
+    shell_builders_lc: list = []
+    shell_builders_maf: list = []
+    shell_builders_copilot: list = []
+    if settings.shell_tools_enabled.strip():
+        allowed_commands = _parse_allowed_commands(settings.shell_allowed_commands)
+        if not allowed_commands:
+            raise ValueError("AGENTS_SHELL_ALLOWED_COMMANDS must be set when AGENTS_SHELL_TOOLS_ENABLED is not empty.")
+        shell_config = ShellCommandConfig(
+            allowed_commands=allowed_commands,
+            root_dir=resolve_shell_root_dir(settings.shell_root_dir, fallback=file_root_dir),
+            timeout_seconds=settings.shell_timeout_seconds,
+            max_output_bytes=settings.shell_max_output_bytes,
+        )
+        shell_builders_lc = build_shell_langchain_tool_builders(shell_config, settings.shell_tools_enabled)
+        shell_builders_maf = build_shell_maf_tool_builders(shell_config, settings.shell_tools_enabled)
+        shell_builders_copilot = build_shell_copilot_sdk_tool_builders(shell_config, settings.shell_tools_enabled)
 
     registry = AgentRegistry()
     registry.register(EchoAgent())
@@ -82,6 +107,7 @@ def get_agent_registry() -> AgentRegistry:
                 build_echo_langchain_tool,
                 image_gen_langchain_tool_factory(save_dir),
                 *file_builders_lc,
+                *shell_builders_lc,
             ],
             run_config_factory=_langgraph_run_config,
         )
@@ -94,6 +120,7 @@ def get_agent_registry() -> AgentRegistry:
                 build_echo_copilot_sdk_tool,
                 image_gen_copilot_sdk_tool_factory(save_dir),
                 *file_builders_copilot,
+                *shell_builders_copilot,
             ],
         )
     )
@@ -106,6 +133,7 @@ def get_agent_registry() -> AgentRegistry:
                 build_echo_maf_tool,
                 image_gen_maf_tool_factory(save_dir),
                 *file_builders_maf,
+                *shell_builders_maf,
             ],
             project_endpoint=foundry_endpoint,
         )

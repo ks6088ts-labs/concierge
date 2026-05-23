@@ -46,6 +46,8 @@ concierge/agents/
       echo_tool.py             # build_echo_langchain_tool / build_echo_maf_tool
       file_management.py       # sandboxed file operation core（パス検証 + IO）
       file_management_tool.py  # LangChain / MAF / Copilot SDK 向け file tool builders
+      shell_command.py         # 許可リスト方式 shell 実行コア（shell=False subprocess）
+      shell_command_tool.py    # LangChain / MAF / Copilot SDK 向け shell tool builders
       image_generation.py      # フレームワーク不要の generate_image() 関数
       image_generation_tool.py # image_gen_langchain_tool_factory / image_gen_maf_tool_factory
     registry_factory.py    # get_agent_registry() — 統合クラス + preset を配線
@@ -90,9 +92,9 @@ class MyAgent:
 | agent_type | クラス | 説明 |
 |------------|--------|------|
 | `echo` | `EchoAgent` | `payload.message` をそのまま返す。LLM 不要。 |
-| `langgraph` | `LangGraphAgent` | `echo` / `generate_image_tool` と、共有のサンドボックス化ファイル操作ツール（デフォルト: `read_file` / `list_directory` / `file_search`）を備える LangGraph (`create_agent`) preset。LLM がユーザー入力に応じてツールを選択します。 |
+| `langgraph` | `LangGraphAgent` | `echo` / `generate_image_tool` と、共有のサンドボックス化ファイル操作ツール（デフォルト: `read_file` / `list_directory` / `file_search`）、および任意有効化の許可リスト方式 shell ツール（`shell_exec`）を備える LangGraph (`create_agent`) preset。LLM がユーザー入力に応じてツールを選択します。 |
 | `github-copilot-sdk` | `GitHubCopilotSdkAgent` | リクエストごとに GitHub Copilot SDK セッションを開き、ユーザーメッセージを `send` し、アシスタント応答を返します。 |
-| `microsoft-agent-framework` | `MicrosoftAgentFrameworkAgent` | `echo` / `generate_image_tool` と、共有のサンドボックス化ファイル操作ツール（デフォルト: `read_file` / `list_directory` / `file_search`）を備える Microsoft Agent Framework preset。LLM がユーザー入力に応じてツールを選択します。 |
+| `microsoft-agent-framework` | `MicrosoftAgentFrameworkAgent` | `echo` / `generate_image_tool` と、共有のサンドボックス化ファイル操作ツール（デフォルト: `read_file` / `list_directory` / `file_search`）、および任意有効化の許可リスト方式 shell ツール（`shell_exec`）を備える Microsoft Agent Framework preset。LLM がユーザー入力に応じてツールを選択します。 |
 
 フレームワークベースの 2 つのエージェント (`langgraph` /
 `microsoft-agent-framework`) は *汎用* で、それぞれ全ツールビルダーを
@@ -114,6 +116,11 @@ class MyAgent:
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | *(組み込み)* | `microsoft-agent-framework` の `Agent(instructions=...)` に渡すシステムプロンプト。デフォルトでは `echo` と `generate_image_tool` を使い分けるよう指示します。 |
 | `AGENTS_FILE_ROOT_DIR` | `""`（`<cwd>/workspace`） | ファイル操作ツールの sandbox root。相対パスはカレントディレクトリ起点で解決され、起動時に自動作成されます。 |
 | `AGENTS_FILE_TOOLS_ENABLED` | `read_file,list_directory,file_search` | 有効化するファイル操作ツール名のカンマ区切り。`""` で全無効化。書き込み系（`write_file` / `copy_file` / `move_file` / `delete_file`）は明示的に opt-in が必要です。 |
+| `AGENTS_SHELL_TOOLS_ENABLED` | `""` | 有効化する shell ツール名のカンマ区切り。空文字のままなら shell ツールは無効（デフォルト・完全 opt-in）。 |
+| `AGENTS_SHELL_ALLOWED_COMMANDS` | `""` | `shell_exec` で許可するコマンド名のカンマ区切り（shell ツール有効時は必須）。コマンドパス指定は拒否されます。 |
+| `AGENTS_SHELL_ROOT_DIR` | `""`（`AGENTS_FILE_ROOT_DIR` にフォールバック） | shell 実行時に固定される作業ディレクトリ。 |
+| `AGENTS_SHELL_TIMEOUT_SECONDS` | `30` | 1 コマンドあたりのタイムアウト秒数。 |
+| `AGENTS_SHELL_MAX_OUTPUT_BYTES` | `65536` | `stdout` / `stderr` 各ストリームの最大バイト数（超過時は末尾に truncate マーカー付与）。 |
 | `AGENTS_IMAGE_MODEL` | `gpt-image-2` | 共有画像生成ツールが使う Foundry デプロイ名。 |
 | `AGENTS_IMAGE_SIZE` | `1024x1024` | 既定サイズ（`1024x1024` / `1536x1024` / `1024x1536` / `4K`）。 |
 | `AGENTS_IMAGE_N` | `1` | 1 回の呼び出しで要求する既定画像枚数。 |
@@ -128,7 +135,9 @@ class MyAgent:
 | `AZURE_AI_PROJECT_ENDPOINT_IMAGE` | `""` | `gpt-image-2` デプロイをホストする別の Foundry プロジェクトを指す任意のオーバーライド。`gpt-image-2` は現在 GA 提供されているリージョンが限定的であるため、メインの Foundry プロジェクトが対応リージョン外の場合に設定します。空の場合は共有の `AZURE_AI_PROJECT_ENDPOINT` が使われます。
 
 ファイル操作ツールは `AGENTS_FILE_ROOT_DIR` 配下に厳密にサンドボックス化され、
-絶対パスやパストラバーサルは拒否されます。書き込み系ツールを有効化する場合は
+絶対パスやパストラバーサルは拒否されます。shell ツールも固定 `cwd` かつ
+`shell=False`、コマンド名許可リスト（`AGENTS_SHELL_ALLOWED_COMMANDS`）で実行されます。
+書き込み系ツールや shell ツールを有効化する場合は
 [LangChain Security Notice](https://python.langchain.com/docs/security) を必ず確認してください。
 
 ## cloud_agent ワーカーからの利用

@@ -113,7 +113,8 @@ def test_agents_settings_defaults(monkeypatch):
     assert "echo" in settings.langgraph_system_prompt.lower()
     assert "generate_image_tool" in settings.langgraph_system_prompt
     assert settings.github_copilot_sdk_model == "gpt-5-mini"
-    assert "helpful coding assistant" in settings.github_copilot_sdk_system_prompt.lower()
+    assert "echo" in settings.github_copilot_sdk_system_prompt.lower()
+    assert "generate_image_tool" in settings.github_copilot_sdk_system_prompt
     assert settings.microsoft_agent_framework_model == "gpt-5"
     assert "echo" in settings.microsoft_agent_framework_system_prompt.lower()
     assert "generate_image_tool" in settings.microsoft_agent_framework_system_prompt

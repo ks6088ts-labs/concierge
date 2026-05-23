@@ -46,5 +46,6 @@ async def test_cloud_agent_processes_github_copilot_sdk_task() -> None:
     assert found.result == {
         "message": "Hello Copilot",
         "reply": "Hello Copilot",
+        "tool_calls": [],
         "model": "gpt-5-mini",
     }

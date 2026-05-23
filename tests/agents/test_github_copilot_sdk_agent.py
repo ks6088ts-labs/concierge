@@ -147,6 +147,7 @@ async def test_handle_success_returns_session_reply() -> None:
     assert output.result == {
         "message": "Hello Copilot",
         "reply": "Hello Copilot",
+        "tool_calls": [],
         "model": _MODEL,
     }
     assert output.error is None
@@ -161,6 +162,9 @@ async def test_handle_success_returns_session_reply() -> None:
         "content": _SYSTEM_PROMPT,
     }
     assert client.create_session_kwargs["on_permission_request"] is PermissionHandler.approve_all
+    # No tool builders configured -> tools / hooks must not be forwarded.
+    assert "tools" not in client.create_session_kwargs
+    assert "hooks" not in client.create_session_kwargs
 
 
 @pytest.mark.anyio
@@ -220,7 +224,99 @@ async def test_handle_empty_reply_chunks_returns_empty_reply() -> None:
         output: AgentResponse = await agent.handle(_make_request({"message": "hi"}))
 
     assert output.status == "succeeded"
-    assert output.result == {"message": "hi", "reply": "", "model": _MODEL}
+    assert output.result == {
+        "message": "hi",
+        "reply": "",
+        "tool_calls": [],
+        "model": _MODEL,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Tests: tool_builders wiring (custom tools + on_pre_tool_use hook)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_handle_with_tool_builders_forwards_tools_and_hook() -> None:
+    """``tool_builders`` results are forwarded as ``tools`` and the hook is registered."""
+
+    built_tools: list[object] = []
+
+    def fake_builder(side_outputs: dict[str, Any]) -> object:
+        side_outputs["images"] = ["dummy-image"]
+        tool = object()
+        built_tools.append(tool)
+        return tool
+
+    agent = GitHubCopilotSdkAgent(
+        model=_MODEL,
+        system_prompt=_SYSTEM_PROMPT,
+        tool_builders=[fake_builder],
+    )
+
+    session = _FakeSession(events=[AssistantMessageData(content="ok", message_id="m1"), SessionIdleData()])
+    client = _FakeClient(session)
+
+    with patch.object(agent, "_build_client", return_value=client):
+        output: AgentResponse = await agent.handle(_make_request({"message": "hello"}))
+
+    assert output.status == "succeeded"
+    assert client.create_session_kwargs is not None
+    # Tools list is forwarded as-is (one tool per builder).
+    assert client.create_session_kwargs["tools"] == built_tools
+    # The on_pre_tool_use hook is registered.
+    hooks = client.create_session_kwargs["hooks"]
+    assert "on_pre_tool_use" in hooks
+    assert callable(hooks["on_pre_tool_use"])
+    # Side outputs from the builder are merged into result.
+    assert output.result is not None
+    assert output.result["images"] == ["dummy-image"]
+    assert output.result["tool_calls"] == []
+
+
+@pytest.mark.anyio
+async def test_on_pre_tool_use_hook_records_tool_calls() -> None:
+    """Hook invocations record ``{name, args}`` into ``AgentResponse.result['tool_calls']``."""
+
+    def fake_builder(_side_outputs: dict[str, Any]) -> object:
+        return object()
+
+    agent = GitHubCopilotSdkAgent(
+        model=_MODEL,
+        system_prompt=_SYSTEM_PROMPT,
+        tool_builders=[fake_builder],
+    )
+
+    captured_hook: list[Any] = []
+
+    class _HookingSession(_FakeSession):
+        async def send(self, prompt: str, **_kwargs: Any) -> str:
+            # Simulate the SDK firing the pre-tool-use hook before the LLM reply.
+            captured_hook[0](
+                {"toolName": "echo", "toolArgs": {"text": prompt}},
+                {},
+            )
+            return await super().send(prompt)
+
+    session = _HookingSession(events=[AssistantMessageData(content="done", message_id="m1"), SessionIdleData()])
+    client = _FakeClient(session)
+
+    # Capture the hook reference for the fake session to invoke.
+    original_create_session = client.create_session
+
+    async def spy_create_session(**kwargs: Any) -> Any:
+        captured_hook.append(kwargs["hooks"]["on_pre_tool_use"])
+        return await original_create_session(**kwargs)
+
+    client.create_session = spy_create_session  # ty: ignore[invalid-assignment]
+
+    with patch.object(agent, "_build_client", return_value=client):
+        output: AgentResponse = await agent.handle(_make_request({"message": "hello"}))
+
+    assert output.status == "succeeded"
+    assert output.result is not None
+    assert output.result["tool_calls"] == [{"name": "echo", "args": {"text": "hello"}}]
 
 
 def test_registry_includes_github_copilot_sdk() -> None:

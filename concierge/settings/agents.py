@@ -20,7 +20,13 @@ class AgentsSettings(BaseSettings):
     )
     github_copilot_sdk_model: str = "gpt-5-mini"
     github_copilot_sdk_system_prompt: str = (
-        "You are a helpful coding assistant that provides code suggestions and explanations to users."
+        "You are a helpful assistant. "
+        "You have access to tools such as `echo` (which simply echoes the user's text back) "
+        "and `generate_image_tool` (which produces images via gpt-image-2). "
+        "Pick the appropriate tool based on the user's request: "
+        "call `echo` for plain echo / smoke-test requests, "
+        "and call `generate_image_tool` with a concise English prompt when the user asks for an image. "
+        "Return the tool result as your final answer in one sentence."
     )
     microsoft_agent_framework_model: str = "gpt-5"
     microsoft_agent_framework_system_prompt: str = (

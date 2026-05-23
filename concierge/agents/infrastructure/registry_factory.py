@@ -29,8 +29,10 @@ from concierge.agents.infrastructure.github_copilot_sdk_agent import GitHubCopil
 from concierge.agents.infrastructure.langgraph_agent import LangGraphAgent
 from concierge.agents.infrastructure.microsoft_agent_framework_agent import MicrosoftAgentFrameworkAgent
 from concierge.agents.infrastructure.tools import (
+    build_echo_copilot_sdk_tool,
     build_echo_langchain_tool,
     build_echo_maf_tool,
+    image_gen_copilot_sdk_tool_factory,
     image_gen_langchain_tool_factory,
     image_gen_maf_tool_factory,
 )
@@ -79,6 +81,10 @@ def get_agent_registry() -> AgentRegistry:
         GitHubCopilotSdkAgent(
             model=settings.github_copilot_sdk_model,
             system_prompt=settings.github_copilot_sdk_system_prompt,
+            tool_builders=[
+                build_echo_copilot_sdk_tool,
+                image_gen_copilot_sdk_tool_factory(save_dir),
+            ],
         )
     )
     registry.register(

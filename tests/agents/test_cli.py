@@ -76,6 +76,7 @@ def test_cli_invoke_github_copilot_sdk_with_message_shortcut() -> None:
     assert response["result"] == {
         "message": "Hello Copilot",
         "reply": "Hello Copilot",
+        "tool_calls": [],
         "model": "gpt-5-mini",
     }
 

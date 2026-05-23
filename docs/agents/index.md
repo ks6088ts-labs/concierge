@@ -125,6 +125,14 @@ Agent settings are read from environment variables with the **`AGENTS_`** prefix
 | `AGENTS_IMAGE_N` | `1` | Default number of images requested per call. |
 | `AGENTS_IMAGE_API_VERSION` | `2025-04-01-preview` | API version passed to `openai.AzureOpenAI`. |
 
+The image generation tool also reads two Foundry endpoint variables from
+[`MicrosoftFoundrySettings`](../tutorial/02-observability.md):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AZURE_AI_PROJECT_ENDPOINT` | `""` | Shared Foundry project endpoint used by all built-in agents. |
+| `AZURE_AI_PROJECT_ENDPOINT_IMAGE` | `""` | Optional override pointing at a different Foundry project that hosts the `gpt-image-2` deployment. `gpt-image-2` is currently only GA in a limited set of regions, so set this when your main Foundry project is in a region where it is not available. When empty, the shared `AZURE_AI_PROJECT_ENDPOINT` is used.
+
 ## Using from cloud_agent worker
 
 The `cloud_agent` CLI dispatches tasks to the shared registry:
@@ -187,6 +195,78 @@ curl -s -X POST http://localhost:8000/conversations/<id>/messages \
 curl -s -X POST http://localhost:8000/conversations/<id>/agent-replies \
   -H 'Content-Type: application/json' \
   -d '{}' | jq .
+```
+
+## Minimum verification steps per agent
+
+The following commands exercise each registered agent against the standalone
+`agents-cli`. They are the smallest "smoke tests" that confirm the agent is
+correctly wired into the registry and that the surrounding settings (model,
+endpoint, credentials) are usable.
+
+Prerequisites for every LLM-backed agent:
+
+```bash
+# 1. Load .env (uv reads it automatically) and sign in for Entra ID auth.
+az login
+# 2. Required for all Foundry-backed agents.
+export AZURE_AI_PROJECT_ENDPOINT="https://<resource>.services.ai.azure.com/api/projects/<project>"
+```
+
+### `echo` (no LLM required)
+
+```bash
+uv run agents-cli invoke --agent-type echo --message "hello"
+# expected: {"status": "succeeded", "result": {"message": "hello", "reply": "hello"}, "error": null}
+```
+
+### `langgraph`
+
+Requires `AZURE_AI_PROJECT_ENDPOINT` plus `az login`.
+
+```bash
+uv run agents-cli info --agent-type langgraph             # confirms wired settings (no LLM call)
+uv run agents-cli invoke --agent-type langgraph --message "Say hi"
+# Image-generation path (requires AGENTS_IMAGE_MODEL deployed; see note below):
+uv run agents-cli invoke --agent-type langgraph --message "Draw a red fox in watercolor style"
+```
+
+### `github-copilot-sdk`
+
+Requires the [GitHub Copilot CLI](https://github.com/github/copilot-cli) to
+be installed and authenticated; no Foundry endpoint is needed for the
+default echo path.
+
+```bash
+uv run agents-cli info --agent-type github-copilot-sdk
+uv run agents-cli invoke --agent-type github-copilot-sdk --message "Say hi"
+```
+
+### `microsoft-agent-framework`
+
+Requires `AZURE_AI_PROJECT_ENDPOINT` plus `az login`.
+
+```bash
+uv run agents-cli info --agent-type microsoft-agent-framework
+uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Say hi"
+# Image-generation path:
+uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Draw a red fox in watercolor style"
+```
+
+### `image generate` (direct, no LLM mediation)
+
+`gpt-image-2` is currently only GA in a limited set of Foundry regions, so
+if `AZURE_AI_PROJECT_ENDPOINT` points at a different region, also set
+`AZURE_AI_PROJECT_ENDPOINT_IMAGE` to a Foundry project that hosts the
+`gpt-image-2` deployment.
+
+```bash
+export AZURE_AI_PROJECT_ENDPOINT_IMAGE="https://<image-resource>.services.ai.azure.com/api/projects/<project>"
+mkdir -p ./tmp_out
+uv run agents-cli image generate \
+  --prompt "A photo of a Shibuya crossing at night" \
+  --output-dir ./tmp_out
+ls ./tmp_out/*.png
 ```
 
 ## Dependency Direction

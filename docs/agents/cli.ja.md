@@ -146,6 +146,12 @@ agents CLI が読むのは `AGENTS_*` 変数のみです。リポジトリ／キ
 
 ### 画像を直接生成する（LLM 経由なし）
 
+`gpt-image-2` は現在 GA リージョンが限定的なため、`AZURE_AI_PROJECT_ENDPOINT`
+が画像モデル未デプロイのリージョンを指す場合は、`gpt-image-2` をホストする
+別の Foundry プロジェクトを `AZURE_AI_PROJECT_ENDPOINT_IMAGE` に設定してください。
+`AZURE_AI_PROJECT_ENDPOINT_IMAGE` が空のときは共有の `AZURE_AI_PROJECT_ENDPOINT`
+が使われます。
+
 ```bash
 uv run agents-cli image generate \
   --prompt "A photo of a Shibuya crossing at night" \

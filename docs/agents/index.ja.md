@@ -115,6 +115,14 @@ class MyAgent:
 | `AGENTS_IMAGE_N` | `1` | 1 回の呼び出しで要求する既定画像枚数。 |
 | `AGENTS_IMAGE_API_VERSION` | `2025-04-01-preview` | `openai.AzureOpenAI` に渡す API バージョン。 |
 
+画像生成ツールは [`MicrosoftFoundrySettings`](../tutorial/02-observability.md)
+から以下の Foundry エンドポイント変数も読み込みます:
+
+| 変数 | デフォルト | 説明 |
+|------|-----------|------|
+| `AZURE_AI_PROJECT_ENDPOINT` | `""` | 全エージェント共通で使う Foundry プロジェクトエンドポイント。 |
+| `AZURE_AI_PROJECT_ENDPOINT_IMAGE` | `""` | `gpt-image-2` デプロイをホストする別の Foundry プロジェクトを指す任意のオーバーライド。`gpt-image-2` は現在 GA 提供されているリージョンが限定的であるため、メインの Foundry プロジェクトが対応リージョン外の場合に設定します。空の場合は共有の `AZURE_AI_PROJECT_ENDPOINT` が使われます。
+
 ## cloud_agent ワーカーからの利用
 
 ```bash
@@ -152,6 +160,76 @@ LangChain autologging では内部 SDK スパンは自動収集されません�
 Agent Framework（`agent_framework.Agent` + `agent_framework.foundry.FoundryChatClient`）
 で実装されているため同様で、内部スパンが必要な場合は Microsoft Agent
 Framework 側の OTLP / Foundry トレーシングを有効化してください。
+
+## エージェント別の最小動作検証手順
+
+以下は `agents-cli` から各登録エージェントを最小限の構成で実行するための手順です。
+レジストリへの配線が正しく、必要な設定（モデル名・エンドポイント・認証）が
+揃っていることを確認できる "スモークテスト" の最小集合です。
+
+LLM を使うエージェントに共通する事前準備:
+
+```bash
+# 1. .env を読み込み（uv が自動的に読み込みます）、Entra ID 認証のため az login する
+az login
+# 2. Foundry 系エージェントすべてに必須
+export AZURE_AI_PROJECT_ENDPOINT="https://<resource>.services.ai.azure.com/api/projects/<project>"
+```
+
+### `echo` (LLM 不要)
+
+```bash
+uv run agents-cli invoke --agent-type echo --message "hello"
+# 期待値: {"status": "succeeded", "result": {"message": "hello", "reply": "hello"}, "error": null}
+```
+
+### `langgraph`
+
+`AZURE_AI_PROJECT_ENDPOINT` と `az login` が必要です。
+
+```bash
+uv run agents-cli info --agent-type langgraph             # 設定確認のみ（LLM 呼び出しなし）
+uv run agents-cli invoke --agent-type langgraph --message "Say hi"
+# 画像生成パス（AGENTS_IMAGE_MODEL のデプロイが必要、下記の注意点も参照）:
+uv run agents-cli invoke --agent-type langgraph --message "Draw a red fox in watercolor style"
+```
+
+### `github-copilot-sdk`
+
+デフォルトの echo パスでは
+[GitHub Copilot CLI](https://github.com/github/copilot-cli) のインストールと
+認証が必要で、Foundry エンドポイントは不要です。
+
+```bash
+uv run agents-cli info --agent-type github-copilot-sdk
+uv run agents-cli invoke --agent-type github-copilot-sdk --message "Say hi"
+```
+
+### `microsoft-agent-framework`
+
+`AZURE_AI_PROJECT_ENDPOINT` と `az login` が必要です。
+
+```bash
+uv run agents-cli info --agent-type microsoft-agent-framework
+uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Say hi"
+# 画像生成パス:
+uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Draw a red fox in watercolor style"
+```
+
+### `image generate` (LLM 経由なしの直接実行)
+
+`gpt-image-2` は現在 GA リージョンが限定的なため、`AZURE_AI_PROJECT_ENDPOINT`
+が対象外リージョンを指している場合は、画像モデルをホストする別の Foundry
+プロジェクトを `AZURE_AI_PROJECT_ENDPOINT_IMAGE` で指定してください。
+
+```bash
+export AZURE_AI_PROJECT_ENDPOINT_IMAGE="https://<image-resource>.services.ai.azure.com/api/projects/<project>"
+mkdir -p ./tmp_out
+uv run agents-cli image generate \
+  --prompt "A photo of a Shibuya crossing at night" \
+  --output-dir ./tmp_out
+ls ./tmp_out/*.png
+```
 
 ## 依存方向
 

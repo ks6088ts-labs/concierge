@@ -95,3 +95,55 @@ async def test_generate_image_wraps_processing_errors() -> None:
     ):
         with pytest.raises(ImageGenerationError, match="failed to process generated image"):
             await generate_image("A cat", save_dir="/tmp", client=client, model="gpt-image-2")
+
+
+def test_build_default_client_prefers_image_endpoint() -> None:
+    """``AZURE_AI_PROJECT_ENDPOINT_IMAGE`` should override the shared endpoint."""
+    from concierge.agents.infrastructure.tools import image_generation
+
+    captured: dict[str, Any] = {}
+
+    def _fake_azure_openai(**kwargs: Any) -> Any:
+        captured.update(kwargs)
+        return SimpleNamespace(**kwargs)
+
+    with patch.object(image_generation, "AzureOpenAI", side_effect=_fake_azure_openai):
+        with patch.object(image_generation, "DefaultAzureCredential", return_value=object()):
+            with patch.object(image_generation, "get_bearer_token_provider", return_value=lambda: "tok"):
+                with patch.object(
+                    image_generation,
+                    "get_microsoft_foundry_settings",
+                    return_value=SimpleNamespace(
+                        azure_ai_project_endpoint="https://shared.example/api/projects/p",
+                        azure_ai_project_endpoint_image="https://image.example/api/projects/p",
+                    ),
+                ):
+                    image_generation._build_default_client()
+
+    assert captured["azure_endpoint"] == "https://image.example/api/projects/p"
+
+
+def test_build_default_client_falls_back_to_shared_endpoint() -> None:
+    """When ``AZURE_AI_PROJECT_ENDPOINT_IMAGE`` is empty, the shared endpoint is used."""
+    from concierge.agents.infrastructure.tools import image_generation
+
+    captured: dict[str, Any] = {}
+
+    def _fake_azure_openai(**kwargs: Any) -> Any:
+        captured.update(kwargs)
+        return SimpleNamespace(**kwargs)
+
+    with patch.object(image_generation, "AzureOpenAI", side_effect=_fake_azure_openai):
+        with patch.object(image_generation, "DefaultAzureCredential", return_value=object()):
+            with patch.object(image_generation, "get_bearer_token_provider", return_value=lambda: "tok"):
+                with patch.object(
+                    image_generation,
+                    "get_microsoft_foundry_settings",
+                    return_value=SimpleNamespace(
+                        azure_ai_project_endpoint="https://shared.example/api/projects/p",
+                        azure_ai_project_endpoint_image="",
+                    ),
+                ):
+                    image_generation._build_default_client()
+
+    assert captured["azure_endpoint"] == "https://shared.example/api/projects/p"

@@ -147,6 +147,12 @@ belong to the `cloud_agent` and `chat` services and are not relevant here.
 
 ### Generate images directly (without LLM mediation)
 
+`gpt-image-2` is currently only generally available in a limited set of
+Foundry regions. If `AZURE_AI_PROJECT_ENDPOINT` points at a region where it
+is not deployed, set `AZURE_AI_PROJECT_ENDPOINT_IMAGE` to a Foundry project
+that hosts the `gpt-image-2` deployment. When `AZURE_AI_PROJECT_ENDPOINT_IMAGE`
+is empty, the shared `AZURE_AI_PROJECT_ENDPOINT` is used.
+
 ```bash
 uv run agents-cli image generate \
   --prompt "A photo of a Shibuya crossing at night" \

@@ -36,12 +36,18 @@ class ImageGenerationResult:
 
 def _build_default_client() -> AzureOpenAI:
     settings = get_agents_settings()
+    foundry_settings = get_microsoft_foundry_settings()
+    # ``gpt-image-2`` is currently only available in a limited set of Foundry
+    # regions, so allow callers to point at a separate Foundry project via
+    # ``AZURE_AI_PROJECT_ENDPOINT_IMAGE``. Fall back to the shared
+    # ``AZURE_AI_PROJECT_ENDPOINT`` when the image-dedicated endpoint is empty.
+    azure_endpoint = foundry_settings.azure_ai_project_endpoint_image or foundry_settings.azure_ai_project_endpoint
     token_provider = get_bearer_token_provider(
         DefaultAzureCredential(),
         "https://cognitiveservices.azure.com/.default",
     )
     return AzureOpenAI(
-        azure_endpoint=get_microsoft_foundry_settings().azure_ai_project_endpoint,
+        azure_endpoint=azure_endpoint,
         api_version=settings.image_api_version,
         azure_ad_token_provider=token_provider,
     )

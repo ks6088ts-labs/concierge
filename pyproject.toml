@@ -13,6 +13,7 @@ dependencies = [
     "github-copilot-sdk>=0.3.0",
     "httpx>=0.28.0",
     "langchain>=1.2.18",
+    "langchain-community>=0.3",
     "langchain-azure-ai[opentelemetry]>=1.2.3",
     "langchain-postgres>=0.0.17",
     "langgraph>=1.1.10",

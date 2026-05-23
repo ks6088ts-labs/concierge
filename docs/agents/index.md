@@ -44,6 +44,8 @@ concierge/agents/
     microsoft_agent_framework_agent.py     # MicrosoftAgentFrameworkAgent (configurable)
     tools/
       echo_tool.py             # build_echo_langchain_tool / build_echo_maf_tool
+      file_management.py       # sandboxed file operation core (path validation + io)
+      file_management_tool.py  # file tool builders for LangChain / MAF / Copilot SDK
       image_generation.py      # pure async generate_image() (no framework deps)
       image_generation_tool.py # image_gen_langchain_tool_factory / image_gen_maf_tool_factory
     registry_factory.py    # get_agent_registry() — wires presets onto unified classes
@@ -98,9 +100,9 @@ agent = registry.resolve("my-agent")
 | agent_type | Class | Description |
 |------------|-------|-------------|
 | `echo` | `EchoAgent` | Returns `payload.message` verbatim. No LLM required. |
-| `langgraph` | `LangGraphAgent` | LangGraph (`create_agent`) preset wired with both the `echo` tool and the shared `generate_image_tool`. The LLM picks the appropriate tool based on user input. |
+| `langgraph` | `LangGraphAgent` | LangGraph (`create_agent`) preset wired with `echo`, `generate_image_tool`, and shared sandboxed file-management tools (`read_file`, `list_directory`, `file_search` by default). The LLM picks the appropriate tool based on user input. |
 | `github-copilot-sdk` | `GitHubCopilotSdkAgent` | Opens a GitHub Copilot SDK session per request, `send`s the user message, and returns the assistant reply. |
-| `microsoft-agent-framework` | `MicrosoftAgentFrameworkAgent` | Microsoft Agent Framework preset wired with both the `echo` tool and the shared `generate_image_tool`. The LLM picks the appropriate tool based on user input. |
+| `microsoft-agent-framework` | `MicrosoftAgentFrameworkAgent` | Microsoft Agent Framework preset wired with `echo`, `generate_image_tool`, and shared sandboxed file-management tools (`read_file`, `list_directory`, `file_search` by default). The LLM picks the appropriate tool based on user input. |
 
 The two framework-backed agents (`langgraph` /
 `microsoft-agent-framework`) are *generic*: they are each registered once
@@ -120,6 +122,8 @@ Agent settings are read from environment variables with the **`AGENTS_`** prefix
 | `AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT` | *(built-in)* | System prompt for `github-copilot-sdk` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Default: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | Model string passed to `FoundryChatClient(model=...)` for `microsoft-agent-framework`. |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | *(built-in)* | System prompt passed as `Agent(instructions=...)` for `microsoft-agent-framework`. Defaults instruct the LLM to pick between the `echo` and `generate_image_tool` tools based on the user request. |
+| `AGENTS_FILE_ROOT_DIR` | `""` (`<cwd>/workspace`) | Sandbox root for file-management tools. Relative paths are resolved from current working directory; root is auto-created at startup. |
+| `AGENTS_FILE_TOOLS_ENABLED` | `read_file,list_directory,file_search` | Comma-separated enabled file tools. Set `""` to disable all file tools; write tools (`write_file`,`copy_file`,`move_file`,`delete_file`) require explicit opt-in. |
 | `AGENTS_IMAGE_MODEL` | `gpt-image-2` | Foundry deployment name used by shared image generation tool. |
 | `AGENTS_IMAGE_SIZE` | `1024x1024` | Default image size (`1024x1024` / `1536x1024` / `1024x1536` / `4K`). |
 | `AGENTS_IMAGE_N` | `1` | Default number of images requested per call. |
@@ -132,6 +136,10 @@ The image generation tool also reads two Foundry endpoint variables from
 |----------|---------|-------------|
 | `AZURE_AI_PROJECT_ENDPOINT` | `""` | Shared Foundry project endpoint used by all built-in agents. |
 | `AZURE_AI_PROJECT_ENDPOINT_IMAGE` | `""` | Optional override pointing at a different Foundry project that hosts the `gpt-image-2` deployment. `gpt-image-2` is currently only GA in a limited set of regions, so set this when your main Foundry project is in a region where it is not available. When empty, the shared `AZURE_AI_PROJECT_ENDPOINT` is used.
+
+File-management tools are sandboxed to `AGENTS_FILE_ROOT_DIR` and reject absolute
+paths or traversal attempts. Keep write tools disabled unless required, and follow
+the [LangChain security guidance](https://python.langchain.com/docs/security).
 
 ## Using from cloud_agent worker
 

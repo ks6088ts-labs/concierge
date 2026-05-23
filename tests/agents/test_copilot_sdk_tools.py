@@ -184,7 +184,7 @@ def test_registry_includes_copilot_sdk_tools() -> None:
 
     # Sanity check the builder list directly so the registry wiring is verified
     # without spawning a real Copilot CLI subprocess.
-    assert len(agent._tool_builders) == 2
+    assert len(agent._tool_builders) == 5
     # Calling the builders with a fresh side_outputs dict must yield Tool instances.
     side_outputs: dict[str, Any] = {}
     for builder in agent._tool_builders:

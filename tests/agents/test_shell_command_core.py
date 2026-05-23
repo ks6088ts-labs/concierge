@@ -109,5 +109,5 @@ def test_shell_exec_output_truncation(tmp_path: Path) -> None:
             max_output_bytes=16,
         )
     )
-    result = core.shell_exec('python3 -c "print(\'x\' * 128)"')
+    result = core.shell_exec("python3 -c \"print('x' * 128)\"")
     assert "[truncated" in result

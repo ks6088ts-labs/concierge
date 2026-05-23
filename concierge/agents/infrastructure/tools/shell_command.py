@@ -86,11 +86,7 @@ class ShellCommandCore:
 
         stdout = _truncate_output(completed.stdout, self.config.max_output_bytes)
         stderr = _truncate_output(completed.stderr, self.config.max_output_bytes)
-        return (
-            f"exit_code: {completed.returncode}\n"
-            f"stdout:\n{stdout}\n"
-            f"stderr:\n{stderr}"
-        )
+        return f"exit_code: {completed.returncode}\nstdout:\n{stdout}\nstderr:\n{stderr}"
 
     @staticmethod
     def _to_argv(command: str | list[str]) -> list[str]:

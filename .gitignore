@@ -165,3 +165,4 @@ requirements.txt
 *.db
 .playwright-cli
 mlartifacts
+workspace

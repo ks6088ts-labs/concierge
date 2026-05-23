@@ -32,9 +32,13 @@ from concierge.agents.infrastructure.tools import (
     build_echo_copilot_sdk_tool,
     build_echo_langchain_tool,
     build_echo_maf_tool,
+    build_file_copilot_sdk_tool_builders,
+    build_file_langchain_tool_builders,
+    build_file_maf_tool_builders,
     image_gen_copilot_sdk_tool_factory,
     image_gen_langchain_tool_factory,
     image_gen_maf_tool_factory,
+    resolve_file_root_dir,
 )
 from concierge.observability import trace_config
 from concierge.settings.agents import get_agents_settings
@@ -62,6 +66,10 @@ def get_agent_registry() -> AgentRegistry:
     settings = get_agents_settings()
     foundry_endpoint = get_microsoft_foundry_settings().azure_ai_project_endpoint
     save_dir = _image_save_dir()
+    file_root_dir = str(resolve_file_root_dir(settings.file_root_dir))
+    file_builders_lc = build_file_langchain_tool_builders(file_root_dir, settings.file_tools_enabled)
+    file_builders_maf = build_file_maf_tool_builders(file_root_dir, settings.file_tools_enabled)
+    file_builders_copilot = build_file_copilot_sdk_tool_builders(file_root_dir, settings.file_tools_enabled)
 
     registry = AgentRegistry()
     registry.register(EchoAgent())
@@ -73,6 +81,7 @@ def get_agent_registry() -> AgentRegistry:
             tool_builders=[
                 build_echo_langchain_tool,
                 image_gen_langchain_tool_factory(save_dir),
+                *file_builders_lc,
             ],
             run_config_factory=_langgraph_run_config,
         )
@@ -84,6 +93,7 @@ def get_agent_registry() -> AgentRegistry:
             tool_builders=[
                 build_echo_copilot_sdk_tool,
                 image_gen_copilot_sdk_tool_factory(save_dir),
+                *file_builders_copilot,
             ],
         )
     )
@@ -95,6 +105,7 @@ def get_agent_registry() -> AgentRegistry:
             tool_builders=[
                 build_echo_maf_tool,
                 image_gen_maf_tool_factory(save_dir),
+                *file_builders_maf,
             ],
             project_endpoint=foundry_endpoint,
         )

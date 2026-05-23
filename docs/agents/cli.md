@@ -63,9 +63,9 @@ uv run agents-cli invoke \
 
 All built-in agents (`echo`, `langgraph`, `github-copilot-sdk`, and `microsoft-agent-framework`) read `payload.message`,
 so the same shortcut works for all of them. The framework-backed agents
-(`langgraph` / `microsoft-agent-framework`) carry both the `echo` and
-`generate_image_tool` tools — the LLM picks the right one based on the
-user's request:
+(`langgraph` / `microsoft-agent-framework`) carry `echo`, `generate_image_tool`,
+and sandboxed file-management tools (`read_file`, `list_directory`, `file_search`
+by default) — the LLM picks the right one based on the user's request:
 
 ```bash
 uv run agents-cli invoke --agent-type langgraph --message "Hello LangGraph"
@@ -73,6 +73,9 @@ uv run agents-cli invoke --agent-type github-copilot-sdk --message "Hello Copilo
 uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Hello MAF"
 uv run agents-cli invoke --agent-type langgraph --message "Create an image of a red fox in watercolor style"
 uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Create an image of a red fox in watercolor style"
+# file tools (reads from AGENTS_FILE_ROOT_DIR sandbox)
+uv run agents-cli invoke --agent-type langgraph --message "List files in the workspace root"
+uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Read README.md from the workspace"
 ```
 
 A successful `langgraph` echo response looks like:
@@ -138,6 +141,8 @@ belong to the `cloud_agent` and `chat` services and are not relevant here.
 | `AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-sdk` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Default: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | Model string passed to `FoundryChatClient(model=...)` for `microsoft-agent-framework` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `microsoft-agent-framework` (passed as `Agent(instructions=...)`). Default tells the LLM to pick between `echo` and `generate_image_tool` based on the user's request. |
+| `AGENTS_FILE_ROOT_DIR` | `""` (`<cwd>/workspace`) | Sandbox root for file-management tools (`read_file`, `list_directory`, `file_search`, optional write tools) |
+| `AGENTS_FILE_TOOLS_ENABLED` | `read_file,list_directory,file_search` | Comma-separated enabled file tools. Set to `""` to disable all file tools |
 | `AGENTS_IMAGE_MODEL` | `gpt-image-2` | Foundry image model deployment name |
 | `AGENTS_IMAGE_SIZE` | `1024x1024` | Default image size (`1024x1024` / `1536x1024` / `1024x1536` / `4K`) |
 | `AGENTS_IMAGE_N` | `1` | Default number of images per generation |

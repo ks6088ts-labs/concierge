@@ -172,11 +172,16 @@ async def test_image_gen_copilot_sdk_tool_handler_failure_returns_failure_result
     assert "upstream failure" in result.error
 
 
-def test_registry_includes_copilot_sdk_tools() -> None:
+def test_registry_includes_copilot_sdk_tools(monkeypatch) -> None:
     """The GitHub Copilot SDK agent in the default registry exposes the tool builders."""
     from concierge.agents.infrastructure.github_copilot_sdk_agent import GitHubCopilotSdkAgent
     from concierge.agents.infrastructure.registry_factory import get_agent_registry
+    from concierge.settings.agents import get_agents_settings
 
+    # Pin to the package default so a developer's .env (which may enable
+    # additional file tools) cannot influence this assertion.
+    monkeypatch.setenv("AGENTS_FILE_TOOLS_ENABLED", "read_file,list_directory,file_search")
+    get_agents_settings.cache_clear()
     get_agent_registry.cache_clear()
     registry = get_agent_registry()
     agent = registry.resolve("github-copilot-sdk")
@@ -184,7 +189,7 @@ def test_registry_includes_copilot_sdk_tools() -> None:
 
     # Sanity check the builder list directly so the registry wiring is verified
     # without spawning a real Copilot CLI subprocess.
-    assert len(agent._tool_builders) == 2
+    assert len(agent._tool_builders) == 5
     # Calling the builders with a fresh side_outputs dict must yield Tool instances.
     side_outputs: dict[str, Any] = {}
     for builder in agent._tool_builders:

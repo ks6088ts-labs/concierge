@@ -62,9 +62,10 @@ uv run agents-cli invoke \
 
 組み込みエージェント（`echo` / `langgraph` / `github-copilot-sdk` / `microsoft-agent-framework`）は
 `payload.message` を読むので、同じショートカットが使えます。フレームワークベースの
-エージェント (`langgraph` / `microsoft-agent-framework`) には `echo` と
-`generate_image_tool` の両方のツールが載っており、LLM がユーザーの
-リクエストに応じて適切なツールを選択します。
+エージェント (`langgraph` / `microsoft-agent-framework`) には `echo` /
+`generate_image_tool` に加えてサンドボックス化されたファイル操作ツール
+（デフォルト: `read_file` / `list_directory` / `file_search`）も載っており、
+LLM がユーザーのリクエストに応じて適切なツールを選択します。
 
 ```bash
 uv run agents-cli invoke --agent-type langgraph --message "Hello LangGraph"
@@ -72,6 +73,9 @@ uv run agents-cli invoke --agent-type github-copilot-sdk --message "Hello Copilo
 uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Hello MAF"
 uv run agents-cli invoke --agent-type langgraph --message "Create an image of a red fox in watercolor style"
 uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Create an image of a red fox in watercolor style"
+# ファイル操作（AGENTS_FILE_ROOT_DIR 配下のみ）
+uv run agents-cli invoke --agent-type langgraph --message "ワークスペース直下のファイルを一覧表示して"
+uv run agents-cli invoke --agent-type microsoft-agent-framework --message "ワークスペースの README.md を読んで"
 ```
 
 `langgraph` の echo 成功時レスポンス例:
@@ -137,6 +141,8 @@ agents CLI が読むのは `AGENTS_*` 変数のみです。リポジトリ／キ
 | `AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT` | _(組み込み)_ | `github-copilot-sdk` のシステムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルト: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | `microsoft-agent-framework` の `FoundryChatClient(model=...)` に渡すモデル文字列 |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(組み込み)_ | `microsoft-agent-framework` のシステムプロンプト（`Agent(instructions=...)` に渡される）。デフォルトでは `echo` と `generate_image_tool` を使い分けるよう LLM に指示します。 |
+| `AGENTS_FILE_ROOT_DIR` | `""`（`<cwd>/workspace`） | ファイル操作ツール（`read_file` / `list_directory` / `file_search` / 任意の書き込み系）の sandbox root |
+| `AGENTS_FILE_TOOLS_ENABLED` | `read_file,list_directory,file_search` | 有効化するファイル操作ツールのカンマ区切り。`""` で全無効化 |
 | `AGENTS_IMAGE_MODEL` | `gpt-image-2` | Foundry 画像モデルのデプロイ名 |
 | `AGENTS_IMAGE_SIZE` | `1024x1024` | 既定サイズ（`1024x1024` / `1536x1024` / `1024x1536` / `4K`） |
 | `AGENTS_IMAGE_N` | `1` | 既定の生成枚数 |

@@ -86,6 +86,7 @@ def _build_maf_builder(tool_name: str, core: FileManagementCore) -> Callable[[di
         from agent_framework import tool
 
         if tool_name == "read_file":
+
             @tool
             def read_file(file_path: str) -> str:
                 """Read a UTF-8 text file under sandbox root."""
@@ -97,6 +98,7 @@ def _build_maf_builder(tool_name: str, core: FileManagementCore) -> Callable[[di
             return read_file
 
         if tool_name == "list_directory":
+
             @tool
             def list_directory(dir_path: str = ".") -> str:
                 """List files under a directory in sandbox root."""
@@ -108,6 +110,7 @@ def _build_maf_builder(tool_name: str, core: FileManagementCore) -> Callable[[di
             return list_directory
 
         if tool_name == "file_search":
+
             @tool
             def file_search(pattern: str, dir_path: str = ".") -> str:
                 """Search files by glob pattern in sandbox root."""
@@ -119,6 +122,7 @@ def _build_maf_builder(tool_name: str, core: FileManagementCore) -> Callable[[di
             return file_search
 
         if tool_name == "write_file":
+
             @tool
             def write_file(file_path: str, text: str) -> str:
                 """Write UTF-8 text content to a file in sandbox root."""
@@ -130,6 +134,7 @@ def _build_maf_builder(tool_name: str, core: FileManagementCore) -> Callable[[di
             return write_file
 
         if tool_name == "copy_file":
+
             @tool
             def copy_file(source_path: str, destination_path: str) -> str:
                 """Copy a file within sandbox root."""
@@ -141,6 +146,7 @@ def _build_maf_builder(tool_name: str, core: FileManagementCore) -> Callable[[di
             return copy_file
 
         if tool_name == "move_file":
+
             @tool
             def move_file(source_path: str, destination_path: str) -> str:
                 """Move a file within sandbox root."""
@@ -152,6 +158,7 @@ def _build_maf_builder(tool_name: str, core: FileManagementCore) -> Callable[[di
             return move_file
 
         if tool_name == "delete_file":
+
             @tool
             def delete_file(file_path: str) -> str:
                 """Delete a file within sandbox root."""
@@ -178,6 +185,7 @@ def _build_copilot_builder(tool_name: str, core: FileManagementCore) -> Callable
         from copilot import define_tool
 
         if tool_name == "read_file":
+
             @define_tool(name="read_file", description="Read a UTF-8 text file in sandbox root.", skip_permission=True)
             def read_file(params: _ReadFileParams) -> str:
                 try:
@@ -188,6 +196,7 @@ def _build_copilot_builder(tool_name: str, core: FileManagementCore) -> Callable
             return read_file
 
         if tool_name == "list_directory":
+
             @define_tool(name="list_directory", description="List files in sandbox directory.", skip_permission=True)
             def list_directory(params: _ListDirectoryParams) -> str:
                 try:
@@ -198,6 +207,7 @@ def _build_copilot_builder(tool_name: str, core: FileManagementCore) -> Callable
             return list_directory
 
         if tool_name == "file_search":
+
             @define_tool(
                 name="file_search",
                 description="Search files by glob pattern in sandbox root.",
@@ -212,6 +222,7 @@ def _build_copilot_builder(tool_name: str, core: FileManagementCore) -> Callable
             return file_search
 
         if tool_name == "write_file":
+
             @define_tool(
                 name="write_file",
                 description="Write UTF-8 text to file in sandbox root.",
@@ -226,6 +237,7 @@ def _build_copilot_builder(tool_name: str, core: FileManagementCore) -> Callable
             return write_file
 
         if tool_name == "copy_file":
+
             @define_tool(name="copy_file", description="Copy a file inside sandbox root.", skip_permission=True)
             def copy_file(params: _CopyFileParams) -> str:
                 try:
@@ -236,6 +248,7 @@ def _build_copilot_builder(tool_name: str, core: FileManagementCore) -> Callable
             return copy_file
 
         if tool_name == "move_file":
+
             @define_tool(name="move_file", description="Move/rename a file inside sandbox root.", skip_permission=True)
             def move_file(params: _MoveFileParams) -> str:
                 try:
@@ -246,6 +259,7 @@ def _build_copilot_builder(tool_name: str, core: FileManagementCore) -> Callable
             return move_file
 
         if tool_name == "delete_file":
+
             @define_tool(name="delete_file", description="Delete a file inside sandbox root.", skip_permission=True)
             def delete_file(params: _DeleteFileParams) -> str:
                 try:

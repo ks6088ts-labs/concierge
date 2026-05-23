@@ -64,8 +64,9 @@ uv run agents-cli invoke \
 All built-in agents (`echo`, `langgraph`, `github-copilot-sdk`, and `microsoft-agent-framework`) read `payload.message`,
 so the same shortcut works for all of them. The framework-backed agents
 (`langgraph` / `microsoft-agent-framework`) carry `echo`, `generate_image_tool`,
-and sandboxed file-management tools (`read_file`, `list_directory`, `file_search`
-by default) — the LLM picks the right one based on the user's request:
+sandboxed file-management tools (`read_file`, `list_directory`, `file_search`
+by default), and optional allowlisted shell execution (`shell_exec`) — the LLM
+picks the right one based on the user's request:
 
 ```bash
 uv run agents-cli invoke --agent-type langgraph --message "Hello LangGraph"
@@ -76,6 +77,8 @@ uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Creat
 # file tools (reads from AGENTS_FILE_ROOT_DIR sandbox)
 uv run agents-cli invoke --agent-type langgraph --message "List files in the workspace root"
 uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Read README.md from the workspace"
+# shell tool (requires AGENTS_SHELL_TOOLS_ENABLED and AGENTS_SHELL_ALLOWED_COMMANDS)
+uv run agents-cli invoke --agent-type langgraph --message "Run terraform plan with shell_exec"
 ```
 
 A successful `langgraph` echo response looks like:
@@ -143,6 +146,11 @@ belong to the `cloud_agent` and `chat` services and are not relevant here.
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `microsoft-agent-framework` (passed as `Agent(instructions=...)`). Default tells the LLM to pick between `echo` and `generate_image_tool` based on the user's request. |
 | `AGENTS_FILE_ROOT_DIR` | `""` (`<cwd>/workspace`) | Sandbox root for file-management tools (`read_file`, `list_directory`, `file_search`, optional write tools) |
 | `AGENTS_FILE_TOOLS_ENABLED` | `read_file,list_directory,file_search` | Comma-separated enabled file tools. Set to `""` to disable all file tools |
+| `AGENTS_SHELL_TOOLS_ENABLED` | `""` | Comma-separated enabled shell tools. Keep empty to disable shell tools (default, opt-in) |
+| `AGENTS_SHELL_ALLOWED_COMMANDS` | `""` | Comma-separated allowlisted command names for `shell_exec` (required when shell tools are enabled) |
+| `AGENTS_SHELL_ROOT_DIR` | `""` (`AGENTS_FILE_ROOT_DIR` fallback) | Fixed working directory for shell commands |
+| `AGENTS_SHELL_TIMEOUT_SECONDS` | `30` | Command timeout in seconds |
+| `AGENTS_SHELL_MAX_OUTPUT_BYTES` | `65536` | Per-stream stdout/stderr output cap before truncation marker |
 | `AGENTS_IMAGE_MODEL` | `gpt-image-2` | Foundry image model deployment name |
 | `AGENTS_IMAGE_SIZE` | `1024x1024` | Default image size (`1024x1024` / `1536x1024` / `1024x1536` / `4K`) |
 | `AGENTS_IMAGE_N` | `1` | Default number of images per generation |
@@ -179,6 +187,17 @@ Options:
 
 See the [Shared Agent Runtime overview](index.md) for the full agent
 catalogue and contract reference.
+
+Example `.env` snippet for shell tool opt-in:
+
+```bash
+AGENTS_SHELL_TOOLS_ENABLED=shell_exec
+AGENTS_SHELL_ALLOWED_COMMANDS=terraform
+# Optional overrides:
+# AGENTS_SHELL_ROOT_DIR=./workspace
+# AGENTS_SHELL_TIMEOUT_SECONDS=30
+# AGENTS_SHELL_MAX_OUTPUT_BYTES=65536
+```
 
 ## Running with tracing and MLflow
 

@@ -24,6 +24,7 @@ def test_registry_defaults_include_read_only_file_tools(monkeypatch) -> None:
     # Pin to the package default so a developer's .env (which may enable
     # additional file tools) cannot influence this assertion.
     monkeypatch.setenv("AGENTS_FILE_TOOLS_ENABLED", "read_file,list_directory,file_search")
+    monkeypatch.setenv("AGENTS_SHELL_TOOLS_ENABLED", "")
     registry = get_agent_registry()
 
     langgraph = registry.resolve("langgraph")
@@ -40,6 +41,7 @@ def test_registry_defaults_include_read_only_file_tools(monkeypatch) -> None:
 
 def test_registry_single_file_tool_enabled(monkeypatch) -> None:
     monkeypatch.setenv("AGENTS_FILE_TOOLS_ENABLED", "read_file")
+    monkeypatch.setenv("AGENTS_SHELL_TOOLS_ENABLED", "")
     registry = get_agent_registry()
     langgraph = registry.resolve("langgraph")
     assert isinstance(langgraph, LangGraphAgent)
@@ -48,6 +50,7 @@ def test_registry_single_file_tool_enabled(monkeypatch) -> None:
 
 def test_registry_file_tools_disabled(monkeypatch) -> None:
     monkeypatch.setenv("AGENTS_FILE_TOOLS_ENABLED", "")
+    monkeypatch.setenv("AGENTS_SHELL_TOOLS_ENABLED", "")
     registry = get_agent_registry()
     langgraph = registry.resolve("langgraph")
     assert isinstance(langgraph, LangGraphAgent)
@@ -56,5 +59,42 @@ def test_registry_file_tools_disabled(monkeypatch) -> None:
 
 def test_registry_unknown_file_tool_raises(monkeypatch) -> None:
     monkeypatch.setenv("AGENTS_FILE_TOOLS_ENABLED", "read_file,unknown_tool")
+    monkeypatch.setenv("AGENTS_SHELL_TOOLS_ENABLED", "")
     with pytest.raises(ValueError, match="Unknown file tool"):
         get_agent_registry()
+
+
+def test_registry_shell_tools_disabled_by_default(monkeypatch) -> None:
+    monkeypatch.setenv("AGENTS_FILE_TOOLS_ENABLED", "")
+    monkeypatch.delenv("AGENTS_SHELL_TOOLS_ENABLED", raising=False)
+    monkeypatch.delenv("AGENTS_SHELL_ALLOWED_COMMANDS", raising=False)
+
+    registry = get_agent_registry()
+    langgraph = registry.resolve("langgraph")
+    assert isinstance(langgraph, LangGraphAgent)
+    assert len(langgraph._tool_builders) == 2
+
+
+def test_registry_shell_tools_enabled_require_allowed_commands(monkeypatch) -> None:
+    monkeypatch.setenv("AGENTS_SHELL_TOOLS_ENABLED", "shell_exec")
+    monkeypatch.setenv("AGENTS_SHELL_ALLOWED_COMMANDS", "")
+    with pytest.raises(ValueError, match="AGENTS_SHELL_ALLOWED_COMMANDS"):
+        get_agent_registry()
+
+
+def test_registry_shell_tool_wired_for_all_framework_agents(monkeypatch) -> None:
+    monkeypatch.setenv("AGENTS_FILE_TOOLS_ENABLED", "")
+    monkeypatch.setenv("AGENTS_SHELL_TOOLS_ENABLED", "shell_exec")
+    monkeypatch.setenv("AGENTS_SHELL_ALLOWED_COMMANDS", "echo")
+    registry = get_agent_registry()
+
+    langgraph = registry.resolve("langgraph")
+    copilot = registry.resolve("github-copilot-sdk")
+    maf = registry.resolve("microsoft-agent-framework")
+
+    assert isinstance(langgraph, LangGraphAgent)
+    assert isinstance(copilot, GitHubCopilotSdkAgent)
+    assert isinstance(maf, MicrosoftAgentFrameworkAgent)
+    assert len(langgraph._tool_builders) == 3
+    assert len(copilot._tool_builders) == 3
+    assert len(maf._tool_builders) == 3

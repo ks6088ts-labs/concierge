@@ -4,3 +4,7 @@ class ImageGenerationError(RuntimeError):
 
 class FileToolError(RuntimeError):
     """Raised when sandboxed file tool operations fail safely."""
+
+
+class ShellToolError(RuntimeError):
+    """Raised when sandboxed shell command execution fails safely."""

@@ -181,6 +181,7 @@ def test_registry_includes_copilot_sdk_tools(monkeypatch) -> None:
     # Pin to the package default so a developer's .env (which may enable
     # additional file tools) cannot influence this assertion.
     monkeypatch.setenv("AGENTS_FILE_TOOLS_ENABLED", "read_file,list_directory,file_search")
+    monkeypatch.setenv("AGENTS_SHELL_TOOLS_ENABLED", "")
     get_agents_settings.cache_clear()
     get_agent_registry.cache_clear()
     registry = get_agent_registry()

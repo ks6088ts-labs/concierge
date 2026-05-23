@@ -15,13 +15,13 @@ flowchart LR
     chat[chat ChatbotResponder] --> Registry
     cloud_agent[cloud_agent ワーカー] --> Registry
     Registry[AgentRegistry] --> Echo[EchoAgent]
-    Registry --> LGE[LangGraphEchoAgent]
-    Registry --> GCE[GitHubCopilotEchoAgent]
-    Registry --> MAF[MicrosoftAgentFrameworkEchoAgent]
+    Registry --> LG["LangGraphAgent\n(langgraph)"]
+    Registry --> GCE[GitHubCopilotSdkAgent]
+    Registry --> MAF["MicrosoftAgentFrameworkAgent\n(microsoft-agent-framework)"]
     subgraph agents["concierge/agents (共有カーネル)"]
         Registry
         Echo
-        LGE
+        LG
         GCE
         MAF
     end
@@ -32,16 +32,21 @@ flowchart LR
 ```
 concierge/agents/
   domain/
+    agent_types.py         # AgentType (StrEnum) — agent_type 定数・preset 識別子
     exceptions.py          # AgentNotFoundError, AgentExecutionError
   application/
     contracts.py           # AgentRequest, AgentResponse, AgentChunk, Agent, StreamingAgent
     registry.py            # AgentRegistry
   infrastructure/
-    echo_agent.py          # EchoAgent
-    langgraph_echo_agent.py # LangGraphEchoAgent
-    github_copilot_echo_agent.py # GitHubCopilotEchoAgent
-    microsoft_agent_framework_echo_agent.py # MicrosoftAgentFrameworkEchoAgent
-    registry_factory.py    # get_agent_registry() (lru_cache)
+    echo_agent.py                          # EchoAgent (LLM 不要)
+    github_copilot_sdk_agent.py           # GitHubCopilotSdkAgent
+    langgraph_agent.py                     # LangGraphAgent (preset ごとに tools を代入)
+    microsoft_agent_framework_agent.py     # MicrosoftAgentFrameworkAgent (preset 構成可)
+    tools/
+      echo_tool.py             # build_echo_langchain_tool / build_echo_maf_tool
+      image_generation.py      # フレームワーク不要の generate_image() 関数
+      image_generation_tool.py # image_gen_langchain_tool_factory / image_gen_maf_tool_factory
+    registry_factory.py    # get_agent_registry() — 統合クラス + preset を配線
 ```
 
 ## 契約
@@ -66,11 +71,13 @@ response: AgentResponse = await agent.handle(request)
 ### Agent Protocol
 
 ```python
-from typing import ClassVar
 from concierge.agents.application.contracts import Agent, AgentRequest, AgentResponse
 
 class MyAgent:
-    agent_type: ClassVar[str] = "my-agent"
+    # ``agent_type`` はクラス属性とインスタンス属性のどちらでも可。
+    # 複数 preset を同一クラスで提供する場合 (`LangGraphAgent` など) は
+    # インスタンス属性とする。
+    agent_type: str = "my-agent"
 
     async def handle(self, request: AgentRequest) -> AgentResponse:
         ...
@@ -81,9 +88,15 @@ class MyAgent:
 | agent_type | クラス | 説明 |
 |------------|--------|------|
 | `echo` | `EchoAgent` | `payload.message` をそのまま返す。LLM 不要。 |
-| `langgraph-echo` | `LangGraphEchoAgent` | `echo` ツールを持つ LangGraph エージェント。Azure AI チャットモデルを使用。 |
-| `github-copilot-echo` | `GitHubCopilotEchoAgent` | リクエストごとに GitHub Copilot SDK セッションを開き、ユーザーメッセージを `send` し、アシスタント応答を返します。 |
-| `microsoft-agent-framework-echo` | `MicrosoftAgentFrameworkEchoAgent` | Microsoft Agent Framework の `Agent` を `echo` ツール付きで実行し、最終応答テキストを返します。 |
+| `langgraph` | `LangGraphAgent` | `echo` と `generate_image_tool` の両方を備える LangGraph (`create_agent`) preset。LLM がユーザー入力に応じてツールを選択します。 |
+| `github-copilot-sdk` | `GitHubCopilotSdkAgent` | リクエストごとに GitHub Copilot SDK セッションを開き、ユーザーメッセージを `send` し、アシスタント応答を返します。 |
+| `microsoft-agent-framework` | `MicrosoftAgentFrameworkAgent` | `echo` と `generate_image_tool` の両方を備える Microsoft Agent Framework preset。LLM がユーザー入力に応じてツールを選択します。 |
+
+フレームワークベースの 2 つのエージェント (`langgraph` /
+`microsoft-agent-framework`) は *汎用* で、それぞれ全ツールビルダーを
+登録した状態で 1 度だけ登録されます。新しいツールを追加するときは
+`registry_factory.py` のリストにビルダーを追加するだけで済み、新しい
+`agent_type` を増やす必要はありません。
 
 ## 設定
 
@@ -92,17 +105,29 @@ class MyAgent:
 | 変数 | デフォルト | 説明 |
 |------|-----------|------|
 | `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | `init_chat_model` に渡すモデル文字列。 |
-| `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(組み込み)_ | LangGraph エージェントへのシステムプロンプト。 |
-| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | `CopilotClient.create_session(model=...)` に渡すモデル名。 |
-| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(組み込み)_ | `github-copilot-echo` 用システムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルト: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
-| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | `microsoft-agent-framework-echo` の `FoundryChatClient(model=...)` に渡すモデル名。 |
-| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(組み込み)_ | `microsoft-agent-framework-echo` の `Agent(instructions=...)` に渡すシステムプロンプト。 |
+| `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | *(組み込み)* | `langgraph` エージェントのシステムプロンプト。デフォルトでは `echo` と `generate_image_tool` を使い分けるよう指示します。 |
+| `AGENTS_GITHUB_COPILOT_SDK_MODEL` | `gpt-5-mini` | `CopilotClient.create_session(model=...)` に渡すモデル名。 |
+| `AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT` | *(組み込み)* | `github-copilot-sdk` 用システムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルト: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | `microsoft-agent-framework` の `FoundryChatClient(model=...)` に渡すモデル名。 |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | *(組み込み)* | `microsoft-agent-framework` の `Agent(instructions=...)` に渡すシステムプロンプト。デフォルトでは `echo` と `generate_image_tool` を使い分けるよう指示します。 |
+| `AGENTS_IMAGE_MODEL` | `gpt-image-2` | 共有画像生成ツールが使う Foundry デプロイ名。 |
+| `AGENTS_IMAGE_SIZE` | `1024x1024` | 既定サイズ（`1024x1024` / `1536x1024` / `1024x1536` / `4K`）。 |
+| `AGENTS_IMAGE_N` | `1` | 1 回の呼び出しで要求する既定画像枚数。 |
+| `AGENTS_IMAGE_API_VERSION` | `2025-04-01-preview` | `openai.AzureOpenAI` に渡す API バージョン。 |
+
+画像生成ツールは [`MicrosoftFoundrySettings`](../tutorial/02-observability.md)
+から以下の Foundry エンドポイント変数も読み込みます:
+
+| 変数 | デフォルト | 説明 |
+|------|-----------|------|
+| `AZURE_AI_PROJECT_ENDPOINT` | `""` | 全エージェント共通で使う Foundry プロジェクトエンドポイント。 |
+| `AZURE_AI_PROJECT_ENDPOINT_IMAGE` | `""` | `gpt-image-2` デプロイをホストする別の Foundry プロジェクトを指す任意のオーバーライド。`gpt-image-2` は現在 GA 提供されているリージョンが限定的であるため、メインの Foundry プロジェクトが対応リージョン外の場合に設定します。空の場合は共有の `AZURE_AI_PROJECT_ENDPOINT` が使われます。
 
 ## cloud_agent ワーカーからの利用
 
 ```bash
 uv run cloud-agent-cli task dispatch \
-  --agent-type langgraph-echo \
+  --agent-type langgraph \
   --payload '{"message": "Hello LangGraph"}'
 ```
 
@@ -115,26 +140,96 @@ export CHAT_BOT_AGENT_TYPE=echo   # LLM 不要のスモークテスト
 uv run chat-web
 ```
 
-`github-copilot-echo` を使う場合:
+`github-copilot-sdk` を使う場合:
 
 ```bash
-export CHAT_BOT_AGENT_TYPE=github-copilot-echo
+export CHAT_BOT_AGENT_TYPE=github-copilot-sdk
 uv run chat-web
 ```
 
-`microsoft-agent-framework-echo` を使う場合:
+`microsoft-agent-framework` を使う場合:
 
 ```bash
-export CHAT_BOT_AGENT_TYPE=microsoft-agent-framework-echo
+export CHAT_BOT_AGENT_TYPE=microsoft-agent-framework
 uv run chat-web
 ```
 
-`github-copilot-echo` は LangChain/LangGraph ベースではないため、MLflow の
+`github-copilot-sdk` は LangChain/LangGraph ベースではないため、MLflow の
 LangChain autologging では内部 SDK スパンは自動収集されません。
-`microsoft-agent-framework-echo` も LangChain/LangGraph ではなく Microsoft
+`microsoft-agent-framework` も LangChain/LangGraph ではなく Microsoft
 Agent Framework（`agent_framework.Agent` + `agent_framework.foundry.FoundryChatClient`）
 で実装されているため同様で、内部スパンが必要な場合は Microsoft Agent
 Framework 側の OTLP / Foundry トレーシングを有効化してください。
+
+## エージェント別の最小動作検証手順
+
+以下は `agents-cli` から各登録エージェントを最小限の構成で実行するための手順です。
+レジストリへの配線が正しく、必要な設定（モデル名・エンドポイント・認証）が
+揃っていることを確認できる "スモークテスト" の最小集合です。
+
+LLM を使うエージェントに共通する事前準備:
+
+```bash
+# 1. .env を読み込み（uv が自動的に読み込みます）、Entra ID 認証のため az login する
+az login
+# 2. Foundry 系エージェントすべてに必須
+export AZURE_AI_PROJECT_ENDPOINT="https://<resource>.services.ai.azure.com/api/projects/<project>"
+```
+
+### `echo` (LLM 不要)
+
+```bash
+uv run agents-cli invoke --agent-type echo --message "hello"
+# 期待値: {"status": "succeeded", "result": {"message": "hello", "reply": "hello"}, "error": null}
+```
+
+### `langgraph`
+
+`AZURE_AI_PROJECT_ENDPOINT` と `az login` が必要です。
+
+```bash
+uv run agents-cli info --agent-type langgraph             # 設定確認のみ（LLM 呼び出しなし）
+uv run agents-cli invoke --agent-type langgraph --message "Say hi"
+# 画像生成パス（AGENTS_IMAGE_MODEL のデプロイが必要、下記の注意点も参照）:
+uv run agents-cli invoke --agent-type langgraph --message "Draw a red fox in watercolor style"
+```
+
+### `github-copilot-sdk`
+
+デフォルトの echo パスでは
+[GitHub Copilot CLI](https://github.com/github/copilot-cli) のインストールと
+認証が必要で、Foundry エンドポイントは不要です。
+
+```bash
+uv run agents-cli info --agent-type github-copilot-sdk
+uv run agents-cli invoke --agent-type github-copilot-sdk --message "Say hi"
+```
+
+### `microsoft-agent-framework`
+
+`AZURE_AI_PROJECT_ENDPOINT` と `az login` が必要です。
+
+```bash
+uv run agents-cli info --agent-type microsoft-agent-framework
+uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Say hi"
+# 画像生成パス:
+uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Draw a red fox in watercolor style"
+```
+
+### `image generate` (LLM 経由なしの直接実行)
+
+`gpt-image-2` は現在 GA リージョンが限定的なため、`AZURE_AI_PROJECT_ENDPOINT`
+が対象外リージョンを指している場合は、画像モデルをホストする別の Foundry
+プロジェクトを `AZURE_AI_PROJECT_ENDPOINT_IMAGE` で指定してください。
+
+```bash
+export AZURE_AI_PROJECT_ENDPOINT_IMAGE="https://<image-resource>.services.ai.azure.com/api/projects/<project>"
+mkdir -p ./tmp_out
+uv run agents-cli image generate \
+  --prompt "A photo of a Shibuya crossing at night" \
+  --output-dir ./tmp_out
+ls ./tmp_out/*.png
+```
 
 ## 依存方向
 

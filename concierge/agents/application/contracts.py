@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from typing import Any, ClassVar, Literal, Protocol
+from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel, Field
 
@@ -27,7 +27,10 @@ class AgentChunk(BaseModel):
 
 
 class Agent(Protocol):
-    agent_type: ClassVar[str]
+    # Implementations may expose this as a ClassVar (single-purpose agents)
+    # or as an instance attribute (configurable agents that fan out into
+    # multiple presets backed by the same class).
+    agent_type: str
 
     async def handle(self, request: AgentRequest) -> AgentResponse: ...
 
@@ -35,6 +38,6 @@ class Agent(Protocol):
 class StreamingAgent(Protocol):
     """Non-breaking extension for streaming agents (declaration only; implementation is a follow-up)."""
 
-    agent_type: ClassVar[str]
+    agent_type: str
 
     async def stream(self, request: AgentRequest) -> AsyncIterator[AgentChunk]: ...

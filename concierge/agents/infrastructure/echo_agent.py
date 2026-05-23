@@ -1,22 +1,23 @@
 """Echo agent - a no-op agent for testing and verification.
 
 Returns the ``payload.message`` value back as the result.  The payload
-contract is intentionally aligned with :class:`LangGraphEchoAgent` so that
-clients can use the same dispatch payload (``{"message": "..."}``) for
-both agents.
+contract is intentionally aligned with :class:`LangGraphAgent` (echo
+preset) so that clients can use the same dispatch payload
+(``{"message": "..."}``) for both agents.
 """
 
 from __future__ import annotations
 
-from typing import Any, ClassVar
+from typing import Any
 
 from concierge.agents.application.contracts import AgentRequest, AgentResponse
+from concierge.agents.domain.agent_types import AgentType
 
 
 class EchoAgent:
     """Agent that echoes ``payload.message`` back as the result."""
 
-    agent_type: ClassVar[str] = "echo"
+    agent_type: str = AgentType.ECHO.value
 
     async def handle(self, request: AgentRequest) -> AgentResponse:
         message = self._extract_message(request.payload)
@@ -27,7 +28,7 @@ class EchoAgent:
             )
         return AgentResponse(
             status="succeeded",
-            result={"echo": message, "reply": message},
+            result={"message": message, "reply": message},
         )
 
     @staticmethod

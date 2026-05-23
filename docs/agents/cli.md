@@ -37,7 +37,7 @@ uv run agents-cli list
 Output:
 
 ```json
-["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo"]
+["echo", "langgraph", "github-copilot-sdk", "microsoft-agent-framework"]
 ```
 
 ### Invoke an agent
@@ -61,22 +61,27 @@ uv run agents-cli invoke \
   --context '{"task_id": "00000000-0000-0000-0000-000000000001"}'
 ```
 
-All built-in agents (`echo`, `langgraph-echo`, `github-copilot-echo`, and `microsoft-agent-framework-echo`) read `payload.message`,
-so the same shortcut works for both:
+All built-in agents (`echo`, `langgraph`, `github-copilot-sdk`, and `microsoft-agent-framework`) read `payload.message`,
+so the same shortcut works for all of them. The framework-backed agents
+(`langgraph` / `microsoft-agent-framework`) carry both the `echo` and
+`generate_image_tool` tools — the LLM picks the right one based on the
+user's request:
 
 ```bash
-uv run agents-cli invoke --agent-type langgraph-echo --message "Hello LangGraph"
-uv run agents-cli invoke --agent-type github-copilot-echo --message "Hello Copilot"
-uv run agents-cli invoke --agent-type microsoft-agent-framework-echo --message "Hello MAF"
+uv run agents-cli invoke --agent-type langgraph --message "Hello LangGraph"
+uv run agents-cli invoke --agent-type github-copilot-sdk --message "Hello Copilot"
+uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Hello MAF"
+uv run agents-cli invoke --agent-type langgraph --message "Create an image of a red fox in watercolor style"
+uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Create an image of a red fox in watercolor style"
 ```
 
-A successful `langgraph-echo` response looks like:
+A successful `langgraph` echo response looks like:
 
 ```json
 {
   "status": "succeeded",
   "result": {
-    "echo": "Hello LangGraph",
+    "message": "Hello LangGraph",
     "reply": "Hello LangGraph",
     "tool_calls": [
       {"name": "echo", "args": {"text": "Hello LangGraph"}}
@@ -98,21 +103,21 @@ Options:
 ### Show agent metadata
 
 ```bash
-uv run agents-cli info --agent-type langgraph-echo
-uv run agents-cli info --agent-type github-copilot-echo
-uv run agents-cli info --agent-type microsoft-agent-framework-echo
+uv run agents-cli info --agent-type langgraph
+uv run agents-cli info --agent-type github-copilot-sdk
+uv run agents-cli info --agent-type microsoft-agent-framework
 ```
 
 Output:
 
 ```json
 {
-  "agent_type": "langgraph-echo",
-  "class": "LangGraphEchoAgent",
-  "module": "concierge.agents.infrastructure.langgraph_echo_agent",
+  "agent_type": "langgraph",
+  "class": "LangGraphAgent",
+  "module": "concierge.agents.infrastructure.langgraph_agent",
   "settings": {
     "langgraph_model": "azure_ai:gpt-5",
-    "langgraph_system_prompt": "You are a minimal echo agent. ..."
+    "langgraph_system_prompt": "You are a helpful assistant. ..."
   }
 }
 ```
@@ -127,14 +132,45 @@ belong to the `cloud_agent` and `chat` services and are not relevant here.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | Model string for `init_chat_model` used by `langgraph-echo` |
-| `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `langgraph-echo` |
-| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | Model name passed to `CopilotClient.create_session(model=...)` for `github-copilot-echo` |
-| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-echo` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Default: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
-| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | Model string passed to `FoundryChatClient(model=...)` for `microsoft-agent-framework-echo` |
-| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `microsoft-agent-framework-echo` (passed as `Agent(instructions=...)`) |
+| `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | Model string for `init_chat_model` used by `langgraph` |
+| `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `langgraph`. Default tells the LLM to pick between `echo` and `generate_image_tool` based on the user's request. |
+| `AGENTS_GITHUB_COPILOT_SDK_MODEL` | `gpt-5-mini` | Model name passed to `CopilotClient.create_session(model=...)` for `github-copilot-sdk` |
+| `AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-sdk` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Default: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | Model string passed to `FoundryChatClient(model=...)` for `microsoft-agent-framework` |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `microsoft-agent-framework` (passed as `Agent(instructions=...)`). Default tells the LLM to pick between `echo` and `generate_image_tool` based on the user's request. |
+| `AGENTS_IMAGE_MODEL` | `gpt-image-2` | Foundry image model deployment name |
+| `AGENTS_IMAGE_SIZE` | `1024x1024` | Default image size (`1024x1024` / `1536x1024` / `1024x1536` / `4K`) |
+| `AGENTS_IMAGE_N` | `1` | Default number of images per generation |
+| `AGENTS_IMAGE_API_VERSION` | `2025-04-01-preview` | API version passed to `openai.AzureOpenAI` |
 | `CONCIERGE_TRACING_ENABLED` | `false` | Enable tracing without passing `--tracing` |
 | `CONCIERGE_MLFLOW_ENABLED` | `false` | Enable MLflow autologging without passing `--mlflow` |
+
+### Generate images directly (without LLM mediation)
+
+`gpt-image-2` is currently only generally available in a limited set of
+Foundry regions. If `AZURE_AI_PROJECT_ENDPOINT` points at a region where it
+is not deployed, set `AZURE_AI_PROJECT_ENDPOINT_IMAGE` to a Foundry project
+that hosts the `gpt-image-2` deployment. When `AZURE_AI_PROJECT_ENDPOINT_IMAGE`
+is empty, the shared `AZURE_AI_PROJECT_ENDPOINT` is used.
+
+```bash
+uv run agents-cli image generate \
+  --prompt "A photo of a Shibuya crossing at night" \
+  --size 1024x1024 \
+  --n 1 \
+  --output-dir ./out
+```
+
+Options:
+
+| Flag | Required | Description |
+|------|----------|-------------|
+| `--prompt` | Yes | Image prompt |
+| `--size` | No | Image size (defaults to `AGENTS_IMAGE_SIZE`) |
+| `--n` | No | Number of images (defaults to `AGENTS_IMAGE_N`) |
+| `--output-dir` | No | Output directory for `.png` files (defaults to `./generated_images`) |
+| `--json` | No | Print full JSON payload |
+| `--include-base64` | No | Include `b64_json` in JSON output (otherwise masked as `null`) |
 
 See the [Shared Agent Runtime overview](index.md) for the full agent
 catalogue and contract reference.
@@ -146,17 +182,17 @@ export AZURE_AI_PROJECT_ENDPOINT="https://<your-foundry-endpoint>"
 az login
 uv run agents-cli \
   --tracing --mlflow --verbose \
-  invoke --agent-type langgraph-echo --message "trace me"
+  invoke --agent-type langgraph --message "trace me"
 ```
 
-Successful `github-copilot-echo` output (the assistant reply text
+Successful `github-copilot-sdk` output (the assistant reply text
 returned by the SDK session is surfaced under `reply`):
 
 ```json
 {
   "status": "succeeded",
   "result": {
-    "echo": "Hello Copilot",
+    "message": "Hello Copilot",
     "reply": "Hello Copilot",
     "model": "gpt-5-mini"
   },
@@ -164,7 +200,7 @@ returned by the SDK session is surfaced under `reply`):
 }
 ```
 
-> The `github-copilot-echo` agent opens a fresh `CopilotClient` per
+> The `github-copilot-sdk` agent opens a fresh `CopilotClient` per
 > request, calls `create_session(model=..., system_message=...,
 > on_permission_request=PermissionHandler.approve_all)`, sends the user
 > message over the session and waits for `SessionIdleData` before

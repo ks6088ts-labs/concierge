@@ -60,12 +60,12 @@ Dispatch a new task to the queue.
 }
 ```
 
-To dispatch to the `langgraph-echo` agent:
+To dispatch to the `langgraph` agent:
 
 ```bash
 curl -X POST http://localhost:8081/cloud-agent/tasks \
   -H "Content-Type: application/json" \
-  -d '{"agent_type": "langgraph-echo", "payload": {"message": "Hello LangGraph"}}'
+  -d '{"agent_type": "langgraph", "payload": {"message": "Hello LangGraph"}}'
 ```
 
 - `agent_type` — registered agent identifier (required, 1–100 chars)
@@ -92,6 +92,7 @@ curl -X POST http://localhost:8081/cloud-agent/tasks \
 ```
 
 **Error codes:**
+
 - `400` — unknown `agent_type`
 - `413` / `422` — validation error (payload too large, invalid fields)
 
@@ -149,7 +150,7 @@ List all registered agent types.
 
 ```json
 {
-  "agent_types": ["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo"]
+  "agent_types": ["echo", "langgraph", "github-copilot-sdk", "microsoft-agent-framework"]
 }
 ```
 

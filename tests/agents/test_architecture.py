@@ -20,6 +20,7 @@ FRAMEWORK_IMPORTS = {
     "langchain_azure_ai",
     "agent_framework",
     "copilot",
+    "openai",
 }
 BASE_PATH = Path("concierge/agents")
 

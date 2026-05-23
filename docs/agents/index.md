@@ -15,13 +15,13 @@ flowchart LR
     chat[chat ChatbotResponder] --> Registry
     cloud_agent[cloud_agent worker] --> Registry
     Registry[AgentRegistry] --> Echo[EchoAgent]
-    Registry --> LGE[LangGraphEchoAgent]
-    Registry --> GCE[GitHubCopilotEchoAgent]
-    Registry --> MAF[MicrosoftAgentFrameworkEchoAgent]
+    Registry --> LG["LangGraphAgent\n(langgraph)"]
+    Registry --> GCE[GitHubCopilotSdkAgent]
+    Registry --> MAF["MicrosoftAgentFrameworkAgent\n(microsoft-agent-framework)"]
     subgraph agents["concierge/agents (shared kernel)"]
         Registry
         Echo
-        LGE
+        LG
         GCE
         MAF
     end
@@ -32,16 +32,21 @@ flowchart LR
 ```
 concierge/agents/
   domain/
+    agent_types.py         # AgentType (StrEnum) — canonical agent_type identifiers / presets
     exceptions.py          # AgentNotFoundError, AgentExecutionError
   application/
     contracts.py           # AgentRequest, AgentResponse, AgentChunk, Agent, StreamingAgent
     registry.py            # AgentRegistry
   infrastructure/
-    echo_agent.py          # EchoAgent
-    langgraph_echo_agent.py # LangGraphEchoAgent
-    github_copilot_echo_agent.py # GitHubCopilotEchoAgent
-    microsoft_agent_framework_echo_agent.py # MicrosoftAgentFrameworkEchoAgent
-    registry_factory.py    # get_agent_registry() (lru_cache)
+    echo_agent.py                          # EchoAgent (no LLM)
+    github_copilot_sdk_agent.py           # GitHubCopilotSdkAgent
+    langgraph_agent.py                     # LangGraphAgent (configurable; tools supplied per preset)
+    microsoft_agent_framework_agent.py     # MicrosoftAgentFrameworkAgent (configurable)
+    tools/
+      echo_tool.py             # build_echo_langchain_tool / build_echo_maf_tool
+      image_generation.py      # pure async generate_image() (no framework deps)
+      image_generation_tool.py # image_gen_langchain_tool_factory / image_gen_maf_tool_factory
+    registry_factory.py    # get_agent_registry() — wires presets onto unified classes
 ```
 
 ## Contracts
@@ -66,11 +71,13 @@ response: AgentResponse = await agent.handle(request)
 ### Agent Protocol
 
 ```python
-from typing import ClassVar
 from concierge.agents.application.contracts import Agent, AgentRequest, AgentResponse
 
 class MyAgent:
-    agent_type: ClassVar[str] = "my-agent"
+    # ``agent_type`` may be a class attribute (single-purpose agents) or an
+    # instance attribute (configurable agents that register as multiple
+    # presets under different ids — see ``LangGraphAgent``).
+    agent_type: str = "my-agent"
 
     async def handle(self, request: AgentRequest) -> AgentResponse:
         ...
@@ -91,9 +98,15 @@ agent = registry.resolve("my-agent")
 | agent_type | Class | Description |
 |------------|-------|-------------|
 | `echo` | `EchoAgent` | Returns `payload.message` verbatim. No LLM required. |
-| `langgraph-echo` | `LangGraphEchoAgent` | LangGraph agent with `echo` tool backed by an Azure AI chat model. |
-| `github-copilot-echo` | `GitHubCopilotEchoAgent` | Opens a GitHub Copilot SDK session per request, `send`s the user message, and returns the assistant reply. |
-| `microsoft-agent-framework-echo` | `MicrosoftAgentFrameworkEchoAgent` | Runs a Microsoft Agent Framework `Agent` with an `echo` tool and returns the final reply text. |
+| `langgraph` | `LangGraphAgent` | LangGraph (`create_agent`) preset wired with both the `echo` tool and the shared `generate_image_tool`. The LLM picks the appropriate tool based on user input. |
+| `github-copilot-sdk` | `GitHubCopilotSdkAgent` | Opens a GitHub Copilot SDK session per request, `send`s the user message, and returns the assistant reply. |
+| `microsoft-agent-framework` | `MicrosoftAgentFrameworkAgent` | Microsoft Agent Framework preset wired with both the `echo` tool and the shared `generate_image_tool`. The LLM picks the appropriate tool based on user input. |
+
+The two framework-backed agents (`langgraph` /
+`microsoft-agent-framework`) are *generic*: they are each registered once
+with the full set of tool builders, and the LLM picks the right tool for
+each request. Adding a new tool means adding another builder to the
+lists in `registry_factory.py` — no new `agent_type` is required.
 
 ## Configuration
 
@@ -102,11 +115,23 @@ Agent settings are read from environment variables with the **`AGENTS_`** prefix
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | Model string for `init_chat_model` (e.g. `azure_ai:gpt-4o-mini`). |
-| `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(built-in)_ | System prompt for LangGraph agents. |
-| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | Model name passed to `CopilotClient.create_session(model=...)`. |
-| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-echo` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Default: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
-| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | Model string passed to `FoundryChatClient(model=...)` for `microsoft-agent-framework-echo`. |
-| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(built-in)_ | System prompt passed as `Agent(instructions=...)` for `microsoft-agent-framework-echo`. |
+| `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | *(built-in)* | System prompt for the `langgraph` agent. Defaults instruct the LLM to pick between the `echo` and `generate_image_tool` tools based on the user request. |
+| `AGENTS_GITHUB_COPILOT_SDK_MODEL` | `gpt-5-mini` | Model name passed to `CopilotClient.create_session(model=...)`. |
+| `AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT` | *(built-in)* | System prompt for `github-copilot-sdk` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Default: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | Model string passed to `FoundryChatClient(model=...)` for `microsoft-agent-framework`. |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | *(built-in)* | System prompt passed as `Agent(instructions=...)` for `microsoft-agent-framework`. Defaults instruct the LLM to pick between the `echo` and `generate_image_tool` tools based on the user request. |
+| `AGENTS_IMAGE_MODEL` | `gpt-image-2` | Foundry deployment name used by shared image generation tool. |
+| `AGENTS_IMAGE_SIZE` | `1024x1024` | Default image size (`1024x1024` / `1536x1024` / `1024x1536` / `4K`). |
+| `AGENTS_IMAGE_N` | `1` | Default number of images requested per call. |
+| `AGENTS_IMAGE_API_VERSION` | `2025-04-01-preview` | API version passed to `openai.AzureOpenAI`. |
+
+The image generation tool also reads two Foundry endpoint variables from
+[`MicrosoftFoundrySettings`](../tutorial/02-observability.md):
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AZURE_AI_PROJECT_ENDPOINT` | `""` | Shared Foundry project endpoint used by all built-in agents. |
+| `AZURE_AI_PROJECT_ENDPOINT_IMAGE` | `""` | Optional override pointing at a different Foundry project that hosts the `gpt-image-2` deployment. `gpt-image-2` is currently only GA in a limited set of regions, so set this when your main Foundry project is in a region where it is not available. When empty, the shared `AZURE_AI_PROJECT_ENDPOINT` is used.
 
 ## Using from cloud_agent worker
 
@@ -114,7 +139,7 @@ The `cloud_agent` CLI dispatches tasks to the shared registry:
 
 ```bash
 uv run cloud-agent-cli task dispatch \
-  --agent-type langgraph-echo \
+  --agent-type langgraph \
   --payload '{"message": "Hello LangGraph"}'
 ```
 
@@ -131,23 +156,23 @@ export CHAT_BOT_AGENT_TYPE=echo   # LLM-free smoke test
 uv run chat-web
 ```
 
-You can also route chat replies through `github-copilot-echo`:
+You can also route chat replies through `github-copilot-sdk`:
 
 ```bash
-export CHAT_BOT_AGENT_TYPE=github-copilot-echo
+export CHAT_BOT_AGENT_TYPE=github-copilot-sdk
 uv run chat-web
 ```
 
-Or `microsoft-agent-framework-echo`:
+Or `microsoft-agent-framework`:
 
 ```bash
-export CHAT_BOT_AGENT_TYPE=microsoft-agent-framework-echo
+export CHAT_BOT_AGENT_TYPE=microsoft-agent-framework
 uv run chat-web
 ```
 
-`github-copilot-echo` is not a LangChain/LangGraph agent, so MLflow LangChain
+`github-copilot-sdk` is not a LangChain/LangGraph agent, so MLflow LangChain
 autologging does not capture its internal SDK spans automatically.
-`microsoft-agent-framework-echo` is built on Microsoft Agent Framework
+`microsoft-agent-framework` is built on Microsoft Agent Framework
 (`agent_framework.Agent` + `agent_framework.foundry.FoundryChatClient`) rather
 than LangChain/LangGraph, so the same caveat applies: enable Microsoft Agent
 Framework's own OTLP / Foundry tracing if you need internal spans for that
@@ -170,6 +195,78 @@ curl -s -X POST http://localhost:8000/conversations/<id>/messages \
 curl -s -X POST http://localhost:8000/conversations/<id>/agent-replies \
   -H 'Content-Type: application/json' \
   -d '{}' | jq .
+```
+
+## Minimum verification steps per agent
+
+The following commands exercise each registered agent against the standalone
+`agents-cli`. They are the smallest "smoke tests" that confirm the agent is
+correctly wired into the registry and that the surrounding settings (model,
+endpoint, credentials) are usable.
+
+Prerequisites for every LLM-backed agent:
+
+```bash
+# 1. Load .env (uv reads it automatically) and sign in for Entra ID auth.
+az login
+# 2. Required for all Foundry-backed agents.
+export AZURE_AI_PROJECT_ENDPOINT="https://<resource>.services.ai.azure.com/api/projects/<project>"
+```
+
+### `echo` (no LLM required)
+
+```bash
+uv run agents-cli invoke --agent-type echo --message "hello"
+# expected: {"status": "succeeded", "result": {"message": "hello", "reply": "hello"}, "error": null}
+```
+
+### `langgraph`
+
+Requires `AZURE_AI_PROJECT_ENDPOINT` plus `az login`.
+
+```bash
+uv run agents-cli info --agent-type langgraph             # confirms wired settings (no LLM call)
+uv run agents-cli invoke --agent-type langgraph --message "Say hi"
+# Image-generation path (requires AGENTS_IMAGE_MODEL deployed; see note below):
+uv run agents-cli invoke --agent-type langgraph --message "Draw a red fox in watercolor style"
+```
+
+### `github-copilot-sdk`
+
+Requires the [GitHub Copilot CLI](https://github.com/github/copilot-cli) to
+be installed and authenticated; no Foundry endpoint is needed for the
+default echo path.
+
+```bash
+uv run agents-cli info --agent-type github-copilot-sdk
+uv run agents-cli invoke --agent-type github-copilot-sdk --message "Say hi"
+```
+
+### `microsoft-agent-framework`
+
+Requires `AZURE_AI_PROJECT_ENDPOINT` plus `az login`.
+
+```bash
+uv run agents-cli info --agent-type microsoft-agent-framework
+uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Say hi"
+# Image-generation path:
+uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Draw a red fox in watercolor style"
+```
+
+### `image generate` (direct, no LLM mediation)
+
+`gpt-image-2` is currently only GA in a limited set of Foundry regions, so
+if `AZURE_AI_PROJECT_ENDPOINT` points at a different region, also set
+`AZURE_AI_PROJECT_ENDPOINT_IMAGE` to a Foundry project that hosts the
+`gpt-image-2` deployment.
+
+```bash
+export AZURE_AI_PROJECT_ENDPOINT_IMAGE="https://<image-resource>.services.ai.azure.com/api/projects/<project>"
+mkdir -p ./tmp_out
+uv run agents-cli image generate \
+  --prompt "A photo of a Shibuya crossing at night" \
+  --output-dir ./tmp_out
+ls ./tmp_out/*.png
 ```
 
 ## Dependency Direction

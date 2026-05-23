@@ -153,7 +153,7 @@ curl -s -o /dev/null -w "HTTP %{http_code}\n" -X DELETE \
 このエンドポイントを共有エージェントランタイム経由で動かすには次のように設定します。
 
 ```bash
-export CHAT_BOT_AGENT_TYPE=github-copilot-echo
+export CHAT_BOT_AGENT_TYPE=github-copilot-sdk
 ```
 
 ### `POST .../agent-replies` でストリーミング応答

@@ -44,6 +44,6 @@ class AgentChatbotResponder:
             yield response.error or "(agent returned failed status)"
             return
         result = response.result or {}
-        reply = result.get("reply") or result.get("echo") or ""
+        reply = result.get("reply") or result.get("message") or ""
         if reply:
             yield reply

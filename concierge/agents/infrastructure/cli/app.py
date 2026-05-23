@@ -11,19 +11,24 @@ from __future__ import annotations
 
 import asyncio
 import json
+from dataclasses import asdict
+from pathlib import Path
 from typing import Annotated, Any
 
 import typer
 from dotenv import load_dotenv
 
 from concierge.agents.application.contracts import AgentRequest, AgentResponse
+from concierge.agents.domain.agent_types import AgentType
 from concierge.agents.domain.exceptions import AgentNotFoundError
 from concierge.agents.infrastructure.registry_factory import get_agent_registry
+from concierge.agents.infrastructure.tools import ImageGenerationResult, generate_image
 from concierge.loggers import enable_verbose_logging, get_logger
 from concierge.observability import bootstrap_from_env, disable_tracing, enable_mlflow, enable_tracing
 from concierge.settings import get_agents_settings
 
 app = typer.Typer(add_completion=False, help="Agents CLI")
+image_app = typer.Typer(add_completion=False, help="Image generation commands")
 logger = get_logger("concierge.agents")
 
 
@@ -109,11 +114,74 @@ def _response_to_dict(response: AgentResponse) -> dict[str, object]:
     }
 
 
+def _image_result_to_dict(
+    result: ImageGenerationResult,
+    *,
+    include_base64: bool,
+) -> dict[str, Any]:
+    payload = asdict(result)
+    if not include_base64:
+        for image in payload["images"]:
+            image["b64_json"] = None
+    return payload
+
+
 @app.command("list")
 def list_agents() -> None:
     """List registered agent type identifiers."""
     registry = get_agent_registry()
     _print_json(registry.list_agent_types())
+
+
+@image_app.command("generate")
+def image_generate(
+    prompt: Annotated[str, typer.Option("--prompt", help="Prompt used to generate image(s)")],
+    size: Annotated[str | None, typer.Option("--size", help="Image size")] = None,
+    n: Annotated[int | None, typer.Option("--n", help="Number of images")] = None,
+    output_dir: Annotated[
+        str | None,
+        typer.Option(
+            "--output-dir",
+            help="Output directory for .png files (default: ./generated_images)",
+        ),
+    ] = None,
+    json_output: Annotated[bool, typer.Option("--json", help="Print full JSON output")] = False,
+    include_base64: Annotated[
+        bool,
+        typer.Option(
+            "--include-base64",
+            help="Include image base64 in --json output",
+        ),
+    ] = False,
+) -> None:
+    settings = get_agents_settings()
+    resolved_size = size or settings.image_size
+    resolved_n = n if n is not None else settings.image_n
+    resolved_output_dir = str((Path(output_dir) if output_dir else Path.cwd() / "generated_images").resolve())
+
+    try:
+        result = asyncio.run(
+            generate_image(
+                prompt,
+                size=resolved_size,
+                n=resolved_n,
+                save_dir=resolved_output_dir,
+            )
+        )
+    except Exception as exc:
+        _handle_error(exc)
+        return
+
+    payload = _image_result_to_dict(result, include_base64=include_base64)
+    if json_output:
+        _print_json(payload)
+        return
+
+    typer.echo(f"Generated {len(result.images)} image{'s' if len(result.images) != 1 else ''}:")
+    for index, image in enumerate(payload["images"], start=1):
+        typer.echo(f"  [{index}] {image['path']}")
+        if image["revised_prompt"]:
+            typer.echo(f"      revised_prompt: {image['revised_prompt']}")
 
 
 @app.command("invoke")
@@ -137,7 +205,7 @@ def invoke_agent(
         str | None,
         typer.Option(
             "--message",
-            help=("Shortcut that merges {'message': value} into --payload (both built-in agents read payload.message)"),
+            help=("Shortcut that merges {'message': value} into --payload (all built-in agents read payload.message)"),
         ),
     ] = None,
 ) -> None:
@@ -201,29 +269,40 @@ def agent_info(
         "module": cls.__module__,
     }
 
-    # Surface langgraph-specific settings when relevant. We read them from
+    # Surface framework-specific settings when relevant. We read them from
     # the configured settings rather than introspecting private attributes
     # so the output stays stable regardless of how the agent was wired.
-    if agent_type == "langgraph-echo":
+    if agent_type == AgentType.LANGGRAPH:
         agents_settings = get_agents_settings()
         info["settings"] = {
             "langgraph_model": agents_settings.langgraph_model,
             "langgraph_system_prompt": agents_settings.langgraph_system_prompt,
+            "image_model": agents_settings.image_model,
+            "image_size": agents_settings.image_size,
+            "image_n": agents_settings.image_n,
+            "image_api_version": agents_settings.image_api_version,
         }
-    if agent_type == "github-copilot-echo":
+    if agent_type == AgentType.GITHUB_COPILOT_SDK:
         agents_settings = get_agents_settings()
         info["settings"] = {
-            "github_copilot_model": agents_settings.github_copilot_model,
-            "github_copilot_system_prompt": agents_settings.github_copilot_system_prompt,
+            "github_copilot_sdk_model": agents_settings.github_copilot_sdk_model,
+            "github_copilot_sdk_system_prompt": agents_settings.github_copilot_sdk_system_prompt,
         }
-    if agent_type == "microsoft-agent-framework-echo":
+    if agent_type == AgentType.MICROSOFT_AGENT_FRAMEWORK:
         agents_settings = get_agents_settings()
         info["settings"] = {
             "microsoft_agent_framework_model": agents_settings.microsoft_agent_framework_model,
             "microsoft_agent_framework_system_prompt": agents_settings.microsoft_agent_framework_system_prompt,
+            "image_model": agents_settings.image_model,
+            "image_size": agents_settings.image_size,
+            "image_n": agents_settings.image_n,
+            "image_api_version": agents_settings.image_api_version,
         }
 
     _print_json(info)
+
+
+app.add_typer(image_app, name="image")
 
 
 if __name__ == "__main__":

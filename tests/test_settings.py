@@ -98,38 +98,57 @@ def test_agents_settings_defaults(monkeypatch):
     """AgentsSettings should load default values when no env vars are set."""
     monkeypatch.delenv("AGENTS_LANGGRAPH_MODEL", raising=False)
     monkeypatch.delenv("AGENTS_LANGGRAPH_SYSTEM_PROMPT", raising=False)
-    monkeypatch.delenv("AGENTS_GITHUB_COPILOT_MODEL", raising=False)
-    monkeypatch.delenv("AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT", raising=False)
+    monkeypatch.delenv("AGENTS_GITHUB_COPILOT_SDK_MODEL", raising=False)
+    monkeypatch.delenv("AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT", raising=False)
     monkeypatch.delenv("AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL", raising=False)
     monkeypatch.delenv("AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT", raising=False)
+    monkeypatch.delenv("AGENTS_IMAGE_MODEL", raising=False)
+    monkeypatch.delenv("AGENTS_IMAGE_SIZE", raising=False)
+    monkeypatch.delenv("AGENTS_IMAGE_N", raising=False)
+    monkeypatch.delenv("AGENTS_IMAGE_API_VERSION", raising=False)
 
     settings = AgentsSettings(_env_file=None)  # ty: ignore[unknown-argument]
 
     assert settings.langgraph_model == "azure_ai:gpt-5"
     assert "echo" in settings.langgraph_system_prompt.lower()
-    assert settings.github_copilot_model == "gpt-5-mini"
-    assert "helpful coding assistant" in settings.github_copilot_system_prompt.lower()
+    assert "generate_image_tool" in settings.langgraph_system_prompt
+    assert settings.github_copilot_sdk_model == "gpt-5-mini"
+    assert "echo" in settings.github_copilot_sdk_system_prompt.lower()
+    assert "generate_image_tool" in settings.github_copilot_sdk_system_prompt
     assert settings.microsoft_agent_framework_model == "gpt-5"
     assert "echo" in settings.microsoft_agent_framework_system_prompt.lower()
+    assert "generate_image_tool" in settings.microsoft_agent_framework_system_prompt
+    assert settings.image_model == "gpt-image-2"
+    assert settings.image_size == "1024x1024"
+    assert settings.image_n == 1
+    assert settings.image_api_version == "2025-04-01-preview"
 
 
 def test_agents_settings_reads_env(monkeypatch):
     """AGENTS_LANGGRAPH_MODEL / AGENTS_LANGGRAPH_SYSTEM_PROMPT should override defaults."""
     monkeypatch.setenv("AGENTS_LANGGRAPH_MODEL", "azure_ai:gpt-4o-mini")
     monkeypatch.setenv("AGENTS_LANGGRAPH_SYSTEM_PROMPT", "custom prompt")
-    monkeypatch.setenv("AGENTS_GITHUB_COPILOT_MODEL", "gpt-4.1")
-    monkeypatch.setenv("AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT", "custom copilot prompt")
+    monkeypatch.setenv("AGENTS_GITHUB_COPILOT_SDK_MODEL", "gpt-4.1")
+    monkeypatch.setenv("AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT", "custom copilot prompt")
     monkeypatch.setenv("AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL", "gpt-4.1-mini")
     monkeypatch.setenv("AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT", "custom maf prompt")
+    monkeypatch.setenv("AGENTS_IMAGE_MODEL", "gpt-image-2-fast")
+    monkeypatch.setenv("AGENTS_IMAGE_SIZE", "1536x1024")
+    monkeypatch.setenv("AGENTS_IMAGE_N", "2")
+    monkeypatch.setenv("AGENTS_IMAGE_API_VERSION", "2025-05-01-preview")
 
     settings = AgentsSettings(_env_file=None)  # ty: ignore[unknown-argument]
 
     assert settings.langgraph_model == "azure_ai:gpt-4o-mini"
     assert settings.langgraph_system_prompt == "custom prompt"
-    assert settings.github_copilot_model == "gpt-4.1"
-    assert settings.github_copilot_system_prompt == "custom copilot prompt"
+    assert settings.github_copilot_sdk_model == "gpt-4.1"
+    assert settings.github_copilot_sdk_system_prompt == "custom copilot prompt"
     assert settings.microsoft_agent_framework_model == "gpt-4.1-mini"
     assert settings.microsoft_agent_framework_system_prompt == "custom maf prompt"
+    assert settings.image_model == "gpt-image-2-fast"
+    assert settings.image_size == "1536x1024"
+    assert settings.image_n == 2
+    assert settings.image_api_version == "2025-05-01-preview"
 
 
 def test_cloud_agent_settings_no_langgraph_fields(monkeypatch):

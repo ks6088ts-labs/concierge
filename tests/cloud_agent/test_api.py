@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from typing import ClassVar
-
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from concierge.agents.domain.agent_types import AgentType
 from concierge.cloud_agent.application.agents import AgentRegistry, AgentRequest, AgentResponse
 from concierge.cloud_agent.infrastructure.persistence.memory import InMemoryTaskRepository
 from concierge.cloud_agent.infrastructure.queue.memory import InMemoryTaskQueue
@@ -19,10 +18,10 @@ from concierge.cloud_agent.infrastructure.web.dependencies import (
 
 
 class _EchoAgent:
-    agent_type: ClassVar[str] = "echo"
+    agent_type: str = AgentType.ECHO.value
 
     async def handle(self, request: AgentRequest) -> AgentResponse:
-        return AgentResponse(status="succeeded", result={"echo": request.payload})
+        return AgentResponse(status="succeeded", result={"message": request.payload})
 
 
 @pytest.fixture
@@ -50,11 +49,11 @@ async def test_healthz(app) -> None:
 async def test_dispatch_and_get_task(app) -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         # Dispatch
-        resp = await client.post("/cloud-agent/tasks", json={"agent_type": "echo", "payload": {"x": 1}})
+        resp = await client.post("/cloud-agent/tasks", json={"agent_type": AgentType.ECHO, "payload": {"x": 1}})
         assert resp.status_code == 201
         task = resp.json()
         assert task["status"] == "QUEUED"
-        assert task["agent_type"] == "echo"
+        assert task["agent_type"] == AgentType.ECHO
         task_id = task["id"]
 
         # Get by ID
@@ -66,7 +65,7 @@ async def test_dispatch_and_get_task(app) -> None:
 @pytest.mark.anyio
 async def test_list_tasks(app) -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        await client.post("/cloud-agent/tasks", json={"agent_type": "echo", "payload": {}})
+        await client.post("/cloud-agent/tasks", json={"agent_type": AgentType.ECHO, "payload": {}})
         resp = await client.get("/cloud-agent/tasks")
         assert resp.status_code == 200
         assert len(resp.json()) >= 1
@@ -75,7 +74,7 @@ async def test_list_tasks(app) -> None:
 @pytest.mark.anyio
 async def test_list_tasks_status_filter(app) -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        await client.post("/cloud-agent/tasks", json={"agent_type": "echo", "payload": {}})
+        await client.post("/cloud-agent/tasks", json={"agent_type": AgentType.ECHO, "payload": {}})
         resp = await client.get("/cloud-agent/tasks", params={"status": "QUEUED"})
         assert resp.status_code == 200
         tasks = resp.json()
@@ -85,7 +84,7 @@ async def test_list_tasks_status_filter(app) -> None:
 @pytest.mark.anyio
 async def test_cancel_task(app) -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        created = await client.post("/cloud-agent/tasks", json={"agent_type": "echo", "payload": {}})
+        created = await client.post("/cloud-agent/tasks", json={"agent_type": AgentType.ECHO, "payload": {}})
         task_id = created.json()["id"]
 
         resp = await client.delete(f"/cloud-agent/tasks/{task_id}")
@@ -98,7 +97,7 @@ async def test_cancel_task(app) -> None:
 @pytest.mark.anyio
 async def test_patch_task_result(app) -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        created = await client.post("/cloud-agent/tasks", json={"agent_type": "echo", "payload": {}})
+        created = await client.post("/cloud-agent/tasks", json={"agent_type": AgentType.ECHO, "payload": {}})
         task_id = created.json()["id"]
 
         # Manually transition to RUNNING first
@@ -109,7 +108,7 @@ async def test_patch_task_result(app) -> None:
         # RUNNING transition via PATCH isn't directly supported; expect 409 since
         # UpdateTaskResult only handles SUCCEEDED/FAILED/CANCELLED
         # So instead test a valid CANCELLED transition
-        created2 = await client.post("/cloud-agent/tasks", json={"agent_type": "echo", "payload": {}})
+        created2 = await client.post("/cloud-agent/tasks", json={"agent_type": AgentType.ECHO, "payload": {}})
         task_id2 = created2.json()["id"]
         patch_resp = await client.patch(
             f"/cloud-agent/tasks/{task_id2}",
@@ -141,14 +140,14 @@ async def test_list_agents(app) -> None:
         resp = await client.get("/cloud-agent/agents")
         assert resp.status_code == 200
         data = resp.json()
-        assert "echo" in data["agent_types"]
+        assert AgentType.ECHO in data["agent_types"]
 
 
 @pytest.mark.anyio
 async def test_dispatch_oversized_payload(app) -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         big = {"data": "x" * (65 * 1024)}
-        resp = await client.post("/cloud-agent/tasks", json={"agent_type": "echo", "payload": big})
+        resp = await client.post("/cloud-agent/tasks", json={"agent_type": AgentType.ECHO, "payload": big})
         assert resp.status_code == 422
 
 

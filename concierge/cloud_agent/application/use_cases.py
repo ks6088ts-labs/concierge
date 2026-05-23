@@ -161,13 +161,9 @@ class ProcessNextTaskUseCase:
             task.mark_failed(f"Agent not registered: {task.agent_type!r}")
             task.bump_retry()
             if task.should_retry():
+                task.mark_requeued()
                 self.repository.save(task)
-                # Re-queue via failed->queued transition
-                task2 = self.repository.find_by_id(task.id)
-                if task2:
-                    task2.status = TaskStatus.QUEUED
-                    self.repository.save(task2)
-                    await self.queue.enqueue(task.id)
+                await self.queue.enqueue(task.id)
                 await self.queue.ack(message)
             else:
                 task.mark_dead_letter(f"Agent not registered: {task.agent_type!r}")
@@ -192,7 +188,7 @@ class ProcessNextTaskUseCase:
                 task.mark_failed(response.error or "agent returned failed status")
                 task.bump_retry()
                 if task.should_retry():
-                    task.status = TaskStatus.QUEUED
+                    task.mark_requeued()
                     self.repository.save(task)
                     await self.queue.enqueue(task.id)
                     await self.queue.ack(message)
@@ -208,7 +204,7 @@ class ProcessNextTaskUseCase:
             task.mark_failed(error_msg)
             task.bump_retry()
             if task.should_retry():
-                task.status = TaskStatus.QUEUED
+                task.mark_requeued()
                 self.repository.save(task)
                 await self.queue.enqueue(task.id)
                 await self.queue.ack(message)

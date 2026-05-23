@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import uuid
-from typing import ClassVar
 
 import pytest
 
+from concierge.agents.domain.agent_types import AgentType
 from concierge.cloud_agent.application.agents import AgentRegistry, AgentRequest, AgentResponse
 from concierge.cloud_agent.application.use_cases import (
     CancelTaskUseCase,
@@ -24,21 +24,21 @@ from concierge.cloud_agent.infrastructure.queue.memory import InMemoryTaskQueue
 
 
 class _FailAgent:
-    agent_type: ClassVar[str] = "fail"
+    agent_type: str = "fail"
 
     async def handle(self, request: AgentRequest) -> AgentResponse:
         return AgentResponse(status="failed", error="deliberate failure")
 
 
 class _SucceedAgent:
-    agent_type: ClassVar[str] = "succeed"
+    agent_type: str = "succeed"
 
     async def handle(self, request: AgentRequest) -> AgentResponse:
         return AgentResponse(status="succeeded", result={"done": True})
 
 
 class _RaiseAgent:
-    agent_type: ClassVar[str] = "raise"
+    agent_type: str = "raise"
 
     async def handle(self, request: AgentRequest) -> AgentResponse:
         raise RuntimeError("unexpected crash")
@@ -48,7 +48,7 @@ class _RaiseAgent:
 async def test_dispatch_creates_and_enqueues_task() -> None:
     repo = InMemoryTaskRepository()
     queue = InMemoryTaskQueue()
-    task = await DispatchTaskUseCase(repo, queue).execute(agent_type="echo", payload={"k": "v"})
+    task = await DispatchTaskUseCase(repo, queue).execute(agent_type=AgentType.ECHO, payload={"k": "v"})
     assert task.status == TaskStatus.QUEUED
     assert await queue.size() == 1
     found = repo.find_by_id(task.id)
@@ -66,7 +66,7 @@ async def test_get_task_not_found_raises() -> None:
 async def test_list_tasks_filters() -> None:
     repo = InMemoryTaskRepository()
     queue = InMemoryTaskQueue()
-    await DispatchTaskUseCase(repo, queue).execute(agent_type="echo", payload={})
+    await DispatchTaskUseCase(repo, queue).execute(agent_type=AgentType.ECHO, payload={})
     t2 = Task(agent_type="other", payload={})
     t2.mark_running()
     t2.mark_succeeded({})
@@ -74,7 +74,7 @@ async def test_list_tasks_filters() -> None:
 
     queued = ListTasksUseCase(repo).execute(status=TaskStatus.QUEUED)
     assert len(queued) == 1
-    by_agent = ListTasksUseCase(repo).execute(agent_type="echo")
+    by_agent = ListTasksUseCase(repo).execute(agent_type=AgentType.ECHO)
     assert len(by_agent) == 1
 
 
@@ -82,7 +82,7 @@ async def test_list_tasks_filters() -> None:
 async def test_cancel_queued_task() -> None:
     repo = InMemoryTaskRepository()
     queue = InMemoryTaskQueue()
-    task = await DispatchTaskUseCase(repo, queue).execute(agent_type="echo", payload={})
+    task = await DispatchTaskUseCase(repo, queue).execute(agent_type=AgentType.ECHO, payload={})
     cancelled = CancelTaskUseCase(repo).execute(task.id)
     assert cancelled.status == TaskStatus.CANCELLED
 
@@ -90,7 +90,7 @@ async def test_cancel_queued_task() -> None:
 @pytest.mark.anyio
 async def test_cancel_succeeded_task_raises() -> None:
     repo = InMemoryTaskRepository()
-    task = Task(agent_type="echo", payload={})
+    task = Task(agent_type=AgentType.ECHO, payload={})
     task.mark_running()
     task.mark_succeeded({})
     repo.save(task)
@@ -101,7 +101,7 @@ async def test_cancel_succeeded_task_raises() -> None:
 @pytest.mark.anyio
 async def test_update_task_result() -> None:
     repo = InMemoryTaskRepository()
-    task = Task(agent_type="echo", payload={})
+    task = Task(agent_type=AgentType.ECHO, payload={})
     task.mark_running()
     repo.save(task)
     updated = UpdateTaskResultUseCase(repo).execute(task.id, status=TaskStatus.SUCCEEDED, result={"out": 1})

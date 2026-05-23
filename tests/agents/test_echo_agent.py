@@ -1,6 +1,6 @@
 """Unit tests for the built-in EchoAgent (shared agents package).
 
-The payload contract is intentionally aligned with LangGraphEchoAgent so the
+The payload contract is intentionally aligned with LangGraphAgent (echo preset) so the
 same dispatch payload (``{"message": "..."}``) works for either agent.
 """
 
@@ -9,11 +9,16 @@ from __future__ import annotations
 import pytest
 
 from concierge.agents.application.contracts import AgentRequest
+from concierge.agents.domain.agent_types import AgentType
 from concierge.agents.infrastructure.echo_agent import EchoAgent
 
 
 def _make_request(payload: dict) -> AgentRequest:
-    return AgentRequest(agent_type="echo", payload=payload, context={"task_id": "00000000-0000-0000-0000-000000000001"})
+    return AgentRequest(
+        agent_type=AgentType.ECHO,
+        payload=payload,
+        context={"task_id": "00000000-0000-0000-0000-000000000001"},
+    )
 
 
 @pytest.mark.anyio
@@ -22,7 +27,7 @@ async def test_echo_agent_succeeds_on_message() -> None:
     output = await agent.handle(_make_request({"message": "hello"}))
 
     assert output.status == "succeeded"
-    assert output.result == {"echo": "hello", "reply": "hello"}
+    assert output.result == {"message": "hello", "reply": "hello"}
     assert output.error is None
 
 

@@ -1,0 +1,31 @@
+"""Canonical identifiers for registered agents.
+
+``agent_type`` is a domain concept that flows through ``AgentRequest``,
+the registry, the CLI, the chat / cloud_agent services, and external
+clients. Centralising the identifiers here keeps producers and consumers
+in sync and lets type checkers catch typos.
+
+Members inherit from :class:`str` (via :class:`enum.StrEnum`) so existing
+``agent_type: str`` annotations, JSON serialisation, and equality with
+plain string literals all continue to work unchanged.
+"""
+
+from __future__ import annotations
+
+from enum import StrEnum
+
+
+class AgentType(StrEnum):
+    """Registered ``agent_type`` identifiers for built-in agents.
+
+    The framework-backed agents (``langgraph`` / ``microsoft-agent-framework``)
+    are generic: their behaviour is controlled by the tools mounted in
+    :mod:`concierge.agents.infrastructure.registry_factory`. The LLM picks
+    the appropriate tool based on the user input, so a single agent_type
+    can serve echo, image generation, etc.
+    """
+
+    ECHO = "echo"
+    LANGGRAPH = "langgraph"
+    GITHUB_COPILOT_SDK = "github-copilot-sdk"
+    MICROSOFT_AGENT_FRAMEWORK = "microsoft-agent-framework"

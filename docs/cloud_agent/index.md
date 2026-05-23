@@ -20,9 +20,9 @@ flowchart LR
     UC --> Queue[TaskQueue]
     UC --> Registry[AgentRegistry]
     Registry --> Echo[EchoAgent]
-    Registry --> LGE[LangGraphEchoAgent]
-    Registry --> GCE[GitHubCopilotEchoAgent]
-    Registry --> MAF[MicrosoftAgentFrameworkEchoAgent]
+    Registry --> LG["LangGraphAgent\n(langgraph)"]
+    Registry --> GCE[GitHubCopilotSdkAgent]
+    Registry --> MAF["MicrosoftAgentFrameworkAgent\n(microsoft-agent-framework)"]
 ```
 
 ## Agent Extension Point
@@ -32,7 +32,9 @@ implements the `Agent` Protocol from the shared `application` layer:
 
 ```python
 class Agent(Protocol):
-    agent_type: ClassVar[str]
+    # Plain attribute (satisfied by both ``ClassVar[str]`` on single-purpose
+    # agents and instance attributes on configurable agents).
+    agent_type: str
     async def handle(self, request: AgentRequest) -> AgentResponse: ...
 ```
 
@@ -51,24 +53,26 @@ classDiagram
         +agent_type = "echo"
         +handle(request) AgentResponse
     }
-    class LangGraphEchoAgent {
-        +agent_type = "langgraph-echo"
+    class LangGraphAgent {
+        +agent_type (instance)
+        +tool_builders
         +handle(request) AgentResponse
-        -_build_agent()
+        -_build_agent(side_outputs)
     }
-    class GitHubCopilotEchoAgent {
-        +agent_type = "github-copilot-echo"
+    class GitHubCopilotSdkAgent {
+        +agent_type = "github-copilot-sdk"
         +handle(request) AgentResponse
     }
-    class MicrosoftAgentFrameworkEchoAgent {
-        +agent_type = "microsoft-agent-framework-echo"
+    class MicrosoftAgentFrameworkAgent {
+        +agent_type (instance)
+        +tool_builders
         +handle(request) AgentResponse
-        -_build_agent()
+        -_build_agent(side_outputs)
     }
     Agent <|.. EchoAgent
-    Agent <|.. LangGraphEchoAgent
-    Agent <|.. GitHubCopilotEchoAgent
-    Agent <|.. MicrosoftAgentFrameworkEchoAgent
+    Agent <|.. LangGraphAgent
+    Agent <|.. GitHubCopilotSdkAgent
+    Agent <|.. MicrosoftAgentFrameworkAgent
 ```
 
 ## Key Design Principles
@@ -120,14 +124,16 @@ uv run cloud-agent-cli task dispatch --agent-type echo --payload '{"message": "h
 uv run cloud-agent-cli agents
 ```
 
-## Running the LangGraph Echo Agent
+## Running the LangGraph Agent
 
-`LangGraphEchoAgent` (`agent_type = "langgraph-echo"`) is the reference
-implementation for integrating LangChain / LangGraph agents with the
-`cloud_agent` task pipeline. It uses
-[`langchain.agents.create_agent`](https://python.langchain.com/) with a single
-`echo` tool and an Azure-hosted chat model resolved through
-`init_chat_model`.
+The `langgraph` preset is the reference setup for integrating
+LangChain / LangGraph agents with the `cloud_agent` task pipeline. It is
+built on the unified `LangGraphAgent` class, which uses
+[`langchain.agents.create_agent`](https://python.langchain.com/) with the
+`echo` and `generate_image_tool` tool builders and an Azure-hosted chat
+model resolved through `init_chat_model`. The LLM picks the appropriate
+tool based on the user's request. Adding additional tools means extending
+the `tool_builders` list — not creating a new agent class.
 
 ### Prerequisites
 
@@ -171,14 +177,14 @@ docker compose up -d postgres
 
 # 3. Confirm the agent is registered
 uv run cloud-agent-cli agents
-# → ["echo", "langgraph-echo", "github-copilot-echo", "microsoft-agent-framework-echo"]
+# → ["echo", "langgraph", "github-copilot-sdk", "microsoft-agent-framework"]
 
 # 4. Start the worker (terminal 1)
 uv run cloud-agent-cli worker
 
 # 5. Dispatch a task (terminal 2)
 uv run cloud-agent-cli task dispatch \
-  --agent-type langgraph-echo \
+  --agent-type langgraph \
   --payload '{"message": "Hello LangGraph"}'
 
 # 6. Poll for the result using the task id printed above
@@ -197,17 +203,19 @@ A successful task stores the following object under `result`:
 
 ```json
 {
-  "echo": "Hello LangGraph",
+  "message": "Hello LangGraph",
   "reply": "<final assistant message>",
   "tool_calls": [
     {"name": "echo", "args": {"text": "Hello LangGraph"}}
-  ]
+  ],
+  "model": "azure_ai:gpt-5"
 }
 ```
 
 `reply` is the last `AIMessage.content` produced by the graph, and
 `tool_calls` lists every `(name, args)` pair the model emitted while
-processing the task.
+processing the task. The `model` field echoes the configured
+`AGENTS_LANGGRAPH_MODEL`.
 
 ### Customising the agent
 
@@ -215,9 +223,9 @@ processing the task.
   `azure_ai:gpt-4o-mini`).
 - `AGENTS_LANGGRAPH_SYSTEM_PROMPT` — replace the built-in system prompt
   to change behaviour without writing code.
-- For a new agent, copy
-  [`concierge/agents/infrastructure/langgraph_echo_agent.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/agents/infrastructure/langgraph_echo_agent.py),
-  add tools, and register it in
+- To add a new tool variant, write a tool builder under
+  [`concierge/agents/infrastructure/tools/`](https://github.com/ks6088ts-labs/concierge/tree/main/concierge/agents/infrastructure/tools)
+  and register an extra `LangGraphAgent(...)` preset in
   [`concierge/agents/infrastructure/registry_factory.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/agents/infrastructure/registry_factory.py).
 
 ### Troubleshooting

@@ -1,72 +1,61 @@
-"""LangGraph-based echo agent.
+"""Unified LangGraph (LangChain ``create_agent``) agent.
 
-Minimal LangChain ``create_agent`` agent that exposes a single ``echo`` tool.
-It serves as the reference pattern for adding LangChain / LangGraph agents to
-the ``cloud_agent`` service.
+A single agent class that can be configured with any combination of tools.
+Different *presets* (echo, image generation, …) are produced by passing
+different tool builder lists at construction time; the framework wiring
+(chat model creation, message extraction, tool-call aggregation) is shared.
+
+The agent is instantiated (``_build_agent``) fresh on every ``handle()``
+call so that Azure credential acquisition does not block worker startup
+when the Foundry endpoint is not yet configured, and so per-call tool
+state (e.g. the ``images`` accumulator on the image-generation preset) is
+isolated between requests.
+
+Each tool builder is a ``Callable[[dict[str, Any]], BaseTool]``. The agent
+calls every builder once per ``handle()`` with a fresh ``side_outputs``
+dict; builders that emit side artifacts (such as generated images) attach
+them to that dict, which is merged into ``AgentResponse.result``.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any, ClassVar
+from typing import Any
 
 from azure.identity import DefaultAzureCredential
 from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import AIMessage
 from langchain_core.runnables import RunnableConfig
-from langchain_core.tools import tool
 
 from concierge.agents.application.contracts import AgentRequest, AgentResponse
 
 RunConfigFactory = Callable[[AgentRequest], RunnableConfig]
-"""Factory that builds a ``RunnableConfig`` for a given request.
-
-The factory is the injection point for cross-cutting concerns such as
-tracing callbacks, run metadata, and tags.  Agents themselves stay
-decoupled from observability backends; the wiring lives in the registry /
-DI layer.
-"""
+LangChainToolBuilder = Callable[[dict[str, Any]], Any]
 
 
 def _empty_run_config(_request: AgentRequest) -> RunnableConfig:
     return RunnableConfig()
 
 
-class LangGraphEchoAgent:
-    """LangChain ``create_agent``-based minimal agent.
+class LangGraphAgent:
+    """Configurable LangChain ``create_agent``-based agent."""
 
-    ``AgentRequest.payload["message"]`` is forwarded to the LLM.  The LLM calls
-    the ``echo`` tool with the user text verbatim, and the final AI message
-    together with the tool-call history are returned in ``AgentResponse.result``.
-
-    The agent is instantiated (``_build_agent``) fresh on every ``handle()``
-    call so that Azure credential acquisition does not block worker startup
-    when the Foundry endpoint is not yet configured.
-
-    :param model: Model string for ``init_chat_model`` (e.g. ``"azure_ai:gpt-5"``).
-    :param system_prompt: System prompt injected into the agent.
-    :param run_config_factory: Optional factory producing a
-        :class:`RunnableConfig` for each request. Used to inject tracing
-        callbacks / run metadata without coupling this class to a specific
-        observability backend. Defaults to a no-op factory returning an
-        empty config.
-    """
-
-    agent_type: ClassVar[str] = "langgraph-echo"
-
-    # Class-level fallback so instances constructed via ``__new__`` (used in
-    # some unit tests to bypass settings loading) still have a usable factory.
     _run_config_factory: RunConfigFactory = staticmethod(_empty_run_config)
 
     def __init__(
         self,
+        *,
+        agent_type: str,
         model: str,
         system_prompt: str,
+        tool_builders: list[LangChainToolBuilder],
         run_config_factory: RunConfigFactory | None = None,
     ) -> None:
+        self.agent_type = agent_type
         self._model = model
         self._system_prompt = system_prompt
+        self._tool_builders = list(tool_builders)
         if run_config_factory is not None:
             self._run_config_factory = run_config_factory
 
@@ -78,8 +67,9 @@ class LangGraphEchoAgent:
                 error="payload.message is required (non-empty string)",
             )
 
+        side_outputs: dict[str, Any] = {}
         try:
-            agent = self._build_agent()
+            agent = self._build_agent(side_outputs)
             config = self._run_config_factory(request)
             result = await agent.ainvoke(
                 {"messages": [("user", message)]},
@@ -89,17 +79,14 @@ class LangGraphEchoAgent:
             return AgentResponse(status="failed", error=f"{type(exc).__name__}: {exc}")
 
         messages = result.get("messages", []) if isinstance(result, dict) else []
-        final_text = self._final_text(messages)
-        tool_calls = self._collect_tool_calls(messages)
-
-        return AgentResponse(
-            status="succeeded",
-            result={
-                "echo": message,
-                "reply": final_text,
-                "tool_calls": tool_calls,
-            },
-        )
+        response_result: dict[str, Any] = {
+            "message": message,
+            "reply": self._final_text(messages),
+            "tool_calls": self._collect_tool_calls(messages),
+            "model": self._model,
+        }
+        response_result.update(side_outputs)
+        return AgentResponse(status="succeeded", result=response_result)
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -110,20 +97,15 @@ class LangGraphEchoAgent:
         value = payload.get("message")
         return value if isinstance(value, str) and value.strip() else ""
 
-    def _build_agent(self):
+    def _build_agent(self, side_outputs: dict[str, Any]):
         chat_model = init_chat_model(
             self._model,
             credential=DefaultAzureCredential(),
         )
-
-        @tool
-        def echo(text: str) -> str:
-            """Echo back the given text exactly."""
-            return text
-
+        tools = [builder(side_outputs) for builder in self._tool_builders]
         return create_agent(
             model=chat_model,
-            tools=[echo],
+            tools=tools,
             system_prompt=self._system_prompt,
         )
 

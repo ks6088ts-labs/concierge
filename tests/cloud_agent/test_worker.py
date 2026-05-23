@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from typing import ClassVar
-
 import pytest
 
+from concierge.agents.domain.agent_types import AgentType
 from concierge.cloud_agent.application.agents import AgentRegistry, AgentRequest, AgentResponse
 from concierge.cloud_agent.application.use_cases import DispatchTaskUseCase, ProcessNextTaskUseCase
 from concierge.cloud_agent.domain.value_objects import TaskStatus
@@ -14,10 +13,10 @@ from concierge.cloud_agent.infrastructure.queue.memory import InMemoryTaskQueue
 
 
 class _EchoAgent:
-    agent_type: ClassVar[str] = "echo"
+    agent_type: str = AgentType.ECHO.value
 
     async def handle(self, request: AgentRequest) -> AgentResponse:
-        return AgentResponse(status="succeeded", result={"echo": request.payload})
+        return AgentResponse(status="succeeded", result={"message": request.payload})
 
 
 @pytest.mark.anyio
@@ -29,7 +28,7 @@ async def test_worker_processes_one_task() -> None:
     registry.register(_EchoAgent())
 
     # Dispatch a task
-    task = await DispatchTaskUseCase(repo, queue).execute(agent_type="echo", payload={"msg": "hi"})
+    task = await DispatchTaskUseCase(repo, queue).execute(agent_type=AgentType.ECHO, payload={"msg": "hi"})
     assert task.status == TaskStatus.QUEUED
 
     # Run worker for one iteration
@@ -40,7 +39,7 @@ async def test_worker_processes_one_task() -> None:
     found = repo.find_by_id(task.id)
     assert found is not None
     assert found.status == TaskStatus.SUCCEEDED
-    assert found.result == {"echo": {"msg": "hi"}}
+    assert found.result == {"message": {"msg": "hi"}}
 
 
 @pytest.mark.anyio
@@ -61,7 +60,7 @@ async def test_worker_with_max_iterations(monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.setattr(worker_module, "get_agent_registry", lambda: registry)
 
     # Dispatch a task
-    await DispatchTaskUseCase(repo, queue).execute(agent_type="echo", payload={})
+    await DispatchTaskUseCase(repo, queue).execute(agent_type=AgentType.ECHO, payload={})
     # Run for 2 iterations
     await run_worker(max_iterations=2)
 

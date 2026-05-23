@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from typing import ClassVar
 
 import pytest
 
@@ -25,21 +24,21 @@ from concierge.cloud_agent.infrastructure.queue.memory import InMemoryTaskQueue
 
 
 class _FailAgent:
-    agent_type: ClassVar[str] = "fail"
+    agent_type: str = "fail"
 
     async def handle(self, request: AgentRequest) -> AgentResponse:
         return AgentResponse(status="failed", error="deliberate failure")
 
 
 class _SucceedAgent:
-    agent_type: ClassVar[str] = "succeed"
+    agent_type: str = "succeed"
 
     async def handle(self, request: AgentRequest) -> AgentResponse:
         return AgentResponse(status="succeeded", result={"done": True})
 
 
 class _RaiseAgent:
-    agent_type: ClassVar[str] = "raise"
+    agent_type: str = "raise"
 
     async def handle(self, request: AgentRequest) -> AgentResponse:
         raise RuntimeError("unexpected crash")

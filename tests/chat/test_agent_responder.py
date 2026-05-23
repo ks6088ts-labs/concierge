@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from typing import ClassVar
 
 import pytest
 
@@ -18,7 +17,7 @@ from concierge.chat.infrastructure.ai.exceptions import ChatbotNotConfiguredErro
 
 
 class _MockAgent:
-    agent_type: ClassVar[str] = "mock"
+    agent_type: str = "mock"
 
     def __init__(self, response: AgentResponse) -> None:
         self._response = response
@@ -65,7 +64,7 @@ def test_stream_reply_success() -> None:
 
 
 def test_stream_reply_uses_echo_field_fallback() -> None:
-    response = AgentResponse(status="succeeded", result={"echo": "echoed"})
+    response = AgentResponse(status="succeeded", result={"message": "echoed"})
     agent = _MockAgent(response)
     responder = AgentChatbotResponder(agent)
 

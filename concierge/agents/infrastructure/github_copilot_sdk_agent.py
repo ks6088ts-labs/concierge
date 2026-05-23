@@ -16,7 +16,6 @@ Reference: https://raw.githubusercontent.com/github/copilot-sdk/refs/heads/main/
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
 from typing import Any
 
 from copilot import CopilotClient
@@ -26,23 +25,9 @@ from copilot.generated.session_events import (
     SessionIdleData,
 )
 from copilot.session import PermissionHandler
-from langchain_core.runnables import RunnableConfig
 
 from concierge.agents.application.contracts import AgentRequest, AgentResponse
 from concierge.agents.domain.agent_types import AgentType
-
-RunConfigFactory = Callable[[AgentRequest], RunnableConfig]
-"""Factory that builds a ``RunnableConfig`` for a given request.
-
-Parity hook with :class:`LangGraphAgent`. The Copilot SDK does not
-consume :class:`RunnableConfig` directly, but the registry / DI layer
-still passes a tracing-aware factory so cross-cutting concerns stay
-centralised.
-"""
-
-
-def _empty_run_config(_request: AgentRequest) -> RunnableConfig:
-    return RunnableConfig()
 
 
 class GitHubCopilotSdkAgent:
@@ -63,28 +48,17 @@ class GitHubCopilotSdkAgent:
         (e.g. ``"gpt-5"``).
     :param system_prompt: System prompt forwarded to ``create_session`` as
         ``system_message={"mode": "replace", "content": ...}``.
-    :param run_config_factory: Optional factory producing a
-        :class:`RunnableConfig` for each request (used by the registry to
-        wire tracing). Defaults to a no-op factory returning an empty
-        config.
     """
 
     agent_type: str = AgentType.GITHUB_COPILOT_SDK.value
-
-    # Class-level fallback so instances constructed via ``__new__`` (used in
-    # some unit tests to bypass settings loading) still have a usable factory.
-    _run_config_factory: RunConfigFactory = staticmethod(_empty_run_config)
 
     def __init__(
         self,
         model: str,
         system_prompt: str,
-        run_config_factory: RunConfigFactory | None = None,
     ) -> None:
         self._model = model
         self._system_prompt = system_prompt
-        if run_config_factory is not None:
-            self._run_config_factory = run_config_factory
 
     async def handle(self, request: AgentRequest) -> AgentResponse:
         message = self._extract_message(request.payload)
@@ -95,12 +69,6 @@ class GitHubCopilotSdkAgent:
             )
 
         try:
-            # Resolve the tracing-aware config for parity with the other
-            # registered agents. The Copilot SDK does not consume it
-            # directly, but calling the factory still triggers any
-            # side effects (metadata, span context, ...) the registry
-            # wires in.
-            self._run_config_factory(request)
             reply = await self._run_session(message)
         except Exception as exc:  # noqa: BLE001
             return AgentResponse(status="failed", error=f"{type(exc).__name__}: {exc}")
@@ -108,7 +76,7 @@ class GitHubCopilotSdkAgent:
         return AgentResponse(
             status="succeeded",
             result={
-                "echo": message,
+                "message": message,
                 "reply": reply,
                 "model": self._model,
             },

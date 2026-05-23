@@ -38,7 +38,7 @@ def test_extract_message_returns_message_string() -> None:
     assert MicrosoftAgentFrameworkAgent._extract_message({"message": "hello"}) == "hello"
 
 
-def test_extract_message_strips_whitespace() -> None:
+def test_extract_message_returns_empty_for_whitespace_only() -> None:
     assert MicrosoftAgentFrameworkAgent._extract_message({"message": "   "}) == ""
 
 

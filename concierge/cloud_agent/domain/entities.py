@@ -55,12 +55,17 @@ class Task:
 
     def mark_succeeded(self, result: dict[str, Any]) -> None:
         self.result = result
+        self.error = None
         self.transition_to(TaskStatus.SUCCEEDED)
 
     def mark_failed(self, error: str) -> None:
         self.error = error
         self.transition_to(TaskStatus.FAILED)
-        self.updated_at = _utcnow()
+
+    def mark_requeued(self) -> None:
+        """Transition FAILED → QUEUED for a retry, clearing per-attempt state."""
+        self.finished_at = None
+        self.transition_to(TaskStatus.QUEUED)
 
     def mark_cancelled(self) -> None:
         self.transition_to(TaskStatus.CANCELLED)

@@ -106,7 +106,7 @@ def test_extract_message_returns_message_string() -> None:
     assert agent._extract_message({"message": "hello"}) == "hello"
 
 
-def test_extract_message_strips_whitespace() -> None:
+def test_extract_message_returns_empty_for_whitespace_only() -> None:
     agent = GitHubCopilotSdkAgent.__new__(GitHubCopilotSdkAgent)
     assert agent._extract_message({"message": "   "}) == ""
 
@@ -145,7 +145,7 @@ async def test_handle_success_returns_session_reply() -> None:
 
     assert output.status == "succeeded"
     assert output.result == {
-        "echo": "Hello Copilot",
+        "message": "Hello Copilot",
         "reply": "Hello Copilot",
         "model": _MODEL,
     }
@@ -220,7 +220,7 @@ async def test_handle_empty_reply_chunks_returns_empty_reply() -> None:
         output: AgentResponse = await agent.handle(_make_request({"message": "hi"}))
 
     assert output.status == "succeeded"
-    assert output.result == {"echo": "hi", "reply": "", "model": _MODEL}
+    assert output.result == {"message": "hi", "reply": "", "model": _MODEL}
 
 
 def test_registry_includes_github_copilot_sdk() -> None:

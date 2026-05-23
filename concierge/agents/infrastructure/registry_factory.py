@@ -42,29 +42,9 @@ from concierge.settings.microsoft_foundry import get_microsoft_foundry_settings
 def _langgraph_run_config(request: AgentRequest) -> RunnableConfig:
     """Build a tracing-aware ``RunnableConfig`` for langgraph runs."""
     return trace_config(
-        "cloud-agent-langgraph",
+        "concierge-agents-langgraph",
         {
             "run_name": AgentType.LANGGRAPH.value,
-            "metadata": {"task_id": request.context.get("task_id", "")},
-        },
-    )
-
-
-def _github_copilot_sdk_run_config(request: AgentRequest) -> RunnableConfig:
-    return trace_config(
-        "cloud-agent-github-copilot-sdk",
-        {
-            "run_name": AgentType.GITHUB_COPILOT_SDK.value,
-            "metadata": {"task_id": request.context.get("task_id", "")},
-        },
-    )
-
-
-def _microsoft_agent_framework_run_config(request: AgentRequest) -> RunnableConfig:
-    return trace_config(
-        "cloud-agent-microsoft-agent-framework",
-        {
-            "run_name": AgentType.MICROSOFT_AGENT_FRAMEWORK.value,
             "metadata": {"task_id": request.context.get("task_id", "")},
         },
     )
@@ -97,9 +77,8 @@ def get_agent_registry() -> AgentRegistry:
     )
     registry.register(
         GitHubCopilotSdkAgent(
-            model=settings.github_copilot_model,
-            system_prompt=settings.github_copilot_system_prompt,
-            run_config_factory=_github_copilot_sdk_run_config,
+            model=settings.github_copilot_sdk_model,
+            system_prompt=settings.github_copilot_sdk_system_prompt,
         )
     )
     registry.register(
@@ -112,7 +91,6 @@ def get_agent_registry() -> AgentRegistry:
                 image_gen_maf_tool_factory(save_dir),
             ],
             project_endpoint=foundry_endpoint,
-            run_config_factory=_microsoft_agent_framework_run_config,
         )
     )
     return registry

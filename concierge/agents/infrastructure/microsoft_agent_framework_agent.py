@@ -14,22 +14,14 @@ from typing import Any
 from agent_framework import Agent
 from agent_framework.foundry import FoundryChatClient
 from azure.identity import DefaultAzureCredential
-from langchain_core.runnables import RunnableConfig
 
 from concierge.agents.application.contracts import AgentRequest, AgentResponse
 
-RunConfigFactory = Callable[[AgentRequest], RunnableConfig]
 MAFToolBuilder = Callable[[dict[str, Any]], Any]
-
-
-def _empty_run_config(_request: AgentRequest) -> RunnableConfig:
-    return RunnableConfig()
 
 
 class MicrosoftAgentFrameworkAgent:
     """Configurable Microsoft Agent Framework-backed agent."""
-
-    _run_config_factory: RunConfigFactory = staticmethod(_empty_run_config)
 
     def __init__(
         self,
@@ -39,15 +31,12 @@ class MicrosoftAgentFrameworkAgent:
         system_prompt: str,
         tool_builders: list[MAFToolBuilder],
         project_endpoint: str = "",
-        run_config_factory: RunConfigFactory | None = None,
     ) -> None:
         self.agent_type = agent_type
         self._model = model
         self._system_prompt = system_prompt
         self._tool_builders = list(tool_builders)
         self._project_endpoint = project_endpoint
-        if run_config_factory is not None:
-            self._run_config_factory = run_config_factory
 
     async def handle(self, request: AgentRequest) -> AgentResponse:
         message = self._extract_message(request.payload)
@@ -59,14 +48,13 @@ class MicrosoftAgentFrameworkAgent:
 
         side_outputs: dict[str, Any] = {}
         try:
-            self._run_config_factory(request)
             agent = self._build_agent(side_outputs)
             response = await agent.run(message)
         except Exception as exc:  # noqa: BLE001
             return AgentResponse(status="failed", error=f"{type(exc).__name__}: {exc}")
 
         response_result: dict[str, Any] = {
-            "echo": message,
+            "message": message,
             "reply": self._extract_reply(response),
             "tool_calls": self._extract_tool_calls(response),
             "model": self._model,

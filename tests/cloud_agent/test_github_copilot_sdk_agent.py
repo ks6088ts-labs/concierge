@@ -44,7 +44,7 @@ async def test_cloud_agent_processes_github_copilot_sdk_task() -> None:
     assert found is not None
     assert found.status == TaskStatus.SUCCEEDED
     assert found.result == {
-        "echo": "Hello Copilot",
+        "message": "Hello Copilot",
         "reply": "Hello Copilot",
         "model": "gpt-5-mini",
     }

@@ -49,7 +49,7 @@ A successful result looks like:
 
 ```json
 {
-  "echo": "Hello LangGraph",
+  "message": "Hello LangGraph",
   "reply": "Hello LangGraph",
   "tool_calls": [
     {"name": "echo", "args": {"text": "Hello LangGraph"}}
@@ -155,8 +155,8 @@ All settings are controlled by environment variables (or a `.env` file).
 | `CLOUD_AGENT_POLL_INTERVAL_SECONDS` | `1.0` | Polling interval when queue empty |
 | `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | Model string for `init_chat_model` used by LangGraph agents |
 | `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(built-in)_ | System prompt for LangGraph agents |
-| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | Model name for `github-copilot-sdk` |
-| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-sdk` |
+| `AGENTS_GITHUB_COPILOT_SDK_MODEL` | `gpt-5-mini` | Model name for `github-copilot-sdk` |
+| `AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-sdk` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | Model string for `microsoft-agent-framework` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `microsoft-agent-framework` |
 

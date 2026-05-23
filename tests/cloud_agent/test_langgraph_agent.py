@@ -1,6 +1,9 @@
-"""Unit tests for the unified LangGraphAgent under its echo preset.
+"""Integration coverage for the LangGraph echo preset within cloud_agent.
 
-LLM calls are fully mocked; no Azure credentials or network access required.
+These tests overlap with ``tests/agents/test_langgraph_agent_echo_preset.py`` but
+are kept here so the ``cloud_agent`` test suite can be run in isolation
+(eg. against a Postgres-backed task queue) without depending on the shared
+agents test module discovery.
 """
 
 from __future__ import annotations
@@ -17,15 +20,16 @@ from concierge.agents.domain.agent_types import AgentType
 from concierge.agents.infrastructure.langgraph_agent import LangGraphAgent
 from concierge.agents.infrastructure.tools import build_echo_langchain_tool
 
+_FAKE_TASK_ID = "00000000-0000-0000-0000-000000000001"
 _MODEL = "azure_ai:gpt-5"
 _SYSTEM_PROMPT = "You are a minimal echo agent."
 
 
-def _make_request(payload: dict[str, Any]) -> AgentRequest:
+def _make_task_input(payload: dict[str, Any]) -> AgentRequest:
     return AgentRequest(
         agent_type=AgentType.LANGGRAPH,
         payload=payload,
-        context={"task_id": "00000000-0000-0000-0000-000000000001"},
+        context={"task_id": _FAKE_TASK_ID},
     )
 
 
@@ -39,7 +43,6 @@ def _make_agent() -> LangGraphAgent:
 
 
 def _make_agent_result(reply: str, tool_call_name: str = "echo", tool_call_args: dict | None = None) -> dict:
-    """Build a fake ``ainvoke`` result that mimics a LangGraph compiled graph output."""
     ai_msg = AIMessage(content=reply)
     ai_msg.tool_calls = [
         ToolCall(name=tool_call_name, args=tool_call_args or {"text": reply}, id=None, type="tool_call")
@@ -56,7 +59,7 @@ def test_extract_message_returns_message_string() -> None:
     assert LangGraphAgent._extract_message({"message": "hello"}) == "hello"
 
 
-def test_extract_message_strips_whitespace() -> None:
+def test_extract_message_returns_empty_for_whitespace_only() -> None:
     assert LangGraphAgent._extract_message({"message": "   "}) == ""
 
 
@@ -123,7 +126,7 @@ def test_collect_tool_calls_no_tool_calls() -> None:
 @pytest.mark.anyio
 async def test_handle_missing_message_returns_failed() -> None:
     agent = _make_agent()
-    output: AgentResponse = await agent.handle(_make_request({}))
+    output: AgentResponse = await agent.handle(_make_task_input({}))
     assert output.status == "failed"
     assert output.error is not None
     assert "message" in output.error.lower()
@@ -132,7 +135,7 @@ async def test_handle_missing_message_returns_failed() -> None:
 @pytest.mark.anyio
 async def test_handle_empty_message_returns_failed() -> None:
     agent = _make_agent()
-    output: AgentResponse = await agent.handle(_make_request({"message": "   "}))
+    output: AgentResponse = await agent.handle(_make_task_input({"message": "   "}))
     assert output.status == "failed"
 
 
@@ -144,7 +147,7 @@ async def test_handle_success() -> None:
     mock_compiled.ainvoke = AsyncMock(return_value=fake_result)
 
     with patch.object(agent, "_build_agent", return_value=mock_compiled):
-        output: AgentResponse = await agent.handle(_make_request({"message": "Hello LangGraph"}))
+        output: AgentResponse = await agent.handle(_make_task_input({"message": "Hello LangGraph"}))
 
     assert output.status == "succeeded"
     assert output.result is not None
@@ -160,7 +163,7 @@ async def test_handle_llm_exception_returns_failed() -> None:
     mock_compiled.ainvoke = AsyncMock(side_effect=RuntimeError("network error"))
 
     with patch.object(agent, "_build_agent", return_value=mock_compiled):
-        output: AgentResponse = await agent.handle(_make_request({"message": "hello"}))
+        output: AgentResponse = await agent.handle(_make_task_input({"message": "hello"}))
 
     assert output.status == "failed"
     assert output.error is not None
@@ -169,19 +172,13 @@ async def test_handle_llm_exception_returns_failed() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Tests: agent_type
+# Tests: agent_type / registry
 # ---------------------------------------------------------------------------
 
 
 def test_agent_type_is_instance_attribute() -> None:
-    """``agent_type`` is set per-instance so the same class can power multiple presets."""
     agent = _make_agent()
     assert agent.agent_type == AgentType.LANGGRAPH
-
-
-# ---------------------------------------------------------------------------
-# Tests: registry includes langgraph
-# ---------------------------------------------------------------------------
 
 
 def test_registry_includes_langgraph() -> None:
@@ -191,3 +188,4 @@ def test_registry_includes_langgraph() -> None:
     get_agent_registry.cache_clear()
     registry = get_agent_registry()
     assert AgentType.LANGGRAPH in registry.list_agent_types()
+    assert AgentType.ECHO in registry.list_agent_types()

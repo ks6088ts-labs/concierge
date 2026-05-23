@@ -203,7 +203,7 @@ A successful task stores the following object under `result`:
 
 ```json
 {
-  "echo": "Hello LangGraph",
+  "message": "Hello LangGraph",
   "reply": "<final assistant message>",
   "tool_calls": [
     {"name": "echo", "args": {"text": "Hello LangGraph"}}

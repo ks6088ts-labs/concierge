@@ -18,8 +18,8 @@ class AgentsSettings(BaseSettings):
         "and call `generate_image_tool` with a concise English prompt when the user asks for an image. "
         "Return the tool result as your final answer in one sentence."
     )
-    github_copilot_model: str = "gpt-5-mini"
-    github_copilot_system_prompt: str = (
+    github_copilot_sdk_model: str = "gpt-5-mini"
+    github_copilot_sdk_system_prompt: str = (
         "You are a helpful coding assistant that provides code suggestions and explanations to users."
     )
     microsoft_agent_framework_model: str = "gpt-5"

@@ -205,7 +205,7 @@ def invoke_agent(
         str | None,
         typer.Option(
             "--message",
-            help=("Shortcut that merges {'message': value} into --payload (both built-in agents read payload.message)"),
+            help=("Shortcut that merges {'message': value} into --payload (all built-in agents read payload.message)"),
         ),
     ] = None,
 ) -> None:
@@ -285,8 +285,8 @@ def agent_info(
     if agent_type == AgentType.GITHUB_COPILOT_SDK:
         agents_settings = get_agents_settings()
         info["settings"] = {
-            "github_copilot_model": agents_settings.github_copilot_model,
-            "github_copilot_system_prompt": agents_settings.github_copilot_system_prompt,
+            "github_copilot_sdk_model": agents_settings.github_copilot_sdk_model,
+            "github_copilot_sdk_system_prompt": agents_settings.github_copilot_sdk_system_prompt,
         }
     if agent_type == AgentType.MICROSOFT_AGENT_FRAMEWORK:
         agents_settings = get_agents_settings()

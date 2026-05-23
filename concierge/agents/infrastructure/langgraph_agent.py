@@ -80,7 +80,7 @@ class LangGraphAgent:
 
         messages = result.get("messages", []) if isinstance(result, dict) else []
         response_result: dict[str, Any] = {
-            "echo": message,
+            "message": message,
             "reply": self._final_text(messages),
             "tool_calls": self._collect_tool_calls(messages),
             "model": self._model,

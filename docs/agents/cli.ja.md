@@ -80,7 +80,7 @@ uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Creat
 {
   "status": "succeeded",
   "result": {
-    "echo": "Hello LangGraph",
+    "message": "Hello LangGraph",
     "reply": "Hello LangGraph",
     "tool_calls": [
       {"name": "echo", "args": {"text": "Hello LangGraph"}}
@@ -133,8 +133,8 @@ agents CLI が読むのは `AGENTS_*` 変数のみです。リポジトリ／キ
 |---------|-----------|------|
 | `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | `langgraph` の `init_chat_model` で使うモデル文字列 |
 | `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(組み込み)_ | `langgraph` のシステムプロンプト。デフォルトでは `echo` と `generate_image_tool` を使い分けるよう LLM に指示します。 |
-| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | `github-copilot-sdk` の `CopilotClient.create_session(model=...)` に渡すモデル名 |
-| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(組み込み)_ | `github-copilot-sdk` のシステムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルト: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
+| `AGENTS_GITHUB_COPILOT_SDK_MODEL` | `gpt-5-mini` | `github-copilot-sdk` の `CopilotClient.create_session(model=...)` に渡すモデル名 |
+| `AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT` | _(組み込み)_ | `github-copilot-sdk` のシステムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルト: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | `microsoft-agent-framework` の `FoundryChatClient(model=...)` に渡すモデル文字列 |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(組み込み)_ | `microsoft-agent-framework` のシステムプロンプト（`Agent(instructions=...)` に渡される）。デフォルトでは `echo` と `generate_image_tool` を使い分けるよう LLM に指示します。 |
 | `AGENTS_IMAGE_MODEL` | `gpt-image-2` | Foundry 画像モデルのデプロイ名 |
@@ -185,7 +185,7 @@ uv run agents-cli \
 {
   "status": "succeeded",
   "result": {
-    "echo": "Hello Copilot",
+    "message": "Hello Copilot",
     "reply": "Hello Copilot",
     "model": "gpt-5-mini"
   },

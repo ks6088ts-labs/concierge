@@ -81,7 +81,7 @@ A successful `langgraph` echo response looks like:
 {
   "status": "succeeded",
   "result": {
-    "echo": "Hello LangGraph",
+    "message": "Hello LangGraph",
     "reply": "Hello LangGraph",
     "tool_calls": [
       {"name": "echo", "args": {"text": "Hello LangGraph"}}
@@ -134,8 +134,8 @@ belong to the `cloud_agent` and `chat` services and are not relevant here.
 |----------|---------|-------------|
 | `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | Model string for `init_chat_model` used by `langgraph` |
 | `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `langgraph`. Default tells the LLM to pick between `echo` and `generate_image_tool` based on the user's request. |
-| `AGENTS_GITHUB_COPILOT_MODEL` | `gpt-5-mini` | Model name passed to `CopilotClient.create_session(model=...)` for `github-copilot-sdk` |
-| `AGENTS_GITHUB_COPILOT_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-sdk` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Default: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
+| `AGENTS_GITHUB_COPILOT_SDK_MODEL` | `gpt-5-mini` | Model name passed to `CopilotClient.create_session(model=...)` for `github-copilot-sdk` |
+| `AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-sdk` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Default: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | Model string passed to `FoundryChatClient(model=...)` for `microsoft-agent-framework` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `microsoft-agent-framework` (passed as `Agent(instructions=...)`). Default tells the LLM to pick between `echo` and `generate_image_tool` based on the user's request. |
 | `AGENTS_IMAGE_MODEL` | `gpt-image-2` | Foundry image model deployment name |
@@ -186,7 +186,7 @@ returned by the SDK session is surfaced under `reply`):
 {
   "status": "succeeded",
   "result": {
-    "echo": "Hello Copilot",
+    "message": "Hello Copilot",
     "reply": "Hello Copilot",
     "model": "gpt-5-mini"
   },

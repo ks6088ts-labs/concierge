@@ -200,7 +200,7 @@ uv run cloud-agent-cli task get <task-id>
 
 ```json
 {
-  "echo": "Hello LangGraph",
+  "message": "Hello LangGraph",
   "reply": "<最終 AI メッセージ>",
   "tool_calls": [
     {"name": "echo", "args": {"text": "Hello LangGraph"}}

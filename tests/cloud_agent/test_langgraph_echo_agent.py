@@ -151,7 +151,7 @@ async def test_handle_success() -> None:
 
     assert output.status == "succeeded"
     assert output.result is not None
-    assert output.result["echo"] == "Hello LangGraph"
+    assert output.result["message"] == "Hello LangGraph"
     assert output.result["reply"] == "Hello LangGraph"
     assert output.result["tool_calls"] == [{"name": "echo", "args": {"text": "Hello LangGraph"}}]
 

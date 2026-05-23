@@ -113,3 +113,35 @@ def test_task_status_transitions() -> None:
     assert TaskStatus.FAILED.can_transition_to(TaskStatus.DEAD_LETTER)
     assert not TaskStatus.SUCCEEDED.can_transition_to(TaskStatus.QUEUED)
     assert not TaskStatus.DEAD_LETTER.can_transition_to(TaskStatus.QUEUED)
+
+
+def test_task_mark_requeued_clears_finished_at() -> None:
+    task = Task(agent_type=AgentType.ECHO, payload={})
+    task.mark_running()
+    task.mark_failed("transient error")
+    assert task.finished_at is not None
+    assert task.error == "transient error"
+
+    task.mark_requeued()
+    assert task.status == TaskStatus.QUEUED
+    assert task.finished_at is None
+    # error is intentionally preserved on QUEUED so retry observers can see why
+    assert task.error == "transient error"
+
+
+def test_task_mark_requeued_rejects_invalid_source_status() -> None:
+    task = Task(agent_type=AgentType.ECHO, payload={})
+    with pytest.raises(TaskStateError):
+        # QUEUED -> QUEUED is not allowed
+        task.mark_requeued()
+
+
+def test_task_mark_succeeded_clears_error_from_previous_attempt() -> None:
+    task = Task(agent_type=AgentType.ECHO, payload={})
+    task.mark_running()
+    task.mark_failed("first attempt failed")
+    task.mark_requeued()
+    task.mark_running()
+    task.mark_succeeded({"output": "ok"})
+    assert task.error is None
+    assert task.result == {"output": "ok"}

@@ -28,7 +28,7 @@ class EchoAgent:
             )
         return AgentResponse(
             status="succeeded",
-            result={"echo": message, "reply": message},
+            result={"message": message, "reply": message},
         )
 
     @staticmethod

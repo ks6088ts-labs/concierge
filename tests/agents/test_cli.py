@@ -38,7 +38,7 @@ def test_cli_invoke_echo_with_payload_succeeds() -> None:
     assert result.exit_code == 0, result.output
     response = json.loads(result.output)
     assert response["status"] == "succeeded"
-    assert response["result"] == {"echo": "hello", "reply": "hello"}
+    assert response["result"] == {"message": "hello", "reply": "hello"}
     assert response["error"] is None
 
 
@@ -50,7 +50,7 @@ def test_cli_invoke_echo_with_message_shortcut() -> None:
     assert result.exit_code == 0, result.output
     response = json.loads(result.output)
     assert response["status"] == "succeeded"
-    assert response["result"] == {"echo": "shortcut", "reply": "shortcut"}
+    assert response["result"] == {"message": "shortcut", "reply": "shortcut"}
 
 
 def test_cli_invoke_github_copilot_sdk_with_message_shortcut() -> None:
@@ -74,7 +74,7 @@ def test_cli_invoke_github_copilot_sdk_with_message_shortcut() -> None:
     response = json.loads(result.output)
     assert response["status"] == "succeeded"
     assert response["result"] == {
-        "echo": "Hello Copilot",
+        "message": "Hello Copilot",
         "reply": "Hello Copilot",
         "model": "gpt-5-mini",
     }
@@ -96,7 +96,7 @@ def test_cli_invoke_microsoft_agent_framework_with_message_shortcut() -> None:
     assert result.exit_code == 0, result.output
     response = json.loads(result.output)
     assert response["status"] == "succeeded"
-    assert response["result"]["echo"] == "hello"
+    assert response["result"]["message"] == "hello"
     assert response["result"]["reply"] == "hello"
     assert response["result"]["model"] == "gpt-5"
 
@@ -169,8 +169,8 @@ def test_cli_info_for_github_copilot_sdk_includes_settings() -> None:
     assert info["agent_type"] == AgentType.GITHUB_COPILOT_SDK
     assert info["class"] == "GitHubCopilotSdkAgent"
     assert "settings" in info
-    assert "github_copilot_model" in info["settings"]
-    assert "github_copilot_system_prompt" in info["settings"]
+    assert "github_copilot_sdk_model" in info["settings"]
+    assert "github_copilot_sdk_system_prompt" in info["settings"]
 
 
 def test_cli_info_for_microsoft_agent_framework_includes_settings() -> None:

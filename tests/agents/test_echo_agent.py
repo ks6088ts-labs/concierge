@@ -27,7 +27,7 @@ async def test_echo_agent_succeeds_on_message() -> None:
     output = await agent.handle(_make_request({"message": "hello"}))
 
     assert output.status == "succeeded"
-    assert output.result == {"echo": "hello", "reply": "hello"}
+    assert output.result == {"message": "hello", "reply": "hello"}
     assert output.error is None
 
 

@@ -5,6 +5,7 @@ import base64
 from dataclasses import dataclass
 from pathlib import Path
 from time import perf_counter
+from urllib.parse import urlparse
 from uuid import uuid4
 
 from azure.identity import DefaultAzureCredential, get_bearer_token_provider
@@ -34,6 +35,26 @@ class ImageGenerationResult:
     size: str
 
 
+def _normalize_foundry_endpoint(endpoint: str) -> str:
+    """Normalize a Foundry project endpoint for use with :class:`AzureOpenAI`.
+
+    Foundry project endpoints look like
+    ``https://<resource>.services.ai.azure.com/api/projects/<project>`` but the
+    ``AzureOpenAI`` client expects the resource root (no ``/api/projects/...``
+    path) and historically uses the ``openai.azure.com`` host. Strip the project
+    path and rewrite the host to ``openai.azure.com`` so the client can build
+    valid ``/openai/...`` paths against it.
+    """
+    parsed = urlparse(endpoint)
+    if not parsed.scheme or not parsed.netloc:
+        return endpoint
+    host = parsed.netloc
+    if host.endswith(".services.ai.azure.com"):
+        resource = host.split(".")[0]
+        host = f"{resource}.openai.azure.com"
+    return f"{parsed.scheme}://{host}/"
+
+
 def _build_default_client() -> AzureOpenAI:
     settings = get_agents_settings()
     foundry_settings = get_microsoft_foundry_settings()
@@ -41,7 +62,8 @@ def _build_default_client() -> AzureOpenAI:
     # regions, so allow callers to point at a separate Foundry project via
     # ``AZURE_AI_PROJECT_ENDPOINT_IMAGE``. Fall back to the shared
     # ``AZURE_AI_PROJECT_ENDPOINT`` when the image-dedicated endpoint is empty.
-    azure_endpoint = foundry_settings.azure_ai_project_endpoint_image or foundry_settings.azure_ai_project_endpoint
+    raw_endpoint = foundry_settings.azure_ai_project_endpoint_image or foundry_settings.azure_ai_project_endpoint
+    azure_endpoint = _normalize_foundry_endpoint(raw_endpoint)
     token_provider = get_bearer_token_provider(
         DefaultAzureCredential(),
         "https://cognitiveservices.azure.com/.default",
@@ -97,10 +119,9 @@ async def generate_image(
             prompt=prompt,
             size=size,
             n=n,
-            response_format="b64_json",
         )
     except Exception as exc:  # noqa: BLE001
-        raise ImageGenerationError(f"{type(exc).__name__}: failed to generate image") from exc
+        raise ImageGenerationError(f"{type(exc).__name__}: failed to generate image: {exc}") from exc
 
     images: list[GeneratedImage] = []
     try:

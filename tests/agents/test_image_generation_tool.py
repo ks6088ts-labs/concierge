@@ -37,7 +37,6 @@ async def test_generate_image_calls_client_with_expected_arguments() -> None:
         prompt="A cat",
         size="1024x1024",
         n=1,
-        response_format="b64_json",
     )
 
 
@@ -120,7 +119,7 @@ def test_build_default_client_prefers_image_endpoint() -> None:
                 ):
                     image_generation._build_default_client()
 
-    assert captured["azure_endpoint"] == "https://image.example/api/projects/p"
+    assert captured["azure_endpoint"] == "https://image.example/"
 
 
 def test_build_default_client_falls_back_to_shared_endpoint() -> None:
@@ -146,4 +145,30 @@ def test_build_default_client_falls_back_to_shared_endpoint() -> None:
                 ):
                     image_generation._build_default_client()
 
-    assert captured["azure_endpoint"] == "https://shared.example/api/projects/p"
+    assert captured["azure_endpoint"] == "https://shared.example/"
+
+
+def test_build_default_client_normalizes_services_ai_host() -> None:
+    """``*.services.ai.azure.com`` hosts are rewritten to ``*.openai.azure.com``."""
+    from concierge.agents.infrastructure.tools import image_generation
+
+    captured: dict[str, Any] = {}
+
+    def _fake_azure_openai(**kwargs: Any) -> Any:
+        captured.update(kwargs)
+        return SimpleNamespace(**kwargs)
+
+    with patch.object(image_generation, "AzureOpenAI", side_effect=_fake_azure_openai):
+        with patch.object(image_generation, "DefaultAzureCredential", return_value=object()):
+            with patch.object(image_generation, "get_bearer_token_provider", return_value=lambda: "tok"):
+                with patch.object(
+                    image_generation,
+                    "get_microsoft_foundry_settings",
+                    return_value=SimpleNamespace(
+                        azure_ai_project_endpoint="",
+                        azure_ai_project_endpoint_image="https://res-x.services.ai.azure.com/api/projects/proj",
+                    ),
+                ):
+                    image_generation._build_default_client()
+
+    assert captured["azure_endpoint"] == "https://res-x.openai.azure.com/"

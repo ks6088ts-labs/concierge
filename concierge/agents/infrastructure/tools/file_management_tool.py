@@ -62,12 +62,95 @@ def _tool_error_to_response(exc: Exception) -> str:
     return f"Error: {exc}"
 
 
-def _build_langchain_builder(tool_name: str, root_dir: str) -> Callable[[dict[str, Any]], Any]:
+def _build_langchain_builder(tool_name: str, core: FileManagementCore) -> Callable[[dict[str, Any]], Any]:
     def _build(_side_outputs: dict[str, Any]) -> Any:
-        from langchain_community.agent_toolkits.file_management.toolkit import FileManagementToolkit
+        from langchain_core.tools import tool
 
-        toolkit = FileManagementToolkit(root_dir=root_dir, selected_tools=[tool_name])
-        return toolkit.get_tools()[0]
+        if tool_name == "read_file":
+
+            @tool
+            def read_file(file_path: str) -> str:
+                """Read a UTF-8 text file under sandbox root."""
+                try:
+                    return core.read_file(file_path)
+                except (FileToolError, ValueError) as exc:
+                    return _tool_error_to_response(exc)
+
+            return read_file
+
+        if tool_name == "list_directory":
+
+            @tool
+            def list_directory(dir_path: str = ".") -> str:
+                """List files under a directory in sandbox root."""
+                try:
+                    return core.list_directory(dir_path)
+                except (FileToolError, ValueError) as exc:
+                    return _tool_error_to_response(exc)
+
+            return list_directory
+
+        if tool_name == "file_search":
+
+            @tool
+            def file_search(pattern: str, dir_path: str = ".") -> str:
+                """Search files by glob pattern in sandbox root."""
+                try:
+                    return core.file_search(pattern, dir_path)
+                except (FileToolError, ValueError) as exc:
+                    return _tool_error_to_response(exc)
+
+            return file_search
+
+        if tool_name == "write_file":
+
+            @tool
+            def write_file(file_path: str, text: str) -> str:
+                """Write UTF-8 text content to a file in sandbox root."""
+                try:
+                    return core.write_file(file_path, text)
+                except (FileToolError, ValueError) as exc:
+                    return _tool_error_to_response(exc)
+
+            return write_file
+
+        if tool_name == "copy_file":
+
+            @tool
+            def copy_file(source_path: str, destination_path: str) -> str:
+                """Copy a file within sandbox root."""
+                try:
+                    return core.copy_file(source_path, destination_path)
+                except (FileToolError, ValueError) as exc:
+                    return _tool_error_to_response(exc)
+
+            return copy_file
+
+        if tool_name == "move_file":
+
+            @tool
+            def move_file(source_path: str, destination_path: str) -> str:
+                """Move a file within sandbox root."""
+                try:
+                    return core.move_file(source_path, destination_path)
+                except (FileToolError, ValueError) as exc:
+                    return _tool_error_to_response(exc)
+
+            return move_file
+
+        if tool_name == "delete_file":
+
+            @tool
+            def delete_file(file_path: str) -> str:
+                """Delete a file within sandbox root."""
+                try:
+                    return core.delete_file(file_path)
+                except (FileToolError, ValueError) as exc:
+                    return _tool_error_to_response(exc)
+
+            return delete_file
+
+        raise ValueError(f"Unsupported file tool: {tool_name}")
 
     return _build
 
@@ -76,9 +159,9 @@ def build_file_langchain_tool_builders(
     root_dir: str,
     enabled: str | Sequence[str],
 ) -> list[Callable[[dict[str, Any]], Any]]:
-    resolved_root_dir = str(FileManagementCore.from_root_dir(root_dir).root_dir)
+    core = FileManagementCore.from_root_dir(root_dir)
     selected = parse_enabled_file_tools(enabled)
-    return [_build_langchain_builder(name, resolved_root_dir) for name in selected]
+    return [_build_langchain_builder(name, core) for name in selected]
 
 
 def _build_maf_builder(tool_name: str, core: FileManagementCore) -> Callable[[dict[str, Any]], Any]:

@@ -20,7 +20,10 @@ def _clear_agent_caches() -> Generator[None, None, None]:
     get_agent_registry.cache_clear()
 
 
-def test_registry_defaults_include_read_only_file_tools() -> None:
+def test_registry_defaults_include_read_only_file_tools(monkeypatch) -> None:
+    # Pin to the package default so a developer's .env (which may enable
+    # additional file tools) cannot influence this assertion.
+    monkeypatch.setenv("AGENTS_FILE_TOOLS_ENABLED", "read_file,list_directory,file_search")
     registry = get_agent_registry()
 
     langgraph = registry.resolve("langgraph")

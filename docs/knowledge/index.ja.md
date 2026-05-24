@@ -183,3 +183,6 @@ for result in results:
 
 各コマンド・フラグの詳細は
 [Knowledge CLI リファレンス](cli.ja.md) を参照してください。
+
+Related: agents ランタイムからの retrieval ツール化は
+[Shared Agent Runtime](../agents/index.ja.md)（`AGENTS_KNOWLEDGE__*`）を参照してください。

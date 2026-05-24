@@ -39,6 +39,24 @@ uv run agents-cli list
 ["echo", "langgraph", "github-copilot-sdk", "microsoft-agent-framework"]
 ```
 
+### 設定済み Knowledge retrieval ツール一覧
+
+```bash
+uv run agents-cli knowledge list
+```
+
+用途: `AGENTS_KNOWLEDGE__*` の設定ミスを CI/CD で事前検知する dry-run。
+`name` / `collection` / `description` / `top_k` / `max_chars` を含む
+JSON 配列を標準出力に出します。
+
+出力例:
+
+```json
+[{"name":"search_docs","collection":"knowledge_default","description":"Search docs.","top_k":4,"max_chars":1200}]
+```
+
+終了コードは成功時 `0`、設定バリデーション失敗時 `1` です。
+
 ### エージェント実行
 
 `Agent.handle()` を呼び出し、`AgentResponse` を JSON として出力します。

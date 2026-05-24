@@ -140,6 +140,63 @@ class MyAgent:
 書き込み系ツールや shell ツールを有効化する場合は
 [LangChain Security Notice](https://python.langchain.com/docs/security) を必ず確認してください。
 
+## Knowledge retrieval tools（環境変数駆動）
+
+`concierge.knowledge.application.use_cases.SearchKnowledge` を呼び出す
+セマンティック検索ツールを複数登録できます。ツール名や description は
+`AGENTS_KNOWLEDGE__*` で差し替え可能です。
+
+```mermaid
+flowchart LR
+    LLM[LangChain / MAF / Copilot SDK Agent]
+    Tool1["search_docs tool<br/>(env description)"]
+    Tool2["search_runbooks tool<br/>(env description)"]
+    Core["search_knowledge_chunks()<br/>SDK 非依存コア"]
+    UC["SearchKnowledge<br/>(concierge.knowledge use case)"]
+    Store[(pgvector / 将来 backend)]
+
+    LLM --> Tool1
+    LLM --> Tool2
+    Tool1 --> Core
+    Tool2 --> Core
+    Core --> UC
+    UC --> Store
+```
+
+### 環境変数スキーマ（`AGENTS_KNOWLEDGE__*`）
+
+| 変数 | 必須 | 説明 |
+|------|------|------|
+| `AGENTS_KNOWLEDGE__TOOLS` | 有効化時は必須 | ツール名のカンマ区切り（`snake_case`、重複不可）。未設定/空なら no-op（後方互換）。 |
+| `AGENTS_KNOWLEDGE__<NAME>__COLLECTION` | 必須 | そのツールが検索する collection。 |
+| `AGENTS_KNOWLEDGE__<NAME>__DESCRIPTION` | 任意 | LLM に見せる description。 |
+| `AGENTS_KNOWLEDGE__<NAME>__TOP_K` | 任意 | モデルが `k` を省略した場合の既定件数（既定 `4`、上限 `20`）。 |
+| `AGENTS_KNOWLEDGE__<NAME>__MAX_CHARS` | 任意 | 1 hit あたりの本文上限（`len()` ベース、既定 `1200`）。 |
+
+最小 `.env` 例:
+
+```bash
+AGENTS_KNOWLEDGE__TOOLS=search_docs,search_runbooks
+AGENTS_KNOWLEDGE__SEARCH_DOCS__COLLECTION=knowledge_default
+AGENTS_KNOWLEDGE__SEARCH_DOCS__DESCRIPTION=Search the product docs.
+AGENTS_KNOWLEDGE__SEARCH_RUNBOOKS__COLLECTION=runbooks
+AGENTS_KNOWLEDGE__SEARCH_RUNBOOKS__DESCRIPTION=Search operational runbooks.
+```
+
+ツール返却値は compact JSON 文字列です:
+
+```json
+{"collection":"knowledge_default","hits":[{"source":"docs/index.md","chunk_index":3,"score":0.83,"content":"..."}],"truncated":false}
+```
+
+0 件時は `hits: []` + `message`、失敗時は
+`{"error":"knowledge search failed: ...","collection":"..."}` を返し、
+エージェント全体のクラッシュを避けます。
+
+> トレース範囲: LangChain 経路は LangChain/MLflow autologging の対象です。
+> Microsoft Agent Framework と GitHub Copilot SDK は SDK 側の OpenTelemetry
+> span emit に依存する best-effort です。
+
 ## cloud_agent ワーカーからの利用
 
 ```bash

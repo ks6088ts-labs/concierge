@@ -184,3 +184,7 @@ for result in results:
 ```
 
 See the [Knowledge CLI Reference](cli.md) for every command and flag.
+
+Related: for runtime retrieval from agents, see
+[Shared Agent Runtime](../agents/index.md#knowledge-retrieval-tools-env-driven)
+(`AGENTS_KNOWLEDGE__*`-driven tool registration).

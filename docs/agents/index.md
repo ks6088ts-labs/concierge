@@ -150,6 +150,63 @@ paths or traversal attempts. Shell tools are also sandboxed and run with
 Keep write tools and shell tools disabled unless required, and follow the
 [LangChain security guidance](https://python.langchain.com/docs/security).
 
+## Knowledge retrieval tools (env-driven)
+
+You can register one or more semantic-retrieval tools that call
+`concierge.knowledge.application.use_cases.SearchKnowledge`.
+Tool names and descriptions are fully environment-driven.
+
+```mermaid
+flowchart LR
+    LLM[LangChain / MAF / Copilot SDK Agent]
+    Tool1["search_docs tool<br/>(env description)"]
+    Tool2["search_runbooks tool<br/>(env description)"]
+    Core["search_knowledge_chunks()<br/>SDK-independent core"]
+    UC["SearchKnowledge<br/>(concierge.knowledge use case)"]
+    Store[(pgvector / future backends)]
+
+    LLM --> Tool1
+    LLM --> Tool2
+    Tool1 --> Core
+    Tool2 --> Core
+    Core --> UC
+    UC --> Store
+```
+
+### Environment schema (`AGENTS_KNOWLEDGE__*`)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `AGENTS_KNOWLEDGE__TOOLS` | Yes (to enable) | Comma-separated tool names (`snake_case`, no duplicates). Empty/unset = no-op (backward compatible). |
+| `AGENTS_KNOWLEDGE__<NAME>__COLLECTION` | Yes | Logical knowledge collection for that tool. |
+| `AGENTS_KNOWLEDGE__<NAME>__DESCRIPTION` | No | Tool description shown to the LLM. |
+| `AGENTS_KNOWLEDGE__<NAME>__TOP_K` | No | Default result count when the model omits `k` (default `4`, max `20`). |
+| `AGENTS_KNOWLEDGE__<NAME>__MAX_CHARS` | No | Per-hit content cap (`len()`-based, default `1200`). |
+
+Minimal `.env` sample:
+
+```bash
+AGENTS_KNOWLEDGE__TOOLS=search_docs,search_runbooks
+AGENTS_KNOWLEDGE__SEARCH_DOCS__COLLECTION=knowledge_default
+AGENTS_KNOWLEDGE__SEARCH_DOCS__DESCRIPTION=Search the product docs.
+AGENTS_KNOWLEDGE__SEARCH_RUNBOOKS__COLLECTION=runbooks
+AGENTS_KNOWLEDGE__SEARCH_RUNBOOKS__DESCRIPTION=Search operational runbooks.
+```
+
+Tool output is a compact JSON envelope string:
+
+```json
+{"collection":"knowledge_default","hits":[{"source":"docs/index.md","chunk_index":3,"score":0.83,"content":"..."}],"truncated":false}
+```
+
+No-match output includes `hits: []` and a message; failures return
+`{"error":"knowledge search failed: ...","collection":"..."}` so the agent does
+not crash.
+
+> Tracing note: LangChain path is covered by LangChain/MLflow autologging.
+> Microsoft Agent Framework and GitHub Copilot SDK paths are best-effort and
+> depend on SDK OpenTelemetry span emission.
+
 ## Using from cloud_agent worker
 
 The `cloud_agent` CLI dispatches tasks to the shared registry:

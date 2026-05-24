@@ -52,7 +52,7 @@ layout that is enforced in CI by
 | :--- | :--- | :--- |
 | `todo` | FastAPI + Typer | CRUD reference app; the smallest fully-tested clean-architecture slice |
 | `knowledge` | Typer CLI | Markdown indexer + pgvector retrieval (`ingest` / `search` / `drop`) |
-| `agents` | Typer CLI | Shared agent runtime with pluggable adapters and built-in tools (echo, files, shell, image gen) |
+| `agents` | Typer CLI | Shared agent runtime with pluggable adapters and built-in tools (echo, files, shell, image gen, knowledge retrieval) |
 | `chat` | FastAPI + Typer + Realtime WebSocket | Synchronous chat replies and realtime voice over Foundry models |
 | `cloud_agent` | FastAPI + Typer | Async job dispatcher backed by Azure Queue Storage |
 
@@ -160,7 +160,7 @@ Every push to the `main` branch triggers the [github-pages workflow](.github/wor
 | :--- | :--- | :--- |
 | `todo` | FastAPI + Typer | CRUD リファレンスアプリ。テスト完備の最小のクリーンアーキテクチャサンプル |
 | `knowledge` | Typer CLI | Markdown インデクサ + pgvector 検索 (`ingest` / `search` / `drop`) |
-| `agents` | Typer CLI | 交換可能なエージェントランタイムと組み込みツール (echo / files / shell / image gen) |
+| `agents` | Typer CLI | 交換可能なエージェントランタイムと組み込みツール (echo / files / shell / image gen / knowledge retrieval) |
 | `chat` | FastAPI + Typer + Realtime WebSocket | 同期チャット応答と Foundry リアルタイム音声 |
 | `cloud_agent` | FastAPI + Typer | Azure Queue Storage を背後に持つ非同期ジョブディスパッチャ |
 

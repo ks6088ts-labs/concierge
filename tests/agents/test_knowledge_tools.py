@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Generator
+from collections.abc import Generator, Sequence
 
 import pytest
 from copilot.tools import ToolInvocation
 
+from concierge.agents.infrastructure import registry_factory
+from concierge.agents.infrastructure.langgraph_agent import LangGraphAgent
 from concierge.agents.infrastructure.registry_factory import get_agent_registry
 from concierge.agents.infrastructure.tools.knowledge_copilot import (
     build_knowledge_copilot_sdk_tool_builders,
@@ -18,7 +20,7 @@ from concierge.settings.agents_knowledge import AgentsKnowledgeSettings, get_age
 
 
 class _FakeUseCase:
-    def __init__(self, results: list[object] | Exception):
+    def __init__(self, results: Sequence[object] | Exception):
         self._results = results
 
     def execute(self, *, collection: str, query: str, k: int):
@@ -78,14 +80,21 @@ def test_knowledge_settings_reject_invalid_tool_names(monkeypatch: pytest.Monkey
 
 
 def test_knowledge_tools_are_not_registered_when_tools_env_is_empty(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENTS_KNOWLEDGE__TOOLS", "")
     monkeypatch.setenv("AGENTS_FILE_TOOLS_ENABLED", "")
     monkeypatch.setenv("AGENTS_SHELL_TOOLS_ENABLED", "")
+    monkeypatch.setattr(
+        registry_factory,
+        "get_agents_knowledge_settings",
+        lambda: AgentsKnowledgeSettings(_env_file=None, tools=""),  # ty: ignore[unknown-argument]
+    )
 
     registry = get_agent_registry()
     langgraph = registry.resolve("langgraph")
+    assert isinstance(langgraph, LangGraphAgent)
+    tool_names = [tool.name for tool in [builder({}) for builder in langgraph._tool_builders]]
 
-    assert len(langgraph._tool_builders) == 2
+    assert "search_docs" not in tool_names
+    assert "search_runbooks" not in tool_names
 
 
 def test_knowledge_tools_register_multiple_named_builders(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -103,6 +112,7 @@ def test_knowledge_tools_register_multiple_named_builders(monkeypatch: pytest.Mo
 
     registry = get_agent_registry()
     langgraph = registry.resolve("langgraph")
+    assert isinstance(langgraph, LangGraphAgent)
     tools = [builder({}) for builder in langgraph._tool_builders]
     names = [tool.name for tool in tools]
 

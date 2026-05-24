@@ -10,6 +10,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from concierge.knowledge import get_search_knowledge_use_case
+from concierge.knowledge.application.use_cases import CollectionName
 from concierge.loggers import get_logger
 from concierge.settings.agents_knowledge import KNOWLEDGE_COLLECTION_FIELD, AgentsKnowledgeToolConfig
 
@@ -47,7 +48,7 @@ def search_knowledge_chunks(
     resolved_k = k if k is not None else config.top_k
     try:
         use_case = get_search_knowledge_use_case(config.collection)
-        results = use_case.execute(collection=config.collection, query=query, k=resolved_k)
+        results = use_case.execute(collection=CollectionName(config.collection), query=query, k=resolved_k)
         hits: list[KnowledgeChunkHit] = []
         truncated = False
 

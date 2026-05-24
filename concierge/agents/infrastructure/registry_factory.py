@@ -36,6 +36,9 @@ from concierge.agents.infrastructure.tools import (
     build_file_copilot_sdk_tool_builders,
     build_file_langchain_tool_builders,
     build_file_maf_tool_builders,
+    build_knowledge_copilot_sdk_tool_builders,
+    build_knowledge_langchain_tool_builders,
+    build_knowledge_maf_tool_builders,
     build_shell_copilot_sdk_tool_builders,
     build_shell_langchain_tool_builders,
     build_shell_maf_tool_builders,
@@ -47,6 +50,7 @@ from concierge.agents.infrastructure.tools import (
 )
 from concierge.observability import trace_config
 from concierge.settings.agents import get_agents_settings
+from concierge.settings.agents_knowledge import get_agents_knowledge_settings
 from concierge.settings.microsoft_foundry import get_microsoft_foundry_settings
 
 
@@ -79,6 +83,10 @@ def get_agent_registry() -> AgentRegistry:
     file_builders_lc = build_file_langchain_tool_builders(file_root_dir, settings.file_tools_enabled)
     file_builders_maf = build_file_maf_tool_builders(file_root_dir, settings.file_tools_enabled)
     file_builders_copilot = build_file_copilot_sdk_tool_builders(file_root_dir, settings.file_tools_enabled)
+    knowledge_settings = get_agents_knowledge_settings()
+    knowledge_builders_lc = build_knowledge_langchain_tool_builders(knowledge_settings)
+    knowledge_builders_maf = build_knowledge_maf_tool_builders(knowledge_settings)
+    knowledge_builders_copilot = build_knowledge_copilot_sdk_tool_builders(knowledge_settings)
     shell_builders_lc: list = []
     shell_builders_maf: list = []
     shell_builders_copilot: list = []
@@ -108,6 +116,7 @@ def get_agent_registry() -> AgentRegistry:
                 image_gen_langchain_tool_factory(save_dir),
                 *file_builders_lc,
                 *shell_builders_lc,
+                *knowledge_builders_lc,
             ],
             run_config_factory=_langgraph_run_config,
         )
@@ -121,6 +130,7 @@ def get_agent_registry() -> AgentRegistry:
                 image_gen_copilot_sdk_tool_factory(save_dir),
                 *file_builders_copilot,
                 *shell_builders_copilot,
+                *knowledge_builders_copilot,
             ],
         )
     )
@@ -134,6 +144,7 @@ def get_agent_registry() -> AgentRegistry:
                 image_gen_maf_tool_factory(save_dir),
                 *file_builders_maf,
                 *shell_builders_maf,
+                *knowledge_builders_maf,
             ],
             project_endpoint=foundry_endpoint,
         )

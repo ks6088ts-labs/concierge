@@ -26,9 +26,11 @@ from concierge.agents.infrastructure.tools import ImageGenerationResult, generat
 from concierge.loggers import enable_verbose_logging, get_logger
 from concierge.observability import bootstrap_from_env, disable_tracing, enable_mlflow, enable_tracing
 from concierge.settings import get_agents_settings
+from concierge.settings.agents_knowledge import get_agents_knowledge_settings
 
 app = typer.Typer(add_completion=False, help="Agents CLI")
 image_app = typer.Typer(add_completion=False, help="Image generation commands")
+knowledge_app = typer.Typer(add_completion=False, help="Knowledge retrieval tool commands")
 logger = get_logger("concierge.agents")
 
 
@@ -303,6 +305,26 @@ def agent_info(
 
 
 app.add_typer(image_app, name="image")
+
+
+@knowledge_app.command("list")
+def knowledge_list() -> None:
+    """List env-configured knowledge retrieval tools."""
+    settings = get_agents_knowledge_settings()
+    payload = [
+        {
+            "name": config.name,
+            "collection": config.collection,
+            "description": config.description,
+            "top_k": config.top_k,
+            "max_chars": config.max_chars,
+        }
+        for config in settings.configured_tools()
+    ]
+    _print_json(payload)
+
+
+app.add_typer(knowledge_app, name="knowledge")
 
 
 if __name__ == "__main__":

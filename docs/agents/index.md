@@ -150,6 +150,171 @@ paths or traversal attempts. Shell tools are also sandboxed and run with
 Keep write tools and shell tools disabled unless required, and follow the
 [LangChain security guidance](https://python.langchain.com/docs/security).
 
+## Knowledge retrieval tools (env-driven)
+
+You can register one or more semantic-retrieval tools that call
+`concierge.knowledge.application.use_cases.SearchKnowledge`.
+Tool names and descriptions are fully environment-driven.
+
+```mermaid
+flowchart LR
+    LLM[LangChain / MAF / Copilot SDK Agent]
+    Tool1["search_docs tool<br/>(env description)"]
+    Tool2["search_runbooks tool<br/>(env description)"]
+    Core["search_knowledge_chunks()<br/>SDK-independent core"]
+    UC["SearchKnowledge<br/>(concierge.knowledge use case)"]
+    Store[(pgvector / future backends)]
+
+    LLM --> Tool1
+    LLM --> Tool2
+    Tool1 --> Core
+    Tool2 --> Core
+    Core --> UC
+    UC --> Store
+```
+
+### Environment schema (`AGENTS_KNOWLEDGE__*`)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `AGENTS_KNOWLEDGE__TOOLS` | Yes (to enable) | Comma-separated tool names (`snake_case`, no duplicates). Empty/unset = no-op (backward compatible). |
+| `AGENTS_KNOWLEDGE__<NAME>__COLLECTION` | Yes | Logical knowledge collection for that tool. |
+| `AGENTS_KNOWLEDGE__<NAME>__DESCRIPTION` | No | Tool description shown to the LLM. |
+| `AGENTS_KNOWLEDGE__<NAME>__TOP_K` | No | Default result count when the model omits `k` (default `4`, max `20`). |
+| `AGENTS_KNOWLEDGE__<NAME>__MAX_CHARS` | No | Per-hit content cap (`len()`-based, default `1200`). |
+
+Minimal `.env` sample:
+
+```bash
+AGENTS_KNOWLEDGE__TOOLS=search_docs,search_runbooks
+AGENTS_KNOWLEDGE__SEARCH_DOCS__COLLECTION=knowledge_default
+AGENTS_KNOWLEDGE__SEARCH_DOCS__DESCRIPTION=Search the product docs.
+AGENTS_KNOWLEDGE__SEARCH_RUNBOOKS__COLLECTION=runbooks
+AGENTS_KNOWLEDGE__SEARCH_RUNBOOKS__DESCRIPTION=Search operational runbooks.
+```
+
+Tool output is a compact JSON envelope string:
+
+```json
+{"collection":"knowledge_default","hits":[{"source":"docs/index.md","chunk_index":3,"score":0.83,"content":"..."}],"truncated":false}
+```
+
+No-match output includes `hits: []` and a message; failures return
+`{"error":"knowledge search failed: ...","collection":"..."}` so the agent does
+not crash.
+
+> Tracing note: LangChain path is covered by LangChain/MLflow autologging.
+> Microsoft Agent Framework and GitHub Copilot SDK paths are best-effort and
+> depend on SDK OpenTelemetry span emission.
+
+### Minimum end-to-end procedure (docs/ → LangGraph agent)
+
+The following is the smallest path to confirm the env-driven knowledge tool
+actually flows from `LLM → search_docs tool → SearchKnowledge use case →
+pgvector`. It indexes the repository's own `docs/` directory into the default
+collection and lets the `langgraph` agent retrieve it.
+
+> The agent runtime resolves the knowledge backend via
+> [`get_search_knowledge_use_case`](../../concierge/knowledge/__init__.py),
+> which currently defaults to `KnowledgeTarget.DOCKER` (i.e. the `POSTGRES_*`
+> env block). Ingest with the same target the agent will read from. The steps
+> below use the local Docker Compose postgres so the agent can reach the data.
+
+```bash
+# 1. Start the local pgvector instance (same target as the agent runtime).
+docker compose up -d postgres
+
+# 2. Sign in for Entra ID-backed Foundry calls (embeddings + chat model).
+az login
+export AZURE_AI_PROJECT_ENDPOINT="https://<resource>.services.ai.azure.com/api/projects/<project>"
+
+# 3. Index docs/ into the default collection.
+uv run knowledge-cli ingest run --collection knowledge_default docs
+uv run knowledge-cli ingest stats --collection knowledge_default
+# expected: {"collection": "knowledge_default", "records": <N > 0>}
+
+# 4. Register the tool with the agent runtime (in .env).
+#    AGENTS_KNOWLEDGE__TOOLS=search_docs
+#    AGENTS_KNOWLEDGE__SEARCH_DOCS__COLLECTION=knowledge_default
+#    AGENTS_KNOWLEDGE__SEARCH_DOCS__DESCRIPTION=Search the concierge docs.
+
+# 5. Confirm the tool is wired into the agent registry.
+uv run agents-cli knowledge list
+# [{"name":"search_docs","collection":"knowledge_default", ...}]
+
+# 6. Drive the LangGraph agent so the LLM calls search_docs.
+uv run agents-cli invoke --agent-type langgraph \
+  --message "Use the search_docs tool to look up 'agents registry' and summarise the hits in 3 bullets."
+# Inspect the JSON response: tool_calls should include search_docs, and the
+# final message should reference content from docs/.
+```
+
+Caveats observed during smoke-testing:
+
+- The `text-embedding-3-small` deployment on AIServices S0 may return HTTP 429
+  during a full `docs/` ingest. `IngestMarkdown` is all-or-nothing, so a 429
+  mid-run leaves the collection at 0 records. Retry after ~60 s, or split
+  the ingest path-by-path (e.g. `docs/agents`, `docs/chat`, ...).
+- The agent CLI keeps Azure Postgres support behind `knowledge-cli`'s
+  `--target azure` flag only; the agent runtime itself currently always uses
+  the `POSTGRES_*` (docker) target. Use Docker Compose for the agent-side
+  smoke test, or extend the runtime to honour `KnowledgeTarget.AZURE_POSTGRES`
+  before pointing the agent at the cloud.
+
+### Verifying the search_docs tool (and recognising common failures)
+
+After the minimum end-to-end procedure, inspect the JSON returned by
+`agents-cli invoke`. A working configuration looks like this:
+
+- `status` is `"succeeded"`,
+- `result.tool_calls` contains at least one entry with `name: "search_docs"`,
+- `result.reply` references content actually present in the indexed docs.
+
+Strip the verbose tracing noise so the response is the only thing printed to
+stdout:
+
+```bash
+uv run agents-cli -m invoke --agent-type langgraph \
+  --message "Use the search_docs tool to look up 'agents registry' and summarise the hits in 3 bullets." \
+  2>/dev/null
+```
+
+Expected (abridged) shape:
+
+```json
+{
+  "status": "succeeded",
+  "result": {
+    "tool_calls": [{"name": "search_docs", "args": {"query": "agents registry", "k": 2}}],
+    "reply": "... docs/agents/index.md ... AgentRegistry ..."
+  },
+  "error": null
+}
+```
+
+If `result.reply` mentions `OperationalError` or `ValueError`, the LLM **is**
+calling `search_docs` correctly — the tool internally caught the failure and
+returned `{"error":"knowledge search failed: <ExceptionClass>","collection":"..."}`,
+which the LLM then paraphrased. The two common cases:
+
+| Symptom in `result.reply` | Root cause | Fix |
+|---|---|---|
+| `... OperationalError ...` | Local pgvector (or Azure Postgres) is unreachable. | Start the local container: `docker compose up -d postgres`, then confirm with `docker exec concierge-postgres pg_isready -U concierge -d concierge`. |
+| `... ValueError ...` | The pgvector table for the configured collection has not been created yet (no successful ingest). | `uv run knowledge-cli ingest run --collection <name> docs/agents`, then verify with `uv run knowledge-cli ingest stats --collection <name>` (`records` must be `> 0`). |
+
+To isolate whether the failure is in the agent wiring or in the knowledge
+backend, bypass the LLM and call the same `SearchKnowledge` use case the tool
+uses:
+
+```bash
+uv run knowledge-cli search run --collection knowledge_default --k 2 "agents registry"
+```
+
+If this command succeeds, the agent path (`langgraph` / `microsoft-agent-framework`
+/ `github-copilot-sdk`) will also succeed — the only thing left is for the LLM
+to choose `search_docs`. If this command fails, the agent path will see the
+same error.
+
 ## Using from cloud_agent worker
 
 The `cloud_agent` CLI dispatches tasks to the shared registry:

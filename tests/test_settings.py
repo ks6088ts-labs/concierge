@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 
 from concierge.loggers import get_logger
 from concierge.settings import (
+    AgentsKnowledgeSettings,
     AgentsSettings,
     KnowledgeEmbeddingProvider,
     KnowledgeSettings,
@@ -186,6 +187,30 @@ def test_agents_settings_reads_env(monkeypatch):
     assert settings.shell_root_dir == "sandbox-shell"
     assert settings.shell_timeout_seconds == 45
     assert settings.shell_max_output_bytes == 8192
+
+
+def test_agents_knowledge_settings_defaults(monkeypatch):
+    monkeypatch.delenv("AGENTS_KNOWLEDGE__TOOLS", raising=False)
+
+    settings = AgentsKnowledgeSettings(_env_file=None)  # ty: ignore[unknown-argument]
+
+    assert settings.configured_tools() == []
+
+
+def test_agents_knowledge_settings_reads_env(monkeypatch):
+    monkeypatch.setenv("AGENTS_KNOWLEDGE__TOOLS", "search_docs")
+    monkeypatch.setenv("AGENTS_KNOWLEDGE__SEARCH_DOCS__COLLECTION", "docs")
+    monkeypatch.setenv("AGENTS_KNOWLEDGE__SEARCH_DOCS__TOP_K", "6")
+    monkeypatch.setenv("AGENTS_KNOWLEDGE__SEARCH_DOCS__MAX_CHARS", "999")
+
+    settings = AgentsKnowledgeSettings(_env_file=None)  # ty: ignore[unknown-argument]
+    configured = settings.configured_tools()
+
+    assert len(configured) == 1
+    assert configured[0].name == "search_docs"
+    assert configured[0].collection == "docs"
+    assert configured[0].top_k == 6
+    assert configured[0].max_chars == 999
 
 
 def test_knowledge_settings_defaults(monkeypatch):

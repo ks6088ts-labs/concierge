@@ -10,6 +10,7 @@ from concierge.agents.infrastructure.cli.app import app
 from concierge.agents.infrastructure.github_copilot_sdk_agent import GitHubCopilotSdkAgent
 from concierge.agents.infrastructure.microsoft_agent_framework_agent import MicrosoftAgentFrameworkAgent
 from concierge.agents.infrastructure.tools.image_generation import GeneratedImage, ImageGenerationResult
+from concierge.settings.agents_knowledge import get_agents_knowledge_settings
 
 runner = CliRunner()
 
@@ -285,3 +286,24 @@ def test_cli_info_unknown_agent_type_returns_error() -> None:
     result = runner.invoke(app, ["info", "--agent-type", "does-not-exist"])
     assert result.exit_code == 1
     assert "does-not-exist" in result.output
+
+
+def test_cli_knowledge_list_returns_configured_tools(monkeypatch) -> None:
+    monkeypatch.setenv("AGENTS_KNOWLEDGE__TOOLS", "search_docs")
+    monkeypatch.setenv("AGENTS_KNOWLEDGE__SEARCH_DOCS__COLLECTION", "docs")
+    monkeypatch.setenv("AGENTS_KNOWLEDGE__SEARCH_DOCS__DESCRIPTION", "Search docs")
+    get_agents_knowledge_settings.cache_clear()
+    result = runner.invoke(app, ["knowledge", "list"])
+    get_agents_knowledge_settings.cache_clear()
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload == [
+        {
+            "name": "search_docs",
+            "collection": "docs",
+            "description": "Search docs",
+            "top_k": 4,
+            "max_chars": 1200,
+        }
+    ]

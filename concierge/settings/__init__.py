@@ -1,4 +1,9 @@
 from concierge.settings.agents import AgentsSettings, get_agents_settings
+from concierge.settings.agents_knowledge import (
+    AgentsKnowledgeSettings,
+    AgentsKnowledgeToolConfig,
+    get_agents_knowledge_settings,
+)
 from concierge.settings.azure_postgres import (
     AzurePostgresSettings,
     get_azure_postgres_settings,
@@ -35,6 +40,8 @@ from concierge.settings.todo import (
 
 __all__ = [
     "AgentsSettings",
+    "AgentsKnowledgeSettings",
+    "AgentsKnowledgeToolConfig",
     "AzurePostgresSettings",
     "ChatRepositoryBackend",
     "ChatSettings",
@@ -52,6 +59,7 @@ __all__ = [
     "TodoRepositoryBackend",
     "TodoSettings",
     "get_agents_settings",
+    "get_agents_knowledge_settings",
     "get_azure_postgres_settings",
     "get_chat_settings",
     "get_cloud_agent_settings",

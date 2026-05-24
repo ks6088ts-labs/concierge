@@ -140,6 +140,170 @@ class MyAgent:
 書き込み系ツールや shell ツールを有効化する場合は
 [LangChain Security Notice](https://python.langchain.com/docs/security) を必ず確認してください。
 
+## Knowledge retrieval tools（環境変数駆動）
+
+`concierge.knowledge.application.use_cases.SearchKnowledge` を呼び出す
+セマンティック検索ツールを複数登録できます。ツール名や description は
+`AGENTS_KNOWLEDGE__*` で差し替え可能です。
+
+```mermaid
+flowchart LR
+    LLM[LangChain / MAF / Copilot SDK Agent]
+    Tool1["search_docs tool<br/>(env description)"]
+    Tool2["search_runbooks tool<br/>(env description)"]
+    Core["search_knowledge_chunks()<br/>SDK 非依存コア"]
+    UC["SearchKnowledge<br/>(concierge.knowledge use case)"]
+    Store[(pgvector / 将来 backend)]
+
+    LLM --> Tool1
+    LLM --> Tool2
+    Tool1 --> Core
+    Tool2 --> Core
+    Core --> UC
+    UC --> Store
+```
+
+### 環境変数スキーマ（`AGENTS_KNOWLEDGE__*`）
+
+| 変数 | 必須 | 説明 |
+|------|------|------|
+| `AGENTS_KNOWLEDGE__TOOLS` | 有効化時は必須 | ツール名のカンマ区切り（`snake_case`、重複不可）。未設定/空なら no-op（後方互換）。 |
+| `AGENTS_KNOWLEDGE__<NAME>__COLLECTION` | 必須 | そのツールが検索する collection。 |
+| `AGENTS_KNOWLEDGE__<NAME>__DESCRIPTION` | 任意 | LLM に見せる description。 |
+| `AGENTS_KNOWLEDGE__<NAME>__TOP_K` | 任意 | モデルが `k` を省略した場合の既定件数（既定 `4`、上限 `20`）。 |
+| `AGENTS_KNOWLEDGE__<NAME>__MAX_CHARS` | 任意 | 1 hit あたりの本文上限（`len()` ベース、既定 `1200`）。 |
+
+最小 `.env` 例:
+
+```bash
+AGENTS_KNOWLEDGE__TOOLS=search_docs,search_runbooks
+AGENTS_KNOWLEDGE__SEARCH_DOCS__COLLECTION=knowledge_default
+AGENTS_KNOWLEDGE__SEARCH_DOCS__DESCRIPTION=Search the product docs.
+AGENTS_KNOWLEDGE__SEARCH_RUNBOOKS__COLLECTION=runbooks
+AGENTS_KNOWLEDGE__SEARCH_RUNBOOKS__DESCRIPTION=Search operational runbooks.
+```
+
+ツール返却値は compact JSON 文字列です:
+
+```json
+{"collection":"knowledge_default","hits":[{"source":"docs/index.md","chunk_index":3,"score":0.83,"content":"..."}],"truncated":false}
+```
+
+0 件時は `hits: []` + `message`、失敗時は
+`{"error":"knowledge search failed: ...","collection":"..."}` を返し、
+エージェント全体のクラッシュを避けます。
+
+> トレース範囲: LangChain 経路は LangChain/MLflow autologging の対象です。
+> Microsoft Agent Framework と GitHub Copilot SDK は SDK 側の OpenTelemetry
+> span emit に依存する best-effort です。
+
+### 最小動作確認手順（docs/ → LangGraph エージェント）
+
+環境変数駆動の knowledge ツールが
+`LLM → search_docs tool → SearchKnowledge use case → pgvector` まで
+実際に流れることを確認する最小ルートです。本リポジトリの `docs/` を
+デフォルト collection に取り込み、`langgraph` エージェントから検索します。
+
+> エージェント実行時のバックエンド解決は
+> [`get_search_knowledge_use_case`](../../concierge/knowledge/__init__.py)
+> が行い、現状は `KnowledgeTarget.DOCKER`（`POSTGRES_*` 環境変数ブロック）
+> 固定です。エージェントが参照するのと同じ target で取り込む必要があるため、
+> 以下では Docker Compose の postgres を使います。
+
+```bash
+# 1. ローカル pgvector を起動（エージェント runtime と同じ target）。
+docker compose up -d postgres
+
+# 2. Entra ID 認証で Foundry（埋め込み + チャットモデル）にサインイン。
+az login
+export AZURE_AI_PROJECT_ENDPOINT="https://<resource>.services.ai.azure.com/api/projects/<project>"
+
+# 3. docs/ をデフォルト collection に取り込み。
+uv run knowledge-cli ingest run --collection knowledge_default docs
+uv run knowledge-cli ingest stats --collection knowledge_default
+# 期待値: {"collection": "knowledge_default", "records": <N > 0>}
+
+# 4. エージェント runtime にツールを登録（.env）。
+#    AGENTS_KNOWLEDGE__TOOLS=search_docs
+#    AGENTS_KNOWLEDGE__SEARCH_DOCS__COLLECTION=knowledge_default
+#    AGENTS_KNOWLEDGE__SEARCH_DOCS__DESCRIPTION=Search the concierge docs.
+
+# 5. ツールがエージェントレジストリに登録されたことを確認。
+uv run agents-cli knowledge list
+# [{"name":"search_docs","collection":"knowledge_default", ...}]
+
+# 6. LangGraph エージェントを起動し、LLM に search_docs を呼ばせる。
+uv run agents-cli invoke --agent-type langgraph \
+  --message "search_docs ツールを使って 'agents registry' に関するドキュメントを取得し、要点を 3 行で要約してください。"
+# 返却 JSON の tool_calls に search_docs が含まれ、最終メッセージで docs/ の
+# 内容が引用されることを確認します。
+```
+
+スモークテスト中に観測された注意点:
+
+- AIServices S0 上の `text-embedding-3-small` は `docs/` 一括取り込み時に
+  HTTP 429 を返すことがあります。`IngestMarkdown` は all-or-nothing なので
+  途中で 429 になると collection は 0 件のままになります。60 秒程度待って
+  再実行するか、サブディレクトリ単位（例: `docs/agents`, `docs/chat` …）
+  に分割して取り込んでください。
+- `knowledge-cli` は `--target azure` で Azure Postgres を扱えますが、
+  エージェント runtime 側は現状 `POSTGRES_*`（docker）固定です。
+  エージェント経由で検証する場合は Docker Compose 上の postgres を使う
+  か、`KnowledgeTarget.AZURE_POSTGRES` を runtime でも選べるよう拡張して
+  ください。
+
+### search_docs ツールの動作確認とよくある失敗の見分け方
+
+最小手順を実行したら、`agents-cli invoke` の返却 JSON を確認します。正常時は
+次の 3 点が揃います。
+
+- `status` が `"succeeded"`
+- `result.tool_calls` に `name: "search_docs"` を含むエントリが 1 つ以上ある
+- `result.reply` が取り込んだドキュメントの内容に言及している
+
+トレース系のログに埋もれないよう stderr を捨てて確認すると分かりやすいです:
+
+```bash
+uv run agents-cli -m invoke --agent-type langgraph \
+  --message "search_docs ツールを使って 'agents registry' に関するドキュメントを 2 件取得し、要点を 3 行で要約してください" \
+  2>/dev/null
+```
+
+期待される返却 JSON（抜粋）:
+
+```json
+{
+  "status": "succeeded",
+  "result": {
+    "tool_calls": [{"name": "search_docs", "args": {"query": "agents registry", "k": 2}}],
+    "reply": "... docs/agents/index.md ... AgentRegistry ..."
+  },
+  "error": null
+}
+```
+
+`result.reply` に `OperationalError` や `ValueError` という単語が出ている場合、
+LLM は `search_docs` を**正しく呼んでいます**。ツール側が内部で失敗を捕捉して
+`{"error":"knowledge search failed: <ExceptionClass>","collection":"..."}` を
+返し、LLM がそれを自然言語化しているだけです。よくある 2 ケース:
+
+| `result.reply` に出る症状 | 原因 | 対処 |
+|---|---|---|
+| `... OperationalError ...` | ローカルの pgvector（または Azure Postgres）に接続できない。 | `docker compose up -d postgres` でコンテナを起動し、`docker exec concierge-postgres pg_isready -U concierge -d concierge` で疎通確認。 |
+| `... ValueError ...` | 対象 collection の pgvector テーブルがまだ作成されていない（ingest 未実施）。 | `uv run knowledge-cli ingest run --collection <name> docs/agents` を実行し、`uv run knowledge-cli ingest stats --collection <name>` で `records > 0` を確認。 |
+
+エージェントの配線側の問題か、knowledge バックエンド側の問題かを切り分け
+たいときは、LLM を介さずに同じ `SearchKnowledge` ユースケースを直接呼び出せます:
+
+```bash
+uv run knowledge-cli search run --collection knowledge_default --k 2 "agents registry"
+```
+
+このコマンドが成功するなら、エージェント経由（`langgraph` / `microsoft-agent-framework`
+/ `github-copilot-sdk`）でも検索パスは動作します。あとは LLM に
+`search_docs` を選ばせるかどうかの問題です。失敗するなら、エージェント経由でも
+同じエラーになります。
+
 ## cloud_agent ワーカーからの利用
 
 ```bash

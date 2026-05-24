@@ -62,3 +62,15 @@ def test_agents_does_not_depend_on_bounded_contexts() -> None:
         imports = _imported_modules(file)
         offending = [m for m in imports if any(m.startswith(p) for p in forbidden_prefixes)]
         assert not offending, f"{file}: {offending}"
+
+
+def test_knowledge_tools_do_not_import_knowledge_infrastructure_or_domain() -> None:
+    forbidden_prefixes = (
+        "concierge.knowledge.infrastructure",
+        "concierge.knowledge.domain",
+    )
+    tools_dir = BASE_PATH / "infrastructure" / "tools"
+    for file in tools_dir.glob("knowledge*.py"):
+        imports = _imported_modules(file)
+        offending = [m for m in imports if any(m.startswith(p) for p in forbidden_prefixes)]
+        assert not offending, f"{file}: {offending}"

@@ -40,6 +40,24 @@ Output:
 ["echo", "langgraph", "github-copilot-sdk", "microsoft-agent-framework"]
 ```
 
+### List configured knowledge retrieval tools
+
+```bash
+uv run agents-cli knowledge list
+```
+
+Purpose: dry-run validation for `AGENTS_KNOWLEDGE__*` settings in CI/CD.
+The command prints a JSON array with `name`, `collection`, `description`,
+`top_k`, and `max_chars`.
+
+Output example:
+
+```json
+[{"name":"search_docs","collection":"knowledge_default","description":"Search docs.","top_k":4,"max_chars":1200}]
+```
+
+Exit code is `0` on success and `1` when settings validation fails.
+
 ### Invoke an agent
 
 Invokes `Agent.handle()` and prints `AgentResponse` as JSON. Exit code is

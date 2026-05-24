@@ -252,6 +252,58 @@ uv run agents-cli invoke --agent-type langgraph \
   か、`KnowledgeTarget.AZURE_POSTGRES` を runtime でも選べるよう拡張して
   ください。
 
+### search_docs ツールの動作確認とよくある失敗の見分け方
+
+最小手順を実行したら、`agents-cli invoke` の返却 JSON を確認します。正常時は
+次の 3 点が揃います。
+
+- `status` が `"succeeded"`
+- `result.tool_calls` に `name: "search_docs"` を含むエントリが 1 つ以上ある
+- `result.reply` が取り込んだドキュメントの内容に言及している
+
+トレース系のログに埋もれないよう stderr を捨てて確認すると分かりやすいです:
+
+```bash
+uv run agents-cli -m invoke --agent-type langgraph \
+  --message "search_docs ツールを使って 'agents registry' に関するドキュメントを 2 件取得し、要点を 3 行で要約してください" \
+  2>/dev/null
+```
+
+期待される返却 JSON（抜粋）:
+
+```json
+{
+  "status": "succeeded",
+  "result": {
+    "tool_calls": [{"name": "search_docs", "args": {"query": "agents registry", "k": 2}}],
+    "reply": "... docs/agents/index.md ... AgentRegistry ..."
+  },
+  "error": null
+}
+```
+
+`result.reply` に `OperationalError` や `ValueError` という単語が出ている場合、
+LLM は `search_docs` を**正しく呼んでいます**。ツール側が内部で失敗を捕捉して
+`{"error":"knowledge search failed: <ExceptionClass>","collection":"..."}` を
+返し、LLM がそれを自然言語化しているだけです。よくある 2 ケース:
+
+| `result.reply` に出る症状 | 原因 | 対処 |
+|---|---|---|
+| `... OperationalError ...` | ローカルの pgvector（または Azure Postgres）に接続できない。 | `docker compose up -d postgres` でコンテナを起動し、`docker exec concierge-postgres pg_isready -U concierge -d concierge` で疎通確認。 |
+| `... ValueError ...` | 対象 collection の pgvector テーブルがまだ作成されていない（ingest 未実施）。 | `uv run knowledge-cli ingest run --collection <name> docs/agents` を実行し、`uv run knowledge-cli ingest stats --collection <name>` で `records > 0` を確認。 |
+
+エージェントの配線側の問題か、knowledge バックエンド側の問題かを切り分け
+たいときは、LLM を介さずに同じ `SearchKnowledge` ユースケースを直接呼び出せます:
+
+```bash
+uv run knowledge-cli search run --collection knowledge_default --k 2 "agents registry"
+```
+
+このコマンドが成功するなら、エージェント経由（`langgraph` / `microsoft-agent-framework`
+/ `github-copilot-sdk`）でも検索パスは動作します。あとは LLM に
+`search_docs` を選ばせるかどうかの問題です。失敗するなら、エージェント経由でも
+同じエラーになります。
+
 ## cloud_agent ワーカーからの利用
 
 ```bash

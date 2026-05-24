@@ -261,6 +261,60 @@ Caveats observed during smoke-testing:
   smoke test, or extend the runtime to honour `KnowledgeTarget.AZURE_POSTGRES`
   before pointing the agent at the cloud.
 
+### Verifying the search_docs tool (and recognising common failures)
+
+After the minimum end-to-end procedure, inspect the JSON returned by
+`agents-cli invoke`. A working configuration looks like this:
+
+- `status` is `"succeeded"`,
+- `result.tool_calls` contains at least one entry with `name: "search_docs"`,
+- `result.reply` references content actually present in the indexed docs.
+
+Strip the verbose tracing noise so the response is the only thing printed to
+stdout:
+
+```bash
+uv run agents-cli -m invoke --agent-type langgraph \
+  --message "Use the search_docs tool to look up 'agents registry' and summarise the hits in 3 bullets." \
+  2>/dev/null
+```
+
+Expected (abridged) shape:
+
+```json
+{
+  "status": "succeeded",
+  "result": {
+    "tool_calls": [{"name": "search_docs", "args": {"query": "agents registry", "k": 2}}],
+    "reply": "... docs/agents/index.md ... AgentRegistry ..."
+  },
+  "error": null
+}
+```
+
+If `result.reply` mentions `OperationalError` or `ValueError`, the LLM **is**
+calling `search_docs` correctly — the tool internally caught the failure and
+returned `{"error":"knowledge search failed: <ExceptionClass>","collection":"..."}`,
+which the LLM then paraphrased. The two common cases:
+
+| Symptom in `result.reply` | Root cause | Fix |
+|---|---|---|
+| `... OperationalError ...` | Local pgvector (or Azure Postgres) is unreachable. | Start the local container: `docker compose up -d postgres`, then confirm with `docker exec concierge-postgres pg_isready -U concierge -d concierge`. |
+| `... ValueError ...` | The pgvector table for the configured collection has not been created yet (no successful ingest). | `uv run knowledge-cli ingest run --collection <name> docs/agents`, then verify with `uv run knowledge-cli ingest stats --collection <name>` (`records` must be `> 0`). |
+
+To isolate whether the failure is in the agent wiring or in the knowledge
+backend, bypass the LLM and call the same `SearchKnowledge` use case the tool
+uses:
+
+```bash
+uv run knowledge-cli search run --collection knowledge_default --k 2 "agents registry"
+```
+
+If this command succeeds, the agent path (`langgraph` / `microsoft-agent-framework`
+/ `github-copilot-sdk`) will also succeed — the only thing left is for the LLM
+to choose `search_docs`. If this command fails, the agent path will see the
+same error.
+
 ## Using from cloud_agent worker
 
 The `cloud_agent` CLI dispatches tasks to the shared registry:

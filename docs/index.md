@@ -16,6 +16,65 @@ ships with two complementary surfaces:
 | [Todo App (Clean Architecture)](todo/index.md) | yes | A small FastAPI + Typer + clean-architecture reference |
 | [Hands-on Tutorial](tutorial/index.md) | partly | Foundry chat / embeddings, observability, pgvector, a LangGraph agent |
 
+## Service modules & dependencies
+
+The Python source under
+[`concierge/`](https://github.com/ks6088ts-labs/concierge/tree/main/concierge)
+is split into small per-feature packages. Each one follows the same
+clean-architecture layout (`domain` / `application` / `infrastructure`)
+and is wired together through a shared `concierge.settings`
+configuration layer.
+
+| Package | Role | Surfaces | Depends on (concierge) |
+| :--- | :--- | :--- | :--- |
+| [`settings`](https://github.com/ks6088ts-labs/concierge/tree/main/concierge/settings) | Pydantic-Settings config with per-service namespaces (Foundry, Postgres, observability, ...) | — | — |
+| [`loggers`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/loggers.py), [`observability`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/observability.py) | Shared logging + Foundry / Azure Monitor / MLflow tracing helpers | — | `settings` |
+| [`todo`](todo/index.md) | Task CRUD reference application | REST API, CLI | `settings` |
+| [`knowledge`](knowledge/index.md) | Markdown ingest + pgvector RAG store | CLI | `settings` |
+| [`agents`](agents/index.md) | Shared agent runtime — `AgentRegistry`, adapters (Echo / GitHub Copilot SDK / LangGraph / Microsoft Agent Framework) and built-in tools (echo, file management, shell command, image generation) | CLI | `settings` |
+| [`chat`](chat/index.md) | Chat conversations and replies (synchronous + realtime voice) | REST API, CLI, Realtime | `settings`, `agents` (optional, agent-backed responder) |
+| [`cloud_agent`](cloud_agent/index.md) | Async task dispatcher that runs agent jobs through a queue + repository | REST API, CLI | `settings`, `agents` |
+
+The dependency direction is strictly one-way:
+
+* `agents`, `todo`, and `knowledge` are independent bounded contexts —
+  nothing in them imports another service package.
+* `chat` and `cloud_agent` are the only services that import `agents`,
+  and they do so at the infrastructure / application boundary, never
+  from their domain layer.
+* These rules are enforced in CI by `import-linter` contracts declared
+  in [`pyproject.toml`](https://github.com/ks6088ts-labs/concierge/blob/main/pyproject.toml)
+  (run locally with `make lint-imports`).
+
+```mermaid
+flowchart LR
+    settings[settings]
+    obs["loggers / observability"]
+    agents[agents]
+    todo[todo]
+    knowledge[knowledge]
+    chat[chat]
+    cloud_agent[cloud_agent]
+
+    obs --> settings
+    todo --> settings
+    knowledge --> settings
+    agents --> settings
+    chat --> settings
+    cloud_agent --> settings
+
+    chat --> agents
+    cloud_agent --> agents
+```
+
+!!! note
+
+    The tutorial CLI
+    [`scripts/langgraph/vanilla.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/langgraph/vanilla.py)
+    drives the Todo app over the public REST API via `httpx` — it does
+    not import `concierge.todo` directly. Treat that as a runtime
+    integration only.
+
 ## Where do I start?
 
 Pick the closest match to your goal. Each path links forward into the next

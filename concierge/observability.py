@@ -99,6 +99,20 @@ def _enable_mlflow_once() -> None:
     mlflow.set_tracking_uri(tracking_uri)
     mlflow.set_experiment(observability_settings.mlflow_experiment_name)
     mlflow.langchain.autolog()
+    # mlflow.langchain.autolog() patches LangChain's BaseCallbackManager, so it
+    # only traces calls that go through a Runnable / chain / chat model. Direct
+    # Embeddings.embed_documents() calls (made e.g. by PGVectorStore during
+    # ingestion) bypass CallbackManager entirely. Enabling the OpenAI flavour
+    # patches the underlying openai SDK client, which is what
+    # init_embeddings("azure_ai:...") ultimately calls, so embedding requests
+    # are recorded as spans too.
+    try:
+        mlflow.openai.autolog()
+    except Exception as exc:  # noqa: BLE001 - non-fatal; langchain traces still work
+        logger.warning(
+            "Skipping mlflow.openai.autolog() (%s). LangChain-only traces will still be recorded.",
+            exc,
+        )
     logger.info("MLflow autologging enabled (tracking_uri=%s)", tracking_uri)
 
 

@@ -3,14 +3,16 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
-from concierge.knowledge.application.use_cases import DeleteCollection, IngestMarkdown
-from concierge.knowledge.domain.entities import KnowledgeChunk, KnowledgeDocument
+from concierge.knowledge.application.use_cases import DeleteCollection, IngestMarkdown, SearchKnowledge
+from concierge.knowledge.domain.entities import KnowledgeChunk, KnowledgeDocument, KnowledgeSearchResult
 from concierge.knowledge.domain.value_objects import ChunkId, CollectionName, ContentHash
 
 
 class InMemoryKnowledgeRepository:
-    def __init__(self) -> None:
+    def __init__(self, search_results: list[KnowledgeSearchResult] | None = None) -> None:
         self._records: dict[str, KnowledgeChunk] = {}
+        self._search_results = search_results or []
+        self.search_calls: list[tuple[CollectionName, str, int]] = []
 
     def upsert_chunks(self, chunks: list[KnowledgeChunk]) -> int:
         for chunk in chunks:
@@ -24,8 +26,8 @@ class InMemoryKnowledgeRepository:
         self._records = {key: chunk for key, chunk in self._records.items() if chunk.collection != collection}
 
     def search(self, collection: CollectionName, query: str, k: int = 4):
-        _ = (collection, query, k)
-        return []
+        self.search_calls.append((collection, query, k))
+        return list(self._search_results)
 
 
 def _loader(paths: list[Path]) -> list[KnowledgeDocument]:
@@ -83,3 +85,20 @@ def test_delete_collection_clears_only_target_collection() -> None:
 
     assert repository.count_chunks(target) == 0
     assert repository.count_chunks(other) == 1
+
+
+def test_search_knowledge_delegates_to_repository() -> None:
+    expected = [
+        KnowledgeSearchResult(
+            id="demo:docs/a.md:0:abc",
+            content="hello",
+            metadata={"source": "docs/a.md", "chunk_index": 0},
+        )
+    ]
+    repository = InMemoryKnowledgeRepository(search_results=expected)
+    collection = CollectionName("demo")
+
+    results = SearchKnowledge(repository).execute(collection=collection, query="hello", k=3)
+
+    assert results == expected
+    assert repository.search_calls == [(collection, "hello", 3)]

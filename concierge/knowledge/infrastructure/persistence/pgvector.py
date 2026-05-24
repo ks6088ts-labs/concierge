@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, cast
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
 
 from concierge.knowledge.domain.entities import KnowledgeChunk, KnowledgeSearchResult
 from concierge.knowledge.domain.value_objects import CollectionName
@@ -90,6 +90,14 @@ def build_connection_url(target: KnowledgeTarget) -> str:
     return settings.build_connection_string(password=password, user=user)
 
 
+def _table_exists(connection_url: str, table_name: str) -> bool:
+    engine = create_engine(connection_url, pool_pre_ping=True)
+    try:
+        return inspect(engine).has_table(table_name)
+    finally:
+        engine.dispose()
+
+
 def create_pgvector_repository(
     *,
     collection: CollectionName,
@@ -102,7 +110,7 @@ def create_pgvector_repository(
 
     connection_url = build_connection_url(target)
     engine = PGEngine.from_connection_string(url=connection_url)
-    if ensure_collection:
+    if ensure_collection and not _table_exists(connection_url, collection.value):
         engine.init_vectorstore_table(
             table_name=collection.value,
             vector_size=vector_size,

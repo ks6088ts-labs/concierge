@@ -65,9 +65,11 @@ def test_registry_unknown_file_tool_raises(monkeypatch) -> None:
 
 
 def test_registry_shell_tools_disabled_by_default(monkeypatch) -> None:
+    # Pin to the package default so a developer's .env (which may enable
+    # shell tools) cannot influence this assertion.
     monkeypatch.setenv("AGENTS_FILE_TOOLS_ENABLED", "")
-    monkeypatch.delenv("AGENTS_SHELL_TOOLS_ENABLED", raising=False)
-    monkeypatch.delenv("AGENTS_SHELL_ALLOWED_COMMANDS", raising=False)
+    monkeypatch.setenv("AGENTS_SHELL_TOOLS_ENABLED", "")
+    monkeypatch.setenv("AGENTS_SHELL_ALLOWED_COMMANDS", "")
 
     registry = get_agent_registry()
     langgraph = registry.resolve("langgraph")

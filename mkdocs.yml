@@ -29,6 +29,9 @@ nav:
       - Overview: cloud_agent/index.md
       - REST API Reference: cloud_agent/api.md
       - CLI Reference: cloud_agent/cli.md
+  - Knowledge Indexer (pgvector):
+      - Overview: knowledge/index.md
+      - CLI Reference: knowledge/cli.md
 markdown_extensions:
   - admonition
   - attr_list

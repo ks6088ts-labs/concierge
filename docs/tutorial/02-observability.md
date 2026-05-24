@@ -8,9 +8,19 @@ same Typer CLI:
 | Backend                 | Use case                                                | Toggle      |
 | :---------------------- | :------------------------------------------------------ | :---------- |
 | Azure Monitor / Foundry | Portal-based tracing of LangChain calls in Foundry      | `--tracing` |
-| MLflow (local)          | Quick local trace inspection for LangChain / LangGraph  | `--mlflow`  |
+| MLflow (local)          | Local trace inspection for LangChain / LangGraph and Microsoft Agent Framework | `--mlflow`  |
 
 Both toggles are mutually independent and can be combined.
+
+!!! info "Microsoft Agent Framework support"
+    MLflow does not provide a dedicated ``mlflow.<flavour>.autolog()`` for
+    Microsoft Agent Framework. Instead, MAF spans are forwarded to the
+    tracking server's ``/v1/traces`` endpoint via the OpenTelemetry HTTP
+    exporter ([upstream docs](https://mlflow.org/docs/latest/genai/tracing/integrations/listing/microsoft-agent-framework/)).
+    ``enable_mlflow()`` wires this exporter automatically when the
+    tracking URI is an ``http(s)://`` MLflow tracking server, so a single
+    ``--mlflow`` flag (or ``CONCIERGE_MLFLOW_ENABLED=true``) covers every
+    supported agent backend.
 
 ## Why this step exists
 

@@ -52,15 +52,19 @@ def test_enable_mlflow_is_idempotent(monkeypatch) -> None:
         "set_experiment": 0,
         "autolog": 0,
         "openai_autolog": 0,
+        "maf_tracing": 0,
     }
 
     fake_mlflow = types.SimpleNamespace()
     fake_mlflow.set_tracking_uri = lambda _uri: call_counts.__setitem__(
         "set_tracking_uri", call_counts["set_tracking_uri"] + 1
     )
-    fake_mlflow.set_experiment = lambda _name: call_counts.__setitem__(
-        "set_experiment", call_counts["set_experiment"] + 1
-    )
+
+    def _set_experiment(_name: str) -> SimpleNamespace:
+        call_counts["set_experiment"] += 1
+        return SimpleNamespace(experiment_id="42")
+
+    fake_mlflow.set_experiment = _set_experiment
     fake_mlflow.langchain = types.SimpleNamespace(
         autolog=lambda: call_counts.__setitem__("autolog", call_counts["autolog"] + 1)
     )
@@ -81,6 +85,17 @@ def test_enable_mlflow_is_idempotent(monkeypatch) -> None:
     )
     monkeypatch.setattr(observability, "_is_mlflow_server_reachable", lambda _uri, _timeout: True)
 
+    def _fake_maf_tracing(*, tracking_uri: str, experiment_id: str) -> None:
+        _ = tracking_uri
+        _ = experiment_id
+        call_counts["maf_tracing"] += 1
+
+    monkeypatch.setattr(
+        observability,
+        "_enable_microsoft_agent_framework_mlflow_tracing",
+        _fake_maf_tracing,
+    )
+
     observability.enable_mlflow()
     observability.enable_mlflow()
 
@@ -89,6 +104,7 @@ def test_enable_mlflow_is_idempotent(monkeypatch) -> None:
         "set_experiment": 1,
         "autolog": 1,
         "openai_autolog": 1,
+        "maf_tracing": 1,
     }
     assert observability.is_mlflow_enabled() is True
 
@@ -96,9 +112,14 @@ def test_enable_mlflow_is_idempotent(monkeypatch) -> None:
 def test_enable_mlflow_skips_when_server_unreachable(monkeypatch, caplog) -> None:
     _reset_state()
     mlflow_calls: list[str] = []
+
+    def _set_experiment(_name: str) -> SimpleNamespace:
+        mlflow_calls.append("set_experiment")
+        return SimpleNamespace(experiment_id="42")
+
     fake_mlflow = types.SimpleNamespace(
         set_tracking_uri=lambda _uri: mlflow_calls.append("set_tracking_uri"),
-        set_experiment=lambda _name: mlflow_calls.append("set_experiment"),
+        set_experiment=_set_experiment,
         langchain=types.SimpleNamespace(autolog=lambda: mlflow_calls.append("autolog")),
         openai=types.SimpleNamespace(autolog=lambda: mlflow_calls.append("openai_autolog")),
     )
@@ -163,9 +184,14 @@ def test_enable_mlflow_swallows_setup_exception(monkeypatch, caplog) -> None:
 def test_enable_mlflow_skips_health_check_for_non_http_uri(monkeypatch) -> None:
     _reset_state()
     mlflow_calls: list[str] = []
+
+    def _set_experiment(_name: str) -> SimpleNamespace:
+        mlflow_calls.append("set_experiment")
+        return SimpleNamespace(experiment_id="42")
+
     fake_mlflow = types.SimpleNamespace(
         set_tracking_uri=lambda _uri: mlflow_calls.append("set_tracking_uri"),
-        set_experiment=lambda _name: mlflow_calls.append("set_experiment"),
+        set_experiment=_set_experiment,
         langchain=types.SimpleNamespace(autolog=lambda: mlflow_calls.append("autolog")),
         openai=types.SimpleNamespace(autolog=lambda: mlflow_calls.append("openai_autolog")),
     )
@@ -191,6 +217,101 @@ def test_enable_mlflow_skips_health_check_for_non_http_uri(monkeypatch) -> None:
 
     assert observability.is_mlflow_enabled() is True
     assert mlflow_calls == ["set_tracking_uri", "set_experiment", "autolog", "openai_autolog"]
+
+
+def test_enable_microsoft_agent_framework_mlflow_tracing_configures_otel(monkeypatch) -> None:
+    """OTel exporter is wired to ``<tracking_uri>/v1/traces`` with the experiment header."""
+    _reset_state()
+
+    captured: dict[str, object] = {}
+
+    class _FakeExporter:
+        def __init__(self, *, endpoint: str, headers: dict[str, str]) -> None:
+            captured["endpoint"] = endpoint
+            captured["headers"] = headers
+
+    def _fake_configure(*, enable_sensitive_data: bool, exporters: list[object]) -> None:
+        captured["enable_sensitive_data"] = enable_sensitive_data
+        captured["exporters"] = exporters
+
+    af_obs = types.ModuleType("agent_framework.observability")
+    setattr(af_obs, "configure_otel_providers", _fake_configure)
+    af_pkg = types.ModuleType("agent_framework")
+    setattr(af_pkg, "observability", af_obs)
+    monkeypatch.setitem(sys.modules, "agent_framework", af_pkg)
+    monkeypatch.setitem(sys.modules, "agent_framework.observability", af_obs)
+
+    otel_trace_module = types.ModuleType("opentelemetry.exporter.otlp.proto.http.trace_exporter")
+    setattr(otel_trace_module, "OTLPSpanExporter", _FakeExporter)
+    for module_name in (
+        "opentelemetry",
+        "opentelemetry.exporter",
+        "opentelemetry.exporter.otlp",
+        "opentelemetry.exporter.otlp.proto",
+        "opentelemetry.exporter.otlp.proto.http",
+    ):
+        monkeypatch.setitem(sys.modules, module_name, types.ModuleType(module_name))
+    monkeypatch.setitem(
+        sys.modules,
+        "opentelemetry.exporter.otlp.proto.http.trace_exporter",
+        otel_trace_module,
+    )
+
+    observability._enable_microsoft_agent_framework_mlflow_tracing(
+        tracking_uri="http://127.0.0.1:5000/",
+        experiment_id="42",
+    )
+
+    assert captured["endpoint"] == "http://127.0.0.1:5000/v1/traces"
+    assert captured["headers"] == {"x-mlflow-experiment-id": "42"}
+    assert captured["enable_sensitive_data"] is True
+    assert isinstance(captured["exporters"], list)
+    assert len(captured["exporters"]) == 1
+    assert isinstance(captured["exporters"][0], _FakeExporter)
+
+
+def test_enable_microsoft_agent_framework_mlflow_tracing_skips_non_http(monkeypatch) -> None:
+    """File-based tracking URIs cannot accept OTLP, so the exporter is not wired."""
+    _reset_state()
+
+    called: dict[str, bool] = {}
+
+    def _fail_if_called(*, enable_sensitive_data: bool, exporters: list[object]) -> None:
+        _ = enable_sensitive_data
+        _ = exporters
+        called["configure"] = True
+
+    af_obs = types.ModuleType("agent_framework.observability")
+    setattr(af_obs, "configure_otel_providers", _fail_if_called)
+    monkeypatch.setitem(sys.modules, "agent_framework.observability", af_obs)
+
+    observability._enable_microsoft_agent_framework_mlflow_tracing(
+        tracking_uri="file:./mlruns",
+        experiment_id="42",
+    )
+
+    assert called == {}
+
+
+def test_enable_microsoft_agent_framework_mlflow_tracing_degrades_when_missing(monkeypatch, caplog) -> None:
+    """A missing OTLP exporter package logs a warning and does not raise."""
+    _reset_state()
+
+    # Force the OTLP HTTP exporter import to fail by removing the parent module
+    # so the nested import inside the helper raises ImportError.
+    monkeypatch.setitem(
+        sys.modules,
+        "opentelemetry.exporter.otlp.proto.http.trace_exporter",
+        None,
+    )
+
+    with caplog.at_level("WARNING", logger=observability.logger.name):
+        observability._enable_microsoft_agent_framework_mlflow_tracing(
+            tracking_uri="http://127.0.0.1:5000",
+            experiment_id="42",
+        )
+
+    assert any("Microsoft Agent Framework" in record.message for record in caplog.records)
 
 
 def test_apply_mlflow_http_env_defaults_respects_existing(monkeypatch) -> None:

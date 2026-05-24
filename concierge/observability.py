@@ -90,6 +90,63 @@ def _apply_mlflow_http_env_defaults(
     os.environ.setdefault("MLFLOW_HTTP_REQUEST_MAX_RETRIES", str(int(max_retries)))
 
 
+def _enable_microsoft_agent_framework_mlflow_tracing(
+    tracking_uri: str,
+    experiment_id: str,
+) -> None:
+    """Forward Microsoft Agent Framework OTel spans to the MLflow tracking server.
+
+    Microsoft Agent Framework does not have a dedicated ``mlflow.*.autolog()``
+    flavour. MLflow ingests its traces via OpenTelemetry instead: spans are
+    pushed to the tracking server's ``/v1/traces`` endpoint with the target
+    experiment id supplied through the ``x-mlflow-experiment-id`` header.
+    See https://mlflow.org/docs/latest/genai/tracing/integrations/listing/microsoft-agent-framework/.
+
+    The integration only works against an HTTP-based tracking server (the OTLP
+    endpoint is exposed by ``mlflow server``), and the optional
+    ``opentelemetry-exporter-otlp-proto-http`` package must be importable.
+    Missing dependencies degrade gracefully: a warning is logged and the
+    rest of MLflow autologging continues to work.
+    """
+    if not _is_http_tracking_uri(tracking_uri):
+        logger.info(
+            "Skipping Microsoft Agent Framework -> MLflow OTel exporter for non-HTTP "
+            "tracking URI %s. OTLP ingestion requires an MLflow tracking server.",
+            tracking_uri,
+        )
+        return
+
+    try:
+        from agent_framework.observability import (  # noqa: PLC0415
+            configure_otel_providers,
+        )
+        from opentelemetry.exporter.otlp.proto.http.trace_exporter import (  # noqa: PLC0415
+            OTLPSpanExporter,
+        )
+    except ImportError as exc:
+        logger.warning(
+            "Skipping Microsoft Agent Framework -> MLflow OTel exporter (%s). "
+            "Install opentelemetry-exporter-otlp-proto-http and agent-framework-core to enable it.",
+            exc,
+        )
+        return
+
+    endpoint = tracking_uri.rstrip("/") + "/v1/traces"
+    exporter = OTLPSpanExporter(
+        endpoint=endpoint,
+        headers={"x-mlflow-experiment-id": experiment_id},
+    )
+    # enable_sensitive_data=True records LLM inputs and outputs alongside the
+    # spans. The Microsoft docs explicitly require it for useful traces; only
+    # enable it for development / non-production tracking servers.
+    configure_otel_providers(enable_sensitive_data=True, exporters=[exporter])
+    logger.info(
+        "Microsoft Agent Framework OTel tracing forwarded to MLflow at %s (experiment_id=%s)",
+        endpoint,
+        experiment_id,
+    )
+
+
 @lru_cache(maxsize=1)
 def _enable_mlflow_once() -> None:
     import mlflow
@@ -97,7 +154,7 @@ def _enable_mlflow_once() -> None:
     observability_settings = get_observability_settings()
     tracking_uri = observability_settings.mlflow_tracking_uri
     mlflow.set_tracking_uri(tracking_uri)
-    mlflow.set_experiment(observability_settings.mlflow_experiment_name)
+    experiment = mlflow.set_experiment(observability_settings.mlflow_experiment_name)
     mlflow.langchain.autolog()
     # mlflow.langchain.autolog() patches LangChain's BaseCallbackManager, so it
     # only traces calls that go through a Runnable / chain / chat model. Direct
@@ -111,6 +168,20 @@ def _enable_mlflow_once() -> None:
     except Exception as exc:  # noqa: BLE001 - non-fatal; langchain traces still work
         logger.warning(
             "Skipping mlflow.openai.autolog() (%s). LangChain-only traces will still be recorded.",
+            exc,
+        )
+    # Microsoft Agent Framework uses its own OpenTelemetry pipeline; route those
+    # spans to the MLflow tracking server alongside the autolog flavours so a
+    # single --mlflow flag covers every supported agent backend.
+    try:
+        _enable_microsoft_agent_framework_mlflow_tracing(
+            tracking_uri=tracking_uri,
+            experiment_id=getattr(experiment, "experiment_id", ""),
+        )
+    except Exception as exc:  # noqa: BLE001 - non-fatal; LangChain traces still work
+        logger.warning(
+            "Failed to wire Microsoft Agent Framework OTel exporter to MLflow (%s). "
+            "Other MLflow integrations are unaffected.",
             exc,
         )
     logger.info("MLflow autologging enabled (tracking_uri=%s)", tracking_uri)

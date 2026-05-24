@@ -7,9 +7,19 @@
 | バックエンド            | 用途                                                    | 切替フラグ  |
 | :---------------------- | :------------------------------------------------------ | :---------- |
 | Azure Monitor / Foundry | Foundry ポータル上での LangChain トレース                 | `--tracing` |
-| MLflow (ローカル)       | LangChain / LangGraph 実行のローカルトレース確認          | `--mlflow`  |
+| MLflow (ローカル)       | LangChain / LangGraph / Microsoft Agent Framework のローカルトレース確認 | `--mlflow`  |
 
 両者は独立しており、同時に有効化することもできます。
+
+!!! info "Microsoft Agent Framework 対応について"
+    MLflow には Microsoft Agent Framework 専用の ``mlflow.<flavour>.autolog()``
+    は存在しません。代わりに、OpenTelemetry HTTP exporter 経由でトラッキ
+    ングサーバーの ``/v1/traces`` エンドポイントへスパンを転送します
+    ([本家ドキュメント](https://mlflow.org/docs/latest/genai/tracing/integrations/listing/microsoft-agent-framework/))。
+    トラッキング URI が ``http(s)://`` のときに ``enable_mlflow()`` が
+    この exporter を自動的に組み込むため、 ``--mlflow`` フラグ
+    (もしくは ``CONCIERGE_MLFLOW_ENABLED=true``) 一つで対応している全
+    エージェントバックエンドのトレースが MLflow に集約されます。
 
 ## なぜこのステップが必要か
 

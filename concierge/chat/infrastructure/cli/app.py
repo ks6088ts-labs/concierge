@@ -79,8 +79,9 @@ def _bootstrap(
             "--mlflow",
             "-m",
             help=(
-                "Enable MLflow autologging for LangChain / LangGraph runs. "
-                "See https://mlflow.org/docs/latest/genai/tracing/integrations/listing/langgraph/"
+                "Enable MLflow autologging for LangChain / LangGraph runs and forward "
+                "Microsoft Agent Framework OpenTelemetry spans to MLflow. "
+                "See https://mlflow.org/docs/latest/genai/tracing/integrations/listing/microsoft-agent-framework/"
             ),
         ),
     ] = False,

@@ -60,6 +60,15 @@ cloud-agent-cli = "concierge.cloud_agent.infrastructure.cli.app:app"
 agents-cli = "concierge.agents.infrastructure.cli.app:app"
 knowledge-cli = "concierge.knowledge.infrastructure.cli.app:app"
 
+[tool.uv]
+# azure-monitor-opentelemetry-exporter <= 1.0.0b45 declares a loose
+# ``opentelemetry-sdk~=1.35`` constraint, but ``opentelemetry-sdk`` 1.42.x
+# removed ``LogData`` and breaks the exporter at import time. b52+ pins
+# ``opentelemetry-sdk==1.40``, which restores compatibility.
+constraint-dependencies = [
+    "azure-monitor-opentelemetry-exporter>=1.0.0b52",
+]
+
 [tool.ruff]
 line-length = 120
 target-version = "py310"

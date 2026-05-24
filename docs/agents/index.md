@@ -207,6 +207,60 @@ not crash.
 > Microsoft Agent Framework and GitHub Copilot SDK paths are best-effort and
 > depend on SDK OpenTelemetry span emission.
 
+### Minimum end-to-end procedure (docs/ → LangGraph agent)
+
+The following is the smallest path to confirm the env-driven knowledge tool
+actually flows from `LLM → search_docs tool → SearchKnowledge use case →
+pgvector`. It indexes the repository's own `docs/` directory into the default
+collection and lets the `langgraph` agent retrieve it.
+
+> The agent runtime resolves the knowledge backend via
+> [`get_search_knowledge_use_case`](../../concierge/knowledge/__init__.py),
+> which currently defaults to `KnowledgeTarget.DOCKER` (i.e. the `POSTGRES_*`
+> env block). Ingest with the same target the agent will read from. The steps
+> below use the local Docker Compose postgres so the agent can reach the data.
+
+```bash
+# 1. Start the local pgvector instance (same target as the agent runtime).
+docker compose up -d postgres
+
+# 2. Sign in for Entra ID-backed Foundry calls (embeddings + chat model).
+az login
+export AZURE_AI_PROJECT_ENDPOINT="https://<resource>.services.ai.azure.com/api/projects/<project>"
+
+# 3. Index docs/ into the default collection.
+uv run knowledge-cli ingest run --collection knowledge_default docs
+uv run knowledge-cli ingest stats --collection knowledge_default
+# expected: {"collection": "knowledge_default", "records": <N > 0>}
+
+# 4. Register the tool with the agent runtime (in .env).
+#    AGENTS_KNOWLEDGE__TOOLS=search_docs
+#    AGENTS_KNOWLEDGE__SEARCH_DOCS__COLLECTION=knowledge_default
+#    AGENTS_KNOWLEDGE__SEARCH_DOCS__DESCRIPTION=Search the concierge docs.
+
+# 5. Confirm the tool is wired into the agent registry.
+uv run agents-cli knowledge list
+# [{"name":"search_docs","collection":"knowledge_default", ...}]
+
+# 6. Drive the LangGraph agent so the LLM calls search_docs.
+uv run agents-cli invoke --agent-type langgraph \
+  --message "Use the search_docs tool to look up 'agents registry' and summarise the hits in 3 bullets."
+# Inspect the JSON response: tool_calls should include search_docs, and the
+# final message should reference content from docs/.
+```
+
+Caveats observed during smoke-testing:
+
+- The `text-embedding-3-small` deployment on AIServices S0 may return HTTP 429
+  during a full `docs/` ingest. `IngestMarkdown` is all-or-nothing, so a 429
+  mid-run leaves the collection at 0 records. Retry after ~60 s, or split
+  the ingest path-by-path (e.g. `docs/agents`, `docs/chat`, ...).
+- The agent CLI keeps Azure Postgres support behind `knowledge-cli`'s
+  `--target azure` flag only; the agent runtime itself currently always uses
+  the `POSTGRES_*` (docker) target. Use Docker Compose for the agent-side
+  smoke test, or extend the runtime to honour `KnowledgeTarget.AZURE_POSTGRES`
+  before pointing the agent at the cloud.
+
 ## Using from cloud_agent worker
 
 The `cloud_agent` CLI dispatches tasks to the shared registry:

@@ -197,6 +197,61 @@ AGENTS_KNOWLEDGE__SEARCH_RUNBOOKS__DESCRIPTION=Search operational runbooks.
 > Microsoft Agent Framework と GitHub Copilot SDK は SDK 側の OpenTelemetry
 > span emit に依存する best-effort です。
 
+### 最小動作確認手順（docs/ → LangGraph エージェント）
+
+環境変数駆動の knowledge ツールが
+`LLM → search_docs tool → SearchKnowledge use case → pgvector` まで
+実際に流れることを確認する最小ルートです。本リポジトリの `docs/` を
+デフォルト collection に取り込み、`langgraph` エージェントから検索します。
+
+> エージェント実行時のバックエンド解決は
+> [`get_search_knowledge_use_case`](../../concierge/knowledge/__init__.py)
+> が行い、現状は `KnowledgeTarget.DOCKER`（`POSTGRES_*` 環境変数ブロック）
+> 固定です。エージェントが参照するのと同じ target で取り込む必要があるため、
+> 以下では Docker Compose の postgres を使います。
+
+```bash
+# 1. ローカル pgvector を起動（エージェント runtime と同じ target）。
+docker compose up -d postgres
+
+# 2. Entra ID 認証で Foundry（埋め込み + チャットモデル）にサインイン。
+az login
+export AZURE_AI_PROJECT_ENDPOINT="https://<resource>.services.ai.azure.com/api/projects/<project>"
+
+# 3. docs/ をデフォルト collection に取り込み。
+uv run knowledge-cli ingest run --collection knowledge_default docs
+uv run knowledge-cli ingest stats --collection knowledge_default
+# 期待値: {"collection": "knowledge_default", "records": <N > 0>}
+
+# 4. エージェント runtime にツールを登録（.env）。
+#    AGENTS_KNOWLEDGE__TOOLS=search_docs
+#    AGENTS_KNOWLEDGE__SEARCH_DOCS__COLLECTION=knowledge_default
+#    AGENTS_KNOWLEDGE__SEARCH_DOCS__DESCRIPTION=Search the concierge docs.
+
+# 5. ツールがエージェントレジストリに登録されたことを確認。
+uv run agents-cli knowledge list
+# [{"name":"search_docs","collection":"knowledge_default", ...}]
+
+# 6. LangGraph エージェントを起動し、LLM に search_docs を呼ばせる。
+uv run agents-cli invoke --agent-type langgraph \
+  --message "search_docs ツールを使って 'agents registry' に関するドキュメントを取得し、要点を 3 行で要約してください。"
+# 返却 JSON の tool_calls に search_docs が含まれ、最終メッセージで docs/ の
+# 内容が引用されることを確認します。
+```
+
+スモークテスト中に観測された注意点:
+
+- AIServices S0 上の `text-embedding-3-small` は `docs/` 一括取り込み時に
+  HTTP 429 を返すことがあります。`IngestMarkdown` は all-or-nothing なので
+  途中で 429 になると collection は 0 件のままになります。60 秒程度待って
+  再実行するか、サブディレクトリ単位（例: `docs/agents`, `docs/chat` …）
+  に分割して取り込んでください。
+- `knowledge-cli` は `--target azure` で Azure Postgres を扱えますが、
+  エージェント runtime 側は現状 `POSTGRES_*`（docker）固定です。
+  エージェント経由で検証する場合は Docker Compose 上の postgres を使う
+  か、`KnowledgeTarget.AZURE_POSTGRES` を runtime でも選べるよう拡張して
+  ください。
+
 ## cloud_agent ワーカーからの利用
 
 ```bash

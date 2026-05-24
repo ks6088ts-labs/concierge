@@ -47,7 +47,12 @@ def test_trace_config_keeps_existing_callbacks_when_tracing_disabled() -> None:
 
 def test_enable_mlflow_is_idempotent(monkeypatch) -> None:
     _reset_state()
-    call_counts = {"set_tracking_uri": 0, "set_experiment": 0, "autolog": 0}
+    call_counts = {
+        "set_tracking_uri": 0,
+        "set_experiment": 0,
+        "autolog": 0,
+        "openai_autolog": 0,
+    }
 
     fake_mlflow = types.SimpleNamespace()
     fake_mlflow.set_tracking_uri = lambda _uri: call_counts.__setitem__(
@@ -58,6 +63,9 @@ def test_enable_mlflow_is_idempotent(monkeypatch) -> None:
     )
     fake_mlflow.langchain = types.SimpleNamespace(
         autolog=lambda: call_counts.__setitem__("autolog", call_counts["autolog"] + 1)
+    )
+    fake_mlflow.openai = types.SimpleNamespace(
+        autolog=lambda: call_counts.__setitem__("openai_autolog", call_counts["openai_autolog"] + 1)
     )
     monkeypatch.setitem(sys.modules, "mlflow", fake_mlflow)
     monkeypatch.setattr(
@@ -76,7 +84,12 @@ def test_enable_mlflow_is_idempotent(monkeypatch) -> None:
     observability.enable_mlflow()
     observability.enable_mlflow()
 
-    assert call_counts == {"set_tracking_uri": 1, "set_experiment": 1, "autolog": 1}
+    assert call_counts == {
+        "set_tracking_uri": 1,
+        "set_experiment": 1,
+        "autolog": 1,
+        "openai_autolog": 1,
+    }
     assert observability.is_mlflow_enabled() is True
 
 
@@ -87,6 +100,7 @@ def test_enable_mlflow_skips_when_server_unreachable(monkeypatch, caplog) -> Non
         set_tracking_uri=lambda _uri: mlflow_calls.append("set_tracking_uri"),
         set_experiment=lambda _name: mlflow_calls.append("set_experiment"),
         langchain=types.SimpleNamespace(autolog=lambda: mlflow_calls.append("autolog")),
+        openai=types.SimpleNamespace(autolog=lambda: mlflow_calls.append("openai_autolog")),
     )
     monkeypatch.setitem(sys.modules, "mlflow", fake_mlflow)
     monkeypatch.setattr(
@@ -120,6 +134,7 @@ def test_enable_mlflow_swallows_setup_exception(monkeypatch, caplog) -> None:
         set_tracking_uri=_raise,
         set_experiment=lambda _name: None,
         langchain=types.SimpleNamespace(autolog=lambda: None),
+        openai=types.SimpleNamespace(autolog=lambda: None),
     )
     monkeypatch.setitem(sys.modules, "mlflow", fake_mlflow)
     monkeypatch.setattr(
@@ -152,6 +167,7 @@ def test_enable_mlflow_skips_health_check_for_non_http_uri(monkeypatch) -> None:
         set_tracking_uri=lambda _uri: mlflow_calls.append("set_tracking_uri"),
         set_experiment=lambda _name: mlflow_calls.append("set_experiment"),
         langchain=types.SimpleNamespace(autolog=lambda: mlflow_calls.append("autolog")),
+        openai=types.SimpleNamespace(autolog=lambda: mlflow_calls.append("openai_autolog")),
     )
     monkeypatch.setitem(sys.modules, "mlflow", fake_mlflow)
     monkeypatch.setattr(
@@ -174,7 +190,7 @@ def test_enable_mlflow_skips_health_check_for_non_http_uri(monkeypatch) -> None:
     observability.enable_mlflow()
 
     assert observability.is_mlflow_enabled() is True
-    assert mlflow_calls == ["set_tracking_uri", "set_experiment", "autolog"]
+    assert mlflow_calls == ["set_tracking_uri", "set_experiment", "autolog", "openai_autolog"]
 
 
 def test_apply_mlflow_http_env_defaults_respects_existing(monkeypatch) -> None:

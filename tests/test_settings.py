@@ -6,6 +6,9 @@ from dotenv import load_dotenv
 from concierge.loggers import get_logger
 from concierge.settings import (
     AgentsSettings,
+    KnowledgeEmbeddingProvider,
+    KnowledgeSettings,
+    KnowledgeVectorBackend,
     ObservabilitySettings,
     ProjectSettings,
     TodoRepositoryBackend,
@@ -183,6 +186,46 @@ def test_agents_settings_reads_env(monkeypatch):
     assert settings.shell_root_dir == "sandbox-shell"
     assert settings.shell_timeout_seconds == 45
     assert settings.shell_max_output_bytes == 8192
+
+
+def test_knowledge_settings_defaults(monkeypatch):
+    monkeypatch.delenv("KNOWLEDGE_EMBEDDING_PROVIDER", raising=False)
+    monkeypatch.delenv("KNOWLEDGE_EMBEDDING_MODEL", raising=False)
+    monkeypatch.delenv("KNOWLEDGE_VECTOR_SIZE", raising=False)
+    monkeypatch.delenv("KNOWLEDGE_VECTOR_BACKEND", raising=False)
+    monkeypatch.delenv("KNOWLEDGE_DEFAULT_COLLECTION", raising=False)
+    monkeypatch.delenv("KNOWLEDGE_CHUNK_SIZE", raising=False)
+    monkeypatch.delenv("KNOWLEDGE_CHUNK_OVERLAP", raising=False)
+
+    settings = KnowledgeSettings(_env_file=None)  # ty: ignore[unknown-argument]
+
+    assert settings.embedding_provider is KnowledgeEmbeddingProvider.FOUNDRY
+    assert settings.embedding_model == "text-embedding-3-small"
+    assert settings.vector_size == 1536
+    assert settings.vector_backend is KnowledgeVectorBackend.PGVECTOR
+    assert settings.default_collection == "knowledge_default"
+    assert settings.chunk_size == 1000
+    assert settings.chunk_overlap == 200
+
+
+def test_knowledge_settings_reads_env(monkeypatch):
+    monkeypatch.setenv("KNOWLEDGE_EMBEDDING_PROVIDER", "fake")
+    monkeypatch.setenv("KNOWLEDGE_EMBEDDING_MODEL", "test-model")
+    monkeypatch.setenv("KNOWLEDGE_VECTOR_SIZE", "64")
+    monkeypatch.setenv("KNOWLEDGE_VECTOR_BACKEND", "pgvector")
+    monkeypatch.setenv("KNOWLEDGE_DEFAULT_COLLECTION", "runbooks")
+    monkeypatch.setenv("KNOWLEDGE_CHUNK_SIZE", "256")
+    monkeypatch.setenv("KNOWLEDGE_CHUNK_OVERLAP", "64")
+
+    settings = KnowledgeSettings(_env_file=None)  # ty: ignore[unknown-argument]
+
+    assert settings.embedding_provider is KnowledgeEmbeddingProvider.FAKE
+    assert settings.embedding_model == "test-model"
+    assert settings.vector_size == 64
+    assert settings.vector_backend is KnowledgeVectorBackend.PGVECTOR
+    assert settings.default_collection == "runbooks"
+    assert settings.chunk_size == 256
+    assert settings.chunk_overlap == 64
 
 
 def test_cloud_agent_settings_no_langgraph_fields(monkeypatch):

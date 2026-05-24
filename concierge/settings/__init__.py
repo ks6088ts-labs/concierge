@@ -10,6 +10,13 @@ from concierge.settings.cloud_agent import (
     CloudAgentSettings,
     get_cloud_agent_settings,
 )
+from concierge.settings.knowledge import (
+    KnowledgeEmbeddingProvider,
+    KnowledgeSettings,
+    KnowledgeTarget,
+    KnowledgeVectorBackend,
+    get_knowledge_settings,
+)
 from concierge.settings.microsoft_foundry import (
     MicrosoftFoundrySettings,
     get_microsoft_foundry_settings,
@@ -34,6 +41,10 @@ __all__ = [
     "CloudAgentQueueBackend",
     "CloudAgentRepositoryBackend",
     "CloudAgentSettings",
+    "KnowledgeEmbeddingProvider",
+    "KnowledgeSettings",
+    "KnowledgeTarget",
+    "KnowledgeVectorBackend",
     "MicrosoftFoundrySettings",
     "ObservabilitySettings",
     "PostgresSettings",
@@ -44,6 +55,7 @@ __all__ = [
     "get_azure_postgres_settings",
     "get_chat_settings",
     "get_cloud_agent_settings",
+    "get_knowledge_settings",
     "get_microsoft_foundry_settings",
     "get_observability_settings",
     "get_postgres_settings",

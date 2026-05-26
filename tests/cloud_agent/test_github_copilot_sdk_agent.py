@@ -11,6 +11,7 @@ from concierge.cloud_agent.application.use_cases import DispatchTaskUseCase, Pro
 from concierge.cloud_agent.domain.value_objects import TaskStatus
 from concierge.cloud_agent.infrastructure.persistence.memory import InMemoryTaskRepository
 from concierge.cloud_agent.infrastructure.queue.memory import InMemoryTaskQueue
+from concierge.settings.agents import get_agents_settings
 
 
 @pytest.mark.anyio
@@ -47,5 +48,5 @@ async def test_cloud_agent_processes_github_copilot_sdk_task() -> None:
         "message": "Hello Copilot",
         "reply": "Hello Copilot",
         "tool_calls": [],
-        "model": "gpt-5-mini",
+        "model": get_agents_settings().github_copilot_sdk_model,
     }

@@ -9,6 +9,7 @@ from urllib import request as urllib_request
 from urllib.parse import urlparse
 
 from azure.identity import DefaultAzureCredential
+from copilot.client import TelemetryConfig
 from langchain_core.runnables import RunnableConfig
 
 from concierge.loggers import get_logger
@@ -90,6 +91,28 @@ def _apply_mlflow_http_env_defaults(
     os.environ.setdefault("MLFLOW_HTTP_REQUEST_MAX_RETRIES", str(int(max_retries)))
 
 
+# The GitHub Copilot CLI subprocess uses OpenTelemetry's BatchSpanProcessor with
+# the JS SDK default ``OTEL_BSP_SCHEDULE_DELAY=5000`` (ms). The CLI shuts down
+# shortly after the JSON-RPC session ends without calling ``forceFlush`` on the
+# OTel provider, so any spans still queued in the BSP are dropped instead of
+# being POSTed to the OTLP endpoint. Lower the schedule delay so at least one
+# flush fires during the typical session lifetime; the value is small enough to
+# catch sub-second sessions but large enough to avoid one HTTP request per span.
+_COPILOT_SDK_OTEL_BSP_SCHEDULE_DELAY_MS = "500"
+
+
+def _apply_copilot_sdk_otel_env_defaults() -> None:
+    """Apply OTel BatchSpanProcessor defaults inherited by the Copilot CLI.
+
+    The :class:`copilot.client.SubprocessConfig` defaults to ``env=None``, which
+    causes the SDK to spawn the CLI with ``dict(os.environ)``. Setting these
+    variables in the parent process therefore propagates them to the
+    subprocess. ``setdefault`` is used so any value the operator already
+    exported wins.
+    """
+    os.environ.setdefault("OTEL_BSP_SCHEDULE_DELAY", _COPILOT_SDK_OTEL_BSP_SCHEDULE_DELAY_MS)
+
+
 def _enable_microsoft_agent_framework_mlflow_tracing(
     tracking_uri: str,
     experiment_id: str,
@@ -147,6 +170,20 @@ def _enable_microsoft_agent_framework_mlflow_tracing(
     )
 
 
+def _append_mlflow_experiment_header(experiment_id: str) -> None:
+    """Append ``x-mlflow-experiment-id`` to ``OTEL_EXPORTER_OTLP_HEADERS``."""
+    if not experiment_id:
+        return
+    header = f"x-mlflow-experiment-id={experiment_id}"
+    existing = os.environ.get("OTEL_EXPORTER_OTLP_HEADERS", "")
+    if not existing:
+        os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = header
+        return
+    if "x-mlflow-experiment-id=" in existing:
+        return
+    os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = f"{existing},{header}"
+
+
 @lru_cache(maxsize=1)
 def _enable_mlflow_once() -> None:
     import mlflow
@@ -155,6 +192,8 @@ def _enable_mlflow_once() -> None:
     tracking_uri = observability_settings.mlflow_tracking_uri
     mlflow.set_tracking_uri(tracking_uri)
     experiment = mlflow.set_experiment(observability_settings.mlflow_experiment_name)
+    if _is_http_tracking_uri(tracking_uri):
+        _append_mlflow_experiment_header(getattr(experiment, "experiment_id", ""))
     mlflow.langchain.autolog()
     # mlflow.langchain.autolog() patches LangChain's BaseCallbackManager, so it
     # only traces calls that go through a Runnable / chain / chat model. Direct
@@ -236,6 +275,21 @@ def enable_mlflow() -> None:
 
 def is_mlflow_enabled() -> bool:
     return _state.mlflow_enabled
+
+
+def build_copilot_sdk_telemetry_config() -> TelemetryConfig | None:
+    """Return Copilot SDK telemetry config when MLflow and HTTP tracking are enabled."""
+    if not is_mlflow_enabled():
+        return None
+    tracking_uri = get_observability_settings().mlflow_tracking_uri
+    if not _is_http_tracking_uri(tracking_uri):
+        return None
+    _apply_copilot_sdk_otel_env_defaults()
+    return TelemetryConfig(
+        otlp_endpoint=tracking_uri,
+        source_name="concierge.github-copilot-sdk",
+        capture_content=False,
+    )
 
 
 @cache

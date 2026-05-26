@@ -10,6 +10,7 @@ from concierge.agents.infrastructure.cli.app import app
 from concierge.agents.infrastructure.github_copilot_sdk_agent import GitHubCopilotSdkAgent
 from concierge.agents.infrastructure.microsoft_agent_framework_agent import MicrosoftAgentFrameworkAgent
 from concierge.agents.infrastructure.tools.image_generation import GeneratedImage, ImageGenerationResult
+from concierge.settings.agents import get_agents_settings
 from concierge.settings.agents_knowledge import get_agents_knowledge_settings
 
 runner = CliRunner()
@@ -78,7 +79,7 @@ def test_cli_invoke_github_copilot_sdk_with_message_shortcut() -> None:
         "message": "Hello Copilot",
         "reply": "Hello Copilot",
         "tool_calls": [],
-        "model": "gpt-5-mini",
+        "model": get_agents_settings().github_copilot_sdk_model,
     }
 
 

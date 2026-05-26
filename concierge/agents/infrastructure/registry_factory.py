@@ -48,7 +48,7 @@ from concierge.agents.infrastructure.tools import (
     resolve_file_root_dir,
     resolve_shell_root_dir,
 )
-from concierge.observability import trace_config
+from concierge.observability import build_copilot_sdk_telemetry_config, trace_config
 from concierge.settings.agents import get_agents_settings
 from concierge.settings.agents_knowledge import get_agents_knowledge_settings
 from concierge.settings.microsoft_foundry import get_microsoft_foundry_settings
@@ -132,6 +132,7 @@ def get_agent_registry() -> AgentRegistry:
                 *shell_builders_copilot,
                 *knowledge_builders_copilot,
             ],
+            telemetry_factory=build_copilot_sdk_telemetry_config,
         )
     )
     registry.register(

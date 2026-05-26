@@ -28,6 +28,7 @@ from collections.abc import Callable
 from typing import Any
 
 from copilot import CopilotClient
+from copilot.client import SubprocessConfig, TelemetryConfig
 from copilot.generated.session_events import (
     AssistantMessageData,
     SessionEvent,
@@ -39,6 +40,7 @@ from concierge.agents.application.contracts import AgentRequest, AgentResponse
 from concierge.agents.domain.agent_types import AgentType
 
 CopilotSdkToolBuilder = Callable[[dict[str, Any]], Any]
+CopilotSdkTelemetryFactory = Callable[[], TelemetryConfig | None]
 
 
 class GitHubCopilotSdkAgent:
@@ -67,6 +69,8 @@ class GitHubCopilotSdkAgent:
     :param tool_builders: Optional list of tool builder callables. Each is
         invoked once per ``handle()`` with the per-request ``side_outputs``
         dict and must return a :class:`copilot.tools.Tool`.
+    :param telemetry_factory: Optional factory returning Copilot SDK telemetry
+        config to pass to :class:`CopilotClient`.
     """
 
     agent_type: str = AgentType.GITHUB_COPILOT_SDK.value
@@ -76,10 +80,12 @@ class GitHubCopilotSdkAgent:
         model: str,
         system_prompt: str,
         tool_builders: list[CopilotSdkToolBuilder] | None = None,
+        telemetry_factory: CopilotSdkTelemetryFactory | None = None,
     ) -> None:
         self._model = model
         self._system_prompt = system_prompt
         self._tool_builders: list[CopilotSdkToolBuilder] = list(tool_builders or [])
+        self._telemetry_factory = telemetry_factory or (lambda: None)
 
     async def handle(self, request: AgentRequest) -> AgentResponse:
         message = self._extract_message(request.payload)
@@ -174,12 +180,14 @@ class GitHubCopilotSdkAgent:
         value = payload.get("message")
         return value if isinstance(value, str) and value.strip() else ""
 
-    @staticmethod
-    def _build_client() -> CopilotClient:
+    def _build_client(self) -> CopilotClient:
         """Construct a fresh :class:`CopilotClient`.
 
         Isolated as a seam so unit tests can patch it to return a fake
         async-context-manager client without instantiating the real CLI
         subprocess.
         """
-        return CopilotClient()
+        telemetry = self._telemetry_factory()
+        if telemetry is None:
+            return CopilotClient()
+        return CopilotClient(config=SubprocessConfig(telemetry=telemetry))

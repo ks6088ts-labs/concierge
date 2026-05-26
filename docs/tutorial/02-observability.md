@@ -8,7 +8,7 @@ same Typer CLI:
 | Backend                 | Use case                                                | Toggle      |
 | :---------------------- | :------------------------------------------------------ | :---------- |
 | Azure Monitor / Foundry | Portal-based tracing of LangChain calls in Foundry      | `--tracing` |
-| MLflow (local)          | Local trace inspection for LangChain / LangGraph and Microsoft Agent Framework | `--mlflow`  |
+| MLflow (local)          | Local trace inspection for LangChain / LangGraph, Microsoft Agent Framework, and GitHub Copilot SDK | `--mlflow`  |
 
 Both toggles are mutually independent and can be combined.
 
@@ -21,6 +21,20 @@ Both toggles are mutually independent and can be combined.
     tracking URI is an ``http(s)://`` MLflow tracking server, so a single
     ``--mlflow`` flag (or ``CONCIERGE_MLFLOW_ENABLED=true``) covers every
     supported agent backend.
+
+!!! info "GitHub Copilot SDK support"
+    GitHub Copilot SDK sessions emit their OpenTelemetry spans from the
+    Copilot CLI subprocess, so ``mlflow.<flavour>.autolog()`` cannot pick
+    them up. Instead, ``concierge.observability.build_copilot_sdk_telemetry_config()``
+    constructs a ``copilot.client.TelemetryConfig`` whose ``otlp_endpoint``
+    is the configured ``MLFLOW_TRACKING_URI`` and passes it through
+    ``CopilotClient(config=SubprocessConfig(telemetry=...))``. The Copilot
+    CLI then pushes spans directly to the MLflow tracking server's OTLP
+    ingestion endpoint, so ``github-copilot-sdk`` traces show up in the
+    MLflow UI alongside the other agent backends. When the tracking URI
+    is not HTTP(S) (e.g. ``file:`` or ``sqlite:``),
+    ``build_copilot_sdk_telemetry_config()`` returns ``None`` and the
+    Copilot SDK runs without telemetry as a graceful fallback.
 
 ## Why this step exists
 
@@ -263,6 +277,44 @@ uv run python scripts/microsoft_foundry/vanilla.py --mlflow use-in-agents \
 experiment, and calls `mlflow.langchain.autolog()`. The setup is cached within
 the current Python process.
 
+### Send GitHub Copilot SDK traces to MLflow
+
+When `enable_mlflow()` has succeeded (i.e. `is_mlflow_enabled()` returns
+True),
+[`build_copilot_sdk_telemetry_config()`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/observability.py)
+returns a `TelemetryConfig` that `GitHubCopilotSdkAgent` forwards to the
+Copilot CLI subprocess via
+`CopilotClient(config=SubprocessConfig(telemetry=...))`. No extra code is
+required: enabling `--mlflow` (or `CONCIERGE_MLFLOW_ENABLED=true`) is enough
+for Copilot SDK spans to reach MLflow.
+
+```bash
+# One-shot via the CLI flag
+uv run cloud-agent-cli --mlflow task dispatch \
+  --agent-type github-copilot-sdk \
+  --payload '{"message": "hello"}'
+
+# Start the worker with MLflow on as well (the worker is what actually opens
+# the Copilot session)
+uv run cloud-agent-cli --mlflow worker run
+```
+
+!!! warning "Non-HTTP tracking URIs are skipped"
+    The Copilot SDK telemetry path uses the OTLP HTTP exporter. When
+    `MLFLOW_TRACKING_URI` does not start with `http://` / `https://`
+    (for example with a `file:` or `sqlite:` local backend),
+    `build_copilot_sdk_telemetry_config()` returns `None` and the agent
+    runs with a plain `CopilotClient()`. To capture Copilot SDK traces,
+    start an HTTP tracking server (e.g. `mlflow server`) and point
+    `MLFLOW_TRACKING_URI=http://...` at it.
+
+!!! note "Capturing prompts and responses"
+    `build_copilot_sdk_telemetry_config()` constructs `TelemetryConfig`
+    with `capture_content=False`, so message bodies are *not* included in
+    spans. Flip it to `capture_content=True` in
+    `concierge/observability.py` if you need full prompt / completion
+    payloads in the traces (be mindful of sensitive content).
+
 ### Verify
 
 Open `http://127.0.0.1:5000` in your browser. The MLflow GenAI home shows
@@ -351,6 +403,20 @@ the suite before pushing.
     Stop the previous `make mlflow` (`Ctrl+C`) or start MLflow manually on a
     different port and set `MLFLOW_TRACKING_URI` on the CLI invocation. The
     `make mlflow` target itself is fixed to port `5000`.
+
+??? failure "github-copilot-sdk traces do not appear in MLflow"
+    1. Confirm `MLFLOW_TRACKING_URI` is an `http(s)://...` URL. `file:`
+       and `sqlite:` backends skip the Copilot SDK telemetry wiring.
+    2. Pass `--mlflow` on the CLI invocation, or set
+       `CONCIERGE_MLFLOW_ENABLED=true` in the environment.
+    3. **The worker process is what actually runs the task**, so make sure
+       MLflow is enabled on the worker (`--mlflow` /
+       `CONCIERGE_MLFLOW_ENABLED=true`), not just on the dispatch call.
+    4. Make sure the MLflow tracking server is reachable; the pre-flight
+       health check (`<MLFLOW_TRACKING_URI>/health`) must succeed.
+       `_is_mlflow_server_reachable()` fails fast and disables every
+       MLflow integration when the server is down, including the Copilot
+       SDK telemetry path.
 
 ## What's next
 

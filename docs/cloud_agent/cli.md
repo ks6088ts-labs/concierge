@@ -15,7 +15,7 @@ uv run cloud-agent-cli --help
 ## Global observability options
 
 - `--tracing` toggles shared tracing state (`concierge-cloud-agent` tracer name).
-- `--mlflow` enables `mlflow.langchain.autolog()` bootstrap.
+- `--mlflow` enables MLflow tracing bootstrap for `langgraph`, `microsoft-agent-framework`, and `github-copilot-sdk` agents.
 - `--verbose` enables DEBUG logging.
 
 ## Task Commands

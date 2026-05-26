@@ -47,6 +47,7 @@ def test_trace_config_keeps_existing_callbacks_when_tracing_disabled() -> None:
 
 def test_enable_mlflow_is_idempotent(monkeypatch) -> None:
     _reset_state()
+    monkeypatch.delenv("OTEL_EXPORTER_OTLP_HEADERS", raising=False)
     call_counts = {
         "set_tracking_uri": 0,
         "set_experiment": 0,
@@ -106,6 +107,9 @@ def test_enable_mlflow_is_idempotent(monkeypatch) -> None:
         "openai_autolog": 1,
         "maf_tracing": 1,
     }
+    import os
+
+    assert os.environ["OTEL_EXPORTER_OTLP_HEADERS"] == "x-mlflow-experiment-id=42"
     assert observability.is_mlflow_enabled() is True
 
 
@@ -326,6 +330,122 @@ def test_apply_mlflow_http_env_defaults_respects_existing(monkeypatch) -> None:
     # Pre-existing value preserved, missing one gets the default.
     assert os.environ["MLFLOW_HTTP_REQUEST_TIMEOUT"] == "42"
     assert os.environ["MLFLOW_HTTP_REQUEST_MAX_RETRIES"] == "1"
+
+
+def test_append_mlflow_experiment_header_sets_when_missing(monkeypatch) -> None:
+    _reset_state()
+    monkeypatch.delenv("OTEL_EXPORTER_OTLP_HEADERS", raising=False)
+
+    observability._append_mlflow_experiment_header("42")
+
+    import os
+
+    assert os.environ["OTEL_EXPORTER_OTLP_HEADERS"] == "x-mlflow-experiment-id=42"
+
+
+def test_append_mlflow_experiment_header_appends_to_existing(monkeypatch) -> None:
+    _reset_state()
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_HEADERS", "authorization=Bearer abc")
+
+    observability._append_mlflow_experiment_header("42")
+
+    import os
+
+    assert os.environ["OTEL_EXPORTER_OTLP_HEADERS"] == ("authorization=Bearer abc,x-mlflow-experiment-id=42")
+
+
+def test_append_mlflow_experiment_header_does_not_duplicate_existing(monkeypatch) -> None:
+    _reset_state()
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_HEADERS", "x-mlflow-experiment-id=1,foo=bar")
+
+    observability._append_mlflow_experiment_header("42")
+
+    import os
+
+    assert os.environ["OTEL_EXPORTER_OTLP_HEADERS"] == "x-mlflow-experiment-id=1,foo=bar"
+
+
+def test_build_copilot_sdk_telemetry_config_returns_none_when_mlflow_disabled(monkeypatch) -> None:
+    _reset_state()
+    monkeypatch.setattr(observability, "is_mlflow_enabled", lambda: False)
+
+    assert observability.build_copilot_sdk_telemetry_config() is None
+
+
+def test_build_copilot_sdk_telemetry_config_returns_none_for_non_http_tracking_uri(monkeypatch) -> None:
+    _reset_state()
+    monkeypatch.setattr(observability, "is_mlflow_enabled", lambda: True)
+    monkeypatch.setattr(
+        observability,
+        "get_observability_settings",
+        lambda: SimpleNamespace(mlflow_tracking_uri="file:./mlruns"),
+    )
+
+    assert observability.build_copilot_sdk_telemetry_config() is None
+
+
+def test_build_copilot_sdk_telemetry_config_returns_config_for_http_tracking_uri(monkeypatch) -> None:
+    _reset_state()
+    monkeypatch.setattr(observability, "is_mlflow_enabled", lambda: True)
+    monkeypatch.setattr(
+        observability,
+        "get_observability_settings",
+        lambda: SimpleNamespace(mlflow_tracking_uri="http://127.0.0.1:5000"),
+    )
+
+    assert observability.build_copilot_sdk_telemetry_config() == {
+        "otlp_endpoint": "http://127.0.0.1:5000",
+        "source_name": "concierge.github-copilot-sdk",
+        "capture_content": False,
+    }
+
+
+def test_build_copilot_sdk_telemetry_config_sets_bsp_schedule_delay_default(monkeypatch) -> None:
+    """A short BSP delay is required so the CLI subprocess flushes spans before exiting."""
+    _reset_state()
+    monkeypatch.delenv("OTEL_BSP_SCHEDULE_DELAY", raising=False)
+    monkeypatch.setattr(observability, "is_mlflow_enabled", lambda: True)
+    monkeypatch.setattr(
+        observability,
+        "get_observability_settings",
+        lambda: SimpleNamespace(mlflow_tracking_uri="http://127.0.0.1:5000"),
+    )
+
+    observability.build_copilot_sdk_telemetry_config()
+
+    import os
+
+    assert os.environ["OTEL_BSP_SCHEDULE_DELAY"] == "500"
+
+
+def test_build_copilot_sdk_telemetry_config_keeps_existing_bsp_schedule_delay(monkeypatch) -> None:
+    _reset_state()
+    monkeypatch.setenv("OTEL_BSP_SCHEDULE_DELAY", "1234")
+    monkeypatch.setattr(observability, "is_mlflow_enabled", lambda: True)
+    monkeypatch.setattr(
+        observability,
+        "get_observability_settings",
+        lambda: SimpleNamespace(mlflow_tracking_uri="http://127.0.0.1:5000"),
+    )
+
+    observability.build_copilot_sdk_telemetry_config()
+
+    import os
+
+    assert os.environ["OTEL_BSP_SCHEDULE_DELAY"] == "1234"
+
+
+def test_build_copilot_sdk_telemetry_config_does_not_set_bsp_when_disabled(monkeypatch) -> None:
+    """No env-var side effect when telemetry config returns None."""
+    _reset_state()
+    monkeypatch.delenv("OTEL_BSP_SCHEDULE_DELAY", raising=False)
+    monkeypatch.setattr(observability, "is_mlflow_enabled", lambda: False)
+
+    assert observability.build_copilot_sdk_telemetry_config() is None
+
+    import os
+
+    assert "OTEL_BSP_SCHEDULE_DELAY" not in os.environ
 
 
 def test_bootstrap_from_env_toggles_tracing(monkeypatch) -> None:

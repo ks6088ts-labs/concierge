@@ -7,7 +7,7 @@
 | バックエンド            | 用途                                                    | 切替フラグ  |
 | :---------------------- | :------------------------------------------------------ | :---------- |
 | Azure Monitor / Foundry | Foundry ポータル上での LangChain トレース                 | `--tracing` |
-| MLflow (ローカル)       | LangChain / LangGraph / Microsoft Agent Framework のローカルトレース確認 | `--mlflow`  |
+| MLflow (ローカル)       | LangChain / LangGraph / Microsoft Agent Framework / GitHub Copilot SDK のローカルトレース確認 | `--mlflow`  |
 
 両者は独立しており、同時に有効化することもできます。
 
@@ -20,6 +20,20 @@
     この exporter を自動的に組み込むため、 ``--mlflow`` フラグ
     (もしくは ``CONCIERGE_MLFLOW_ENABLED=true``) 一つで対応している全
     エージェントバックエンドのトレースが MLflow に集約されます。
+
+!!! info "GitHub Copilot SDK 対応について"
+    GitHub Copilot SDK のセッションは Copilot CLI サブプロセス側で
+    OpenTelemetry スパンを生成するため、``mlflow.<flavour>.autolog()``
+    では捕捉できません。代わりに ``concierge.observability.build_copilot_sdk_telemetry_config()``
+    が ``MLFLOW_TRACKING_URI`` を ``otlp_endpoint`` とする
+    ``copilot.client.TelemetryConfig`` を生成し、
+    ``CopilotClient(config=SubprocessConfig(telemetry=...))`` 経由で
+    Copilot CLI に渡します。これにより MLflow tracking server の OTLP
+    エンドポイントへ直接スパンが push され、MLflow UI 上で ``github-copilot-sdk``
+    エージェントのトレースが他バックエンドと並んで一覧表示されます。
+    HTTP(S) でない tracking URI (``file:`` / ``sqlite:`` など) の場合は
+    Copilot SDK にテレメトリ設定を渡さず、通常の ``CopilotClient()`` で
+    フォールバック動作します。
 
 ## なぜこのステップが必要か
 
@@ -262,6 +276,44 @@ uv run python scripts/microsoft_foundry/vanilla.py --mlflow use-in-agents \
 で `mlflow.langchain.autolog()` を呼び出します。この初期化は同じ Python
 プロセス内でキャッシュされます。
 
+### GitHub Copilot SDK のトレースを送る
+
+`github-copilot-sdk` エージェントを使うときは、`enable_mlflow()` が成功
+している状態 (= `is_mlflow_enabled()` が True) であれば
+[`build_copilot_sdk_telemetry_config()`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/observability.py)
+が `TelemetryConfig` を返し、`GitHubCopilotSdkAgent` がそれを
+`CopilotClient(config=SubprocessConfig(telemetry=...))` 経由で Copilot CLI
+サブプロセスに渡します。追加コードは不要で、`--mlflow` か
+`CONCIERGE_MLFLOW_ENABLED=true` を有効にするだけで Copilot SDK のスパンが
+MLflow に流れます。
+
+```bash
+# CLI フラグで一回限り有効化する場合
+uv run cloud-agent-cli --mlflow task dispatch \
+  --agent-type github-copilot-sdk \
+  --payload '{"message": "hello"}'
+
+# ワーカーも MLflow 有効で起動する (実際に Copilot セッションを開くのは worker)
+uv run cloud-agent-cli --mlflow worker run
+```
+
+!!! warning "HTTP 以外の tracking URI では無効"
+    Copilot SDK 側の telemetry は OTLP HTTP exporter を前提としています。
+    `MLFLOW_TRACKING_URI` が `http://` / `https://` で始まらない場合
+    (`file:` や `sqlite:` でローカルファイルバックエンドを使う場合)、
+    `build_copilot_sdk_telemetry_config()` は `None` を返し、Copilot SDK
+    にはテレメトリが渡らず通常の `CopilotClient()` で動作します。
+    Copilot SDK のトレースを MLflow に送りたい場合は必ず `mlflow server`
+    などで HTTP サーバを起動し、`MLFLOW_TRACKING_URI=http://...` を指定
+    してください。
+
+!!! note "プロンプト本文を含めたいとき"
+    `build_copilot_sdk_telemetry_config()` は `capture_content=False` で
+    `TelemetryConfig` を生成するため、スパンにはメッセージ本文が含まれ
+    ません。プロンプト / レスポンスもトレースに残したい場合は、
+    `concierge/observability.py` の該当箇所を `capture_content=True` に
+    変更してください (機微情報を送る可能性がある点に注意)。
+
 ### 動作確認
 
 ブラウザで `http://127.0.0.1:5000` を開きます。MLflow GenAI ホームに
@@ -350,6 +402,18 @@ make test
     前回の `make mlflow` を `Ctrl+C` で停止するか、MLflow を手動で別ポート
     起動し、CLI 実行時の `MLFLOW_TRACKING_URI` も同じ URL に合わせます。
     `make mlflow` ターゲット自体はポート `5000` 固定です。
+
+??? failure "github-copilot-sdk のトレースが MLflow に出ない"
+    1. `MLFLOW_TRACKING_URI` が `http(s)://...` であることを確認
+       (`file:` / `sqlite:` では Copilot SDK 側にテレメトリが渡りません)。
+    2. `--mlflow` を CLI 呼び出し側に付ける、あるいは
+       `CONCIERGE_MLFLOW_ENABLED=true` を設定する。
+    3. **タスクを実際に処理するのは worker プロセス** なので、worker 起動時にも
+       `--mlflow` / `CONCIERGE_MLFLOW_ENABLED=true` を有効化する。
+    4. MLflow tracking server が起動済みで、ヘルスチェック
+       (`<MLFLOW_TRACKING_URI>/health`) が通ること。サーバが落ちていると
+       `_is_mlflow_server_reachable()` が fail-fast で MLflow 全体を無効化
+       するため、Copilot SDK のテレメトリも合わせて飛ばなくなります。
 
 ## 次のステップ
 

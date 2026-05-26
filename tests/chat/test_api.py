@@ -88,3 +88,52 @@ async def test_api_validation_and_not_found(app) -> None:
             json={"title": ""},
         )
         assert invalid_body.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_realtime_path_redirects_to_root(app) -> None:
+    """``/realtime`` is kept for backward compatibility but now redirects to ``/``.
+
+    The dedicated realtime UI has been merged into the main chat page.
+    """
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/realtime")
+        assert resp.status_code == 301
+        assert resp.headers["location"] == "/"
+
+
+@pytest.mark.anyio
+async def test_capabilities_reports_realtime_disabled(app, monkeypatch) -> None:
+    """When ``AZURE_AI_PROJECT_ENDPOINT_REALTIME`` is empty, ``realtime`` is False."""
+    # Explicit empty string overrides the developer's local ``.env`` (which
+    # pydantic-settings reads as a fallback when the env var is missing).
+    monkeypatch.setenv("AZURE_AI_PROJECT_ENDPOINT_REALTIME", "")
+    from concierge.settings import get_microsoft_foundry_settings  # noqa: PLC0415
+
+    get_microsoft_foundry_settings.cache_clear()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/capabilities")
+        assert resp.status_code == 200
+        assert resp.json() == {"realtime": False}
+
+    get_microsoft_foundry_settings.cache_clear()
+
+
+@pytest.mark.anyio
+async def test_capabilities_reports_realtime_enabled(app, monkeypatch) -> None:
+    """When the realtime endpoint env var is set, ``realtime`` is True."""
+    monkeypatch.setenv("AZURE_AI_PROJECT_ENDPOINT_REALTIME", "https://example.openai.azure.com/")
+    from concierge.settings import get_microsoft_foundry_settings  # noqa: PLC0415
+
+    get_microsoft_foundry_settings.cache_clear()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/capabilities")
+        assert resp.status_code == 200
+        assert resp.json() == {"realtime": True}
+
+    get_microsoft_foundry_settings.cache_clear()

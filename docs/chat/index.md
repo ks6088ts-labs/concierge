@@ -31,7 +31,7 @@ Where to go next:
 - **Just trying it out?** → [5-minute smoke test](#5-minute-smoke-test-rest-only) below.
 - **REST reference** → [REST API Reference](api.md).
 - **CLI reference** → [CLI Reference](cli.md).
-- **Realtime voice** → [Realtime Voice Chat](realtime.md).
+- **Realtime voice** → [Realtime voice (optional)](#realtime-voice-optional) below.
 
 ---
 
@@ -480,6 +480,99 @@ step 3 returns two messages — yours with `role: USER` and the bot reply with
 
 ---
 
+## Realtime voice (optional) { #realtime-voice-optional }
+
+The realtime voice feature adds a **bidirectional WebSocket proxy** between
+the browser and Microsoft Foundry's GPT Realtime API. Audio is processed
+server-side — Foundry credentials never leave the server. User and AI
+transcripts are persisted as regular `Message` objects, so they appear in
+`/conversations/{id}/messages` alongside text-chat messages.
+
+```
+Browser ⇄ FastAPI (chat-web) ⇄ Foundry /openai/v1/realtime
+```
+
+### Quick start
+
+```bash
+# 1. Configure the realtime endpoint in .env (see the settings table below).
+echo "AZURE_AI_PROJECT_ENDPOINT_REALTIME=https://<resource>.openai.azure.com/" >> .env
+
+# 2. Confirm the configuration is picked up (no live call).
+uv run chat-cli realtime status
+# → ステータス: ✅ 設定済み
+
+# 3. Start the API server.
+uv run chat-web
+```
+
+Then open <http://localhost:8080/> in a recent Chromium / Firefox / Safari
+browser, create a conversation from the sidebar, and click
+**🎙 通話開始 (Start call)** in the composer. Microphone permission is requested
+on the first call. The legacy URL <http://localhost:8080/realtime> now
+returns a `301` redirect to `/`, so existing bookmarks keep working.
+
+The call button appears only when the server reports `{"realtime": true}`
+from [`GET /capabilities`](api.md#realtime-voice-websocket). When
+`AZURE_AI_PROJECT_ENDPOINT_REALTIME` is empty the call button is hidden and
+text chat continues to work normally.
+
+!!! tip "Region note"
+    Use a Foundry resource in a region that supports the GPT Realtime model
+    (for example `swedencentral` or `eastus2`). This is typically **different**
+    from the region used for standard text chat, so a separate endpoint
+    variable is provided. Reference:
+    [Use the GPT Realtime API via WebSockets (Microsoft Learn)](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/realtime-audio-websockets?tabs=ga).
+
+### How the UI pipeline works
+
+1. `getUserMedia({ audio: true })` requests microphone permission.
+2. An `AudioWorklet` resamples to 24 kHz mono PCM16 (the value of
+   `CHAT_REALTIME_AUDIO_SAMPLE_RATE_HZ`) in 200 ms chunks.
+3. Each chunk is base64-encoded and sent over the WebSocket as
+   `{"type":"oai-event","payload":{"type":"input_audio_buffer.append","audio":"<b64>"}}`.
+4. Foundry-emitted `response.output_audio.delta` events are decoded back to
+   PCM16 and played through a queued `AudioBufferSource` graph. The partial
+   transcript (`response.output_audio_transcript.delta`) streams into the
+   interim line until the final message is persisted.
+
+The text composer is locked while a call is active to avoid input-mode
+conflicts. The conversation list, message log, and `localStorage` profile
+(`chat_user_id` / `chat_display_name`) are shared between text chat and
+voice calls. Legacy keys `chat_rt_user_id` / `chat_rt_display_name` from
+the previous standalone realtime UI are migrated automatically on first
+load.
+
+### Browser support
+
+The UI relies on `AudioWorklet`, `WebSocket`, `MediaDevices.getUserMedia`,
+and `crypto.randomUUID`. Recent Chrome, Edge, Firefox, and Safari all work.
+Safari requires the **通話開始** click before the `AudioContext` can start
+producing audio.
+
+### Settings reference
+
+All realtime settings use the `CHAT_` prefix (full schema in
+`ChatSettings`).
+
+| Variable | Default | Description |
+|---|---|---|
+| `AZURE_AI_PROJECT_ENDPOINT_REALTIME` | `""` (disabled) | Foundry endpoint for the realtime model. Accepts both `https://<r>.openai.azure.com/` and `https://<r>.services.ai.azure.com/` (auto-normalised). When empty the realtime WebSocket closes with code `4503`. |
+| `CHAT_REALTIME_MODEL` | `gpt-realtime-1.5` | Realtime model deployment name |
+| `CHAT_REALTIME_VOICE` | `alloy` | Voice id: `alloy` / `ash` / `ballad` / `coral` / `echo` / `sage` / `shimmer` / `verse` |
+| `CHAT_REALTIME_LOCALE` | `ja-JP` | Transcription locale. BCP-47 values like `ja-JP` are reduced to the ISO-639-1 primary subtag (`ja`) when forwarded to Foundry. |
+| `CHAT_REALTIME_SYSTEM_PROMPT` | Japanese default prompt | System message for the realtime session |
+| `CHAT_REALTIME_AUDIO_SAMPLE_RATE_HZ` | `24000` | PCM16 sample rate (Foundry fixed value) |
+| `CHAT_REALTIME_MAX_SESSION_SECONDS` | `600` | Server-side session timeout in seconds |
+| `CHAT_REALTIME_TRANSCRIPTION_MODEL` | `""` | Azure deployment name for input-audio transcription. When empty the `transcription` block is omitted from `session.update`. |
+
+### Where to look next
+
+- WebSocket wire protocol (events, close codes) → [REST API Reference → Realtime voice WebSocket](api.md#realtime-voice-websocket).
+- Non-interactive sanity check → [`chat-cli realtime status`](cli.md#realtime-status).
+
+---
+
 ## Troubleshooting
 
 ### `relation "chat_conversations" does not exist`
@@ -523,3 +616,28 @@ surfaces on `/agent-replies` (or `chat-cli message reply`).
 `DefaultAzureCredential()`. Make sure your shell can issue a token (for
 example via `az login`, a managed identity, or environment variables that the
 credential chain accepts).
+
+### Realtime WebSocket closes with `4503` / call button hidden
+
+`AZURE_AI_PROJECT_ENDPOINT_REALTIME` is empty, so `GET /capabilities`
+returns `{"realtime": false}` and the **通話開始** button is hidden. Set the
+variable in `.env` and restart `chat-web`. Use
+[`chat-cli realtime status`](cli.md#realtime-status) for a quick check
+without opening a browser.
+
+### Realtime WebSocket closes with `4404`
+
+The `conversation_id` in the URL does not exist. Reselect or create a
+conversation, then start the call again.
+
+### Realtime WebSocket closes with `4400`
+
+The `user_id` query parameter is missing or is not a valid UUID. Clear
+`localStorage` (`chat_user_id`) in the browser DevTools and reload — the
+page regenerates a UUID on next visit.
+
+### Microphone permission denied (red banner in the UI)
+
+The browser blocked microphone access. Allow microphone for
+`localhost:8080` in the browser's site permissions (`chrome://settings/content/microphone`
+in Chrome / Edge) and reload the tab.

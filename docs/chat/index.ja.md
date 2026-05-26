@@ -10,7 +10,7 @@ description: FastAPI + Typer で実装したクリーンアーキテクチャ Ch
 | 入口 | 内容 | 使いどころ |
 |---|---|---|
 | **`chat-web`** | `:8080` の FastAPI サーバ。REST + 同梱の Web UI | Swagger UI、curl、付属クライアントを使いたい |
-| **`chat-cli`** | Typer CLI（`conversation` / `message` / `db` サブコマンド） | スクリプト用に JSON 出力が欲しい、ローカルで素早く確認したい |
+| **`chat-cli`** | Typer CLI（`conversation` / `message` / `db` / `realtime` サブコマンド） | スクリプト用に JSON 出力が欲しい、ローカルで素早く確認したい |
 
 どちらも同じ `concierge.chat.application.use_cases` を呼ぶため、片側に機能を足せばもう片側にも自動で反映されます。
 
@@ -28,7 +28,7 @@ flowchart LR
 - **まず触ってみたい** → 下の [5 分で動作確認（REST のみ）](#5-rest)
 - **REST API リファレンス** → [REST API リファレンス](api.ja.md)
 - **CLI リファレンス** → [CLI リファレンス](cli.ja.md)
-- **音声会話（Realtime）** → [リアルタイム音声会話](realtime.ja.md)
+- **音声会話（Realtime）** → 下の [リアルタイム音声（任意）](#realtime-voice-optional)
 
 ---
 
@@ -419,6 +419,93 @@ kill $SERVER_PID
 
 ---
 
+## リアルタイム音声（任意） { #realtime-voice-optional }
+
+リアルタイム音声機能は、ブラウザと Microsoft Foundry の GPT Realtime API を
+**双方向 WebSocket プロキシ**でつなぎます。音声処理はすべてサーバ側で
+行われ、Foundry の認証情報はサーバ外に出ません。ユーザーと AI の transcript は
+通常の `Message` としてテキストチャットと同じストアに保存され、
+`/conversations/{id}/messages` で一覧できます。
+
+```
+ブラウザ ⇄ FastAPI (chat-web) ⇄ Foundry /openai/v1/realtime
+```
+
+### クイックスタート
+
+```bash
+# 1. .env にリアルタイム用エンドポイントを設定（他の設定は下の表を参照）
+echo "AZURE_AI_PROJECT_ENDPOINT_REALTIME=https://<resource>.openai.azure.com/" >> .env
+
+# 2. 設定が読み込めるか確認（実際の接続は行わない）
+uv run chat-cli realtime status
+# → ステータス: ✅ 設定済み
+
+# 3. API サーバを起動
+uv run chat-web
+```
+
+その後 Chromium 系 / Firefox / Safari ブラウザで <http://localhost:8080/> を開き、
+サイドバーで会話を作成 → コンポザー上部の **🎙 通話開始** をクリックして話します。
+初回はマイクの利用許可ダイアログが表示されます。旧 URL <http://localhost:8080/realtime>
+は `301` リダイレクトで `/` に転送されるため、既存のブックマークはそのまま使えます。
+
+通話ボタンはサーバが [`GET /capabilities`](api.ja.md#realtime-voice-websocket) で `{"realtime": true}` を
+返すときだけ表示されます。`AZURE_AI_PROJECT_ENDPOINT_REALTIME` が空のときは
+通話ボタンが隠され、テキストチャットはそのまま使えます。
+
+!!! tip "リージョンについて"
+    GPT Realtime モデルが利用可能なリージョン（例：`swedencentral` / `eastus2`）の
+    Foundry リソースが必要です。通常のテキストチャットとは別リージョンになることが多いため、
+    専用の環境変数が用意されています。参考：
+    [GPT Realtime API via WebSockets の使用方法 (Microsoft Learn)](https://learn.microsoft.com/ja-jp/azure/foundry/openai/how-to/realtime-audio-websockets?tabs=ga)。
+
+### UI のパイプライン
+
+1. `getUserMedia({ audio: true })` でマイク権限をリクエスト。
+2. `AudioWorklet` で 24 kHz モノラル PCM16（`CHAT_REALTIME_AUDIO_SAMPLE_RATE_HZ` の値）に変換し、200 ms 単位で分割。
+3. 各チャンクを base64 エンコードし、
+   `{"type":"oai-event","payload":{"type":"input_audio_buffer.append","audio":"<b64>"}}` として送信。
+4. Foundry が返す `response.output_audio.delta` イベントを PCM16 にデコードし、
+   キュー付き `AudioBufferSource` で順次再生。部分 transcript
+   （`response.output_audio_transcript.delta`）は確定前の仮行にストリーミングされます。
+
+通話中は入力モードの競合を避けるためテキストコンポザーがロックされます。
+会話リスト、メッセージログ、`localStorage` プロフィール
+（`chat_user_id` / `chat_display_name`）はテキストチャットと音声通話で共有されます。
+以前の単体リアルタイム UI で使われていた `chat_rt_user_id` / `chat_rt_display_name` は
+初回ロード時に自動移行されます。
+
+### 対応ブラウザ
+
+`AudioWorklet` / `WebSocket` / `MediaDevices.getUserMedia` / `crypto.randomUUID`
+を使用します。最近の Chrome / Edge / Firefox / Safari で動作します。Safari は
+セキュリティ仕様上、`AudioContext` の音声出力にユーザー操作（**通話開始**
+ボタンのクリック）が必要です。
+
+### 設定一覧
+
+すべてのリアルタイム設定は `CHAT_` プレフィックスを使用します（完全なスキーマは
+`ChatSettings` を参照）。
+
+| 変数名 | デフォルト | 説明 |
+|---|---|---|
+| `AZURE_AI_PROJECT_ENDPOINT_REALTIME` | `""`（無効） | リアルタイムモデル用 Foundry エンドポイント。`https://<r>.openai.azure.com/` / `https://<r>.services.ai.azure.com/` の両形式を受け付け、自動正規化します。空のときリアルタイム WebSocket は `4503` で閉じます。 |
+| `CHAT_REALTIME_MODEL` | `gpt-realtime-1.5` | リアルタイムモデルのデプロイ名 |
+| `CHAT_REALTIME_VOICE` | `alloy` | ボイス識別子：`alloy` / `ash` / `ballad` / `coral` / `echo` / `sage` / `shimmer` / `verse` |
+| `CHAT_REALTIME_LOCALE` | `ja-JP` | 文字起こし言語。`ja-JP` のような BCP-47 値は Foundry への転送時に ISO-639-1 主サブタグ（`ja`）に縮約されます。 |
+| `CHAT_REALTIME_SYSTEM_PROMPT` | 日本語の既定プロンプト | リアルタイムセッションで使うシステムメッセージ |
+| `CHAT_REALTIME_AUDIO_SAMPLE_RATE_HZ` | `24000` | PCM16 サンプルレート（Foundry 固定値） |
+| `CHAT_REALTIME_MAX_SESSION_SECONDS` | `600` | サーバ側セッションタイムアウト（秒） |
+| `CHAT_REALTIME_TRANSCRIPTION_MODEL` | `""` | 入力音声の transcription 用 Azure デプロイ名。空のとき `session.update` に `transcription` ブロックを含めません。 |
+
+### その他の参照先
+
+- WebSocket ワイヤープロトコル（イベント、クローズコード）→ [REST API リファレンス → リアルタイム音声 WebSocket](api.ja.md#realtime-voice-websocket)
+- 非対話の動作確認 → [`chat-cli realtime status`](cli.ja.md#realtime-status)
+
+---
+
 ## トラブルシューティング
 
 ### `relation "chat_conversations" does not exist`
@@ -449,3 +536,27 @@ uv run chat-cli db init   # テーブル作成
 ### Foundry 呼び出しが `ClientAuthenticationError` / `DefaultAzureCredential failed` で落ちる
 
 `FoundryChatbotResponder` は構築時に `DefaultAzureCredential()` を使います。`az login` やマネージド ID、`DefaultAzureCredential` がサポートする環境変数など、シェルからトークンを取得できる状態に整えてください。
+
+### リアルタイム WebSocket が `4503` で閉じる / 通話ボタンが表示されない
+
+`AZURE_AI_PROJECT_ENDPOINT_REALTIME` が未設定のため、`GET /capabilities` が
+`{"realtime": false}` を返し **通話開始** ボタンが隠されます。`.env` に設定して
+`chat-web` を再起動してください。ブラウザを開かずにさっと確認したいときは
+[`chat-cli realtime status`](cli.ja.md#realtime-status) を使います。
+
+### リアルタイム WebSocket が `4404` で閉じる
+
+URL の `conversation_id` が存在しません。会話を選び直すか作り直してから
+再度通話を開始してください。
+
+### リアルタイム WebSocket が `4400` で閉じる
+
+`user_id` クエリパラメータが未指定か UUID として不正です。ブラウザの DevTools で
+`localStorage` の `chat_user_id` を削除してリロードします — 次回アクセス時に
+ページが UUID を再生成します。
+
+### マイク許可が拒否された（UI に赤バナー）
+
+ブラウザがマイクへのアクセスをブロックしています。ブラウザのサイト設定で
+`localhost:8080` のマイク使用を許可し（Chrome / Edge なら `chrome://settings/content/microphone`）、
+タブをリロードしてください。

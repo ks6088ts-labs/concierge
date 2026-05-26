@@ -10,6 +10,7 @@ from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from copilot.client import TelemetryConfig
 from copilot.generated.session_events import AssistantMessageData, SessionEvent, SessionIdleData
 from copilot.session import PermissionHandler
 
@@ -330,3 +331,66 @@ def test_registry_includes_github_copilot_sdk() -> None:
 
 def test_agent_type() -> None:
     assert GitHubCopilotSdkAgent.agent_type == AgentType.GITHUB_COPILOT_SDK
+
+
+def test_build_client_without_telemetry_uses_default_constructor(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+    sentinel = object()
+
+    def _fake_copilot_client(*args: Any, **kwargs: Any) -> object:
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+        return sentinel
+
+    monkeypatch.setattr(
+        "concierge.agents.infrastructure.github_copilot_sdk_agent.CopilotClient",
+        _fake_copilot_client,
+    )
+
+    agent = GitHubCopilotSdkAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT, telemetry_factory=lambda: None)
+
+    built = agent._build_client()
+
+    assert built is sentinel
+    assert captured == {"args": (), "kwargs": {}}
+
+
+def test_build_client_with_telemetry_passes_subprocess_config(monkeypatch) -> None:
+    captured: dict[str, Any] = {}
+    telemetry: TelemetryConfig = {
+        "otlp_endpoint": "http://127.0.0.1:5000",
+        "source_name": "concierge.github-copilot-sdk",
+        "capture_content": False,
+    }
+    sentinel = object()
+
+    def _fake_subprocess_config(*, telemetry: TelemetryConfig) -> dict[str, Any]:
+        captured["telemetry"] = telemetry
+        return {"telemetry": telemetry}
+
+    def _fake_copilot_client(*args: Any, **kwargs: Any) -> object:
+        captured["args"] = args
+        captured["kwargs"] = kwargs
+        return sentinel
+
+    monkeypatch.setattr(
+        "concierge.agents.infrastructure.github_copilot_sdk_agent.SubprocessConfig",
+        _fake_subprocess_config,
+    )
+    monkeypatch.setattr(
+        "concierge.agents.infrastructure.github_copilot_sdk_agent.CopilotClient",
+        _fake_copilot_client,
+    )
+
+    agent = GitHubCopilotSdkAgent(
+        model=_MODEL,
+        system_prompt=_SYSTEM_PROMPT,
+        telemetry_factory=lambda: telemetry,
+    )
+
+    built = agent._build_client()
+
+    assert built is sentinel
+    assert captured["telemetry"] == telemetry
+    assert captured["args"] == ()
+    assert captured["kwargs"] == {"config": {"telemetry": telemetry}}

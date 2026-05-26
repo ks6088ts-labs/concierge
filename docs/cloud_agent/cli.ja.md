@@ -14,7 +14,7 @@ uv run cloud-agent-cli --help
 ## observability のグローバルオプション
 
 - `--tracing`: 共有 tracing 状態を有効化（tracer 名: `concierge-cloud-agent`）
-- `--mlflow`: `mlflow.langchain.autolog()` の初期化を有効化
+- `--mlflow`: `langgraph` / `microsoft-agent-framework` / `github-copilot-sdk` の MLflow トレーシング初期化を有効化
 - `--verbose`: DEBUG ログを有効化
 
 ## タスクコマンド

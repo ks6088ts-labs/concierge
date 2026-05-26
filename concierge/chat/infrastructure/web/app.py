@@ -5,9 +5,10 @@ from pathlib import Path
 import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from concierge.chat.infrastructure.ai.factory import ChatbotNotConfiguredError, create_realtime_responder
 from concierge.chat.infrastructure.web.exception_handlers import register_exception_handlers
 from concierge.chat.infrastructure.web.routes import router
 from concierge.loggers import get_logger
@@ -27,25 +28,38 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title="Chat API", version="0.1.0")
     static_dir = Path(__file__).parent / "static"
-    static_realtime_dir = Path(__file__).parent / "static_realtime"
 
     register_exception_handlers(app)
     app.include_router(router)
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
-    if static_realtime_dir.is_dir():
-        app.mount("/realtime-static", StaticFiles(directory=static_realtime_dir), name="static_realtime")
 
     @app.get("/healthz", tags=["health"])
     def healthz() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/capabilities", tags=["health"])
+    def capabilities() -> dict[str, bool]:
+        """Return feature toggles the web UI uses to enable/disable controls.
+
+        ``realtime`` reflects whether ``AZURE_AI_PROJECT_ENDPOINT_REALTIME`` is
+        configured — the client uses it to show/hide the voice call button.
+        """
+        try:
+            create_realtime_responder()
+            realtime_enabled = True
+        except ChatbotNotConfiguredError:
+            realtime_enabled = False
+        return {"realtime": realtime_enabled}
 
     @app.get("/", include_in_schema=False)
     def index() -> FileResponse:
         return FileResponse(static_dir / "index.html")
 
     @app.get("/realtime", include_in_schema=False)
-    def realtime_index() -> FileResponse:
-        return FileResponse(static_realtime_dir / "index.html")
+    def realtime_index() -> RedirectResponse:
+        # The dedicated realtime UI has been merged into ``/``. Keep this route
+        # so existing bookmarks and docs continue to work.
+        return RedirectResponse(url="/", status_code=301)
 
     logger.info("Initialized Chat FastAPI app")
     return app

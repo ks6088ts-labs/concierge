@@ -21,7 +21,6 @@ nav:
       - Overview: chat/index.md
       - REST API Reference: chat/api.md
       - CLI Reference: chat/cli.md
-      - Realtime Voice: chat/realtime.md
   - Shared Agent Runtime:
       - Overview: agents/index.md
       - CLI Reference: agents/cli.md

@@ -15,6 +15,7 @@ uv run chat-cli --help
 chat-cli
 ├── conversation     # create / list / get / delete
 ├── message          # post / list / reply
+├── realtime         # status
 └── db               # init / ping / drop  （postgres / azure-postgres 専用）
 ```
 
@@ -107,6 +108,39 @@ uv run chat-cli db init        # → Database schema initialised successfully.
 uv run chat-cli db drop --yes  # 破壊的
 ```
 
+### `realtime status` { #realtime-status }
+
+リアルタイム音声設定の正常性をチェックする非対話コマンドです。
+`AZURE_AI_PROJECT_ENDPOINT_REALTIME`、`CHAT_REALTIME_MODEL`、`CHAT_REALTIME_VOICE` を
+読み取り、リアルタイム機能が有効かどうかを表示します。**実際の WebSocket 接続は
+行わない**ため、CI からも安全に実行できます。
+
+```bash
+uv run chat-cli realtime status
+```
+
+設定済みの場合の出力例：
+
+```text
+AZURE_AI_PROJECT_ENDPOINT_REALTIME : https://myresource.openai.azure.com/
+CHAT_REALTIME_MODEL               : gpt-realtime-1.5
+CHAT_REALTIME_VOICE               : alloy
+導出 WSS ホスト                   : wss://myre****azure.com/openai/v1/realtime
+ステータス: ✅ 設定済み
+```
+
+未設定の場合の出力例：
+
+```text
+AZURE_AI_PROJECT_ENDPOINT_REALTIME : (未設定)
+CHAT_REALTIME_MODEL               : gpt-realtime-1.5
+CHAT_REALTIME_VOICE               : alloy
+ステータス: ❌ 未設定 — リアルタイム機能は無効です
+```
+
+未設定のときは終了コード `1`、設定済みのときは `0` です。
+詳細は [リアルタイム音声（任意）](index.ja.md#realtime-voice-optional) を参照してください。
+
 ## ウォークスルー（`postgres` バックエンド） { #postgres- }
 
 CLI 体験としてはこれが一番スムーズです。すべての呼び出しが同じ SQL ストアを共有します。
@@ -160,3 +194,11 @@ uv run chat-cli conversation delete "$CONV_ID"
 | `CHAT_BOT_HISTORY_LIMIT` | `20` | int | モデルに渡すコンテキストの最大件数 |
 | `CHAT_BOT_AGENT_TYPE` | `foundry` | 文字列 | レスポンダ選択。`foundry`（既定、ストリーミング）か登録済みエージェント名（`echo` / `langgraph` / `github-copilot-sdk` / `microsoft-agent-framework`） |
 | `AZURE_AI_PROJECT_ENDPOINT` | 未設定 | URL 文字列 | Foundry レスポンダ有効化に必須（未設定のとき `message reply` は終了コード 1） |
+| `AZURE_AI_PROJECT_ENDPOINT_REALTIME` | 未設定 | URL 文字列 | リアルタイム音声有効化に必須。`https://<r>.openai.azure.com/` / `https://<r>.services.ai.azure.com/` の両形式を受け付け、自動正規化します。空のとき `realtime status` は終了コード 1。 |
+| `CHAT_REALTIME_MODEL` | `gpt-realtime-1.5` | 文字列 | リアルタイムモデルのデプロイ名 |
+| `CHAT_REALTIME_VOICE` | `alloy` | 文字列 | ボイス識別子：`alloy` / `ash` / `ballad` / `coral` / `echo` / `sage` / `shimmer` / `verse` |
+| `CHAT_REALTIME_LOCALE` | `ja-JP` | 文字列 | 文字起こし言語。`ja-JP` のような BCP-47 値は Foundry への転送時に ISO-639-1 主サブタグ（`ja`）に縮約されます |
+| `CHAT_REALTIME_SYSTEM_PROMPT` | 日本語の既定プロンプト | 文字列 | リアルタイムセッションで使うシステムメッセージ |
+| `CHAT_REALTIME_AUDIO_SAMPLE_RATE_HZ` | `24000` | int | PCM16 サンプルレート（Foundry 固定値） |
+| `CHAT_REALTIME_MAX_SESSION_SECONDS` | `600` | int | サーバ側セッションタイムアウト（秒） |
+| `CHAT_REALTIME_TRANSCRIPTION_MODEL` | `""` | 文字列 | 入力音声の transcription 用 Azure デプロイ名。空のとき `session.update` に `transcription` ブロックを含めません。 |

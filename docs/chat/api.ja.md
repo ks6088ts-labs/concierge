@@ -35,7 +35,9 @@ flowchart LR
 
 | URL | 内容 |
 |---|---|
-| <http://localhost:8080/> | 同梱のチャット UI（日本語ラベル） |
+| <http://localhost:8080/> | 統合チャット UI — テキスト + リアルタイム音声（日本語ラベル） |
+| <http://localhost:8080/realtime> | 旧 URL。`/` へ `301` リダイレクト（下位互換用） |
+| <http://localhost:8080/capabilities> | UI が読む機能フラグ JSON（`{"realtime": bool}`、通話ボタンの表示/非表示判定に使用） |
 | <http://localhost:8080/docs> | Swagger UI（対話的 REST ドキュメント） |
 | <http://localhost:8080/openapi.json> | OpenAPI スキーマ |
 | <http://localhost:8080/healthz> | 死活監視（`{"status":"ok"}`） |
@@ -60,8 +62,11 @@ export USER_ID=$(python -c 'import uuid; print(uuid.uuid4())')
 | POST | `/conversations/{conversation_id}/messages` | ユーザーメッセージを保存（ボット応答は別 API） |
 | GET | `/conversations/{conversation_id}/messages` | メッセージ一覧 |
 | POST | `/conversations/{conversation_id}/agent-replies` | AI エージェント応答を Server-Sent Events でストリーミング |
+| WS | `/conversations/{conversation_id}/realtime` | リアルタイム音声セッション（Foundry への WebSocket プロキシ） |
 | GET | `/healthz` | ヘルスチェック |
-| GET | `/` | 静的 HTML フロント |
+| GET | `/capabilities` | `{"realtime": bool}` — `AZURE_AI_PROJECT_ENDPOINT_REALTIME` 設定済みなら `true` |
+| GET | `/` | 統合 HTML フロントエンド（テキスト + リアルタイム音声） |
+| GET | `/realtime` | `/` へ `301` リダイレクト（下位互換用） |
 
 ## curl で一通り叩く
 
@@ -203,3 +208,66 @@ curl -N -s -X POST "http://localhost:8080/conversations/${CONV_ID}/agent-replies
   "created_at": "2026-05-14T06:03:23.000000Z"
 }
 ```
+
+## リアルタイム音声 WebSocket { #realtime-voice-websocket }
+
+リアルタイム音声機能は、マイク音声をサーバ側の WebSocket プロキシ経由で
+Microsoft Foundry の GPT Realtime API へ転送し、やり取りされたユーザー / AI の
+transcript を通常の `Message` として永続化します。セットアップ、`.env` 設定、
+UI の使い方は概要ページの
+[リアルタイム音声（任意）](index.ja.md#realtime-voice-optional) を参照してください。
+
+このセクションではワイヤープロトコルのみを説明します。
+
+### エンドポイント
+
+```
+WS /conversations/{conversation_id}/realtime
+   ?user_id=<uuid>
+   [&display_name=<string>]
+```
+
+`user_id` クエリパラメータは REST エンドポイントで使う `X-User-Id` ヘッダと同じ UUID です。
+ブラウザは WebSocket ハンドシェイクにカスタムヘッダを追加できないため、ヘッダではなく
+クエリで渡します。
+
+### サーバー → クライアント イベント
+
+| `type` | ペイロード | 備考 |
+|--------|-----------|------|
+| `concierge.session.ready` | `{"conversation_id": "..."}` | accept 直後の最初のメッセージ |
+| `oai-event` | `{"payload": <Foundry イベント JSON>}` | Foundry イベントの透過リレー（`response.output_audio.delta`、`response.output_audio_transcript.delta` など） |
+| `concierge.message.persisted` | `{"message": <MessageResponse>}` | USER/AGENT transcript の永続化通知 |
+| `concierge.error` | `{"detail": "..."}` | サーバ側の未処理エラー |
+
+### クライアント → サーバー イベント
+
+| `type` | ペイロード | 備考 |
+|--------|-----------|------|
+| `oai-event` | `{"payload": <Foundry イベント JSON>}` | Foundry への透過転送（通常は `input_audio_buffer.append` ＋ base64 PCM16） |
+
+### クローズコード
+
+| コード | 意味 |
+|--------|------|
+| `4400` | `user_id` が未指定または UUID として不正 |
+| `4404` | `conversation_id` が存在しない |
+| `4503` | `AZURE_AI_PROJECT_ENDPOINT_REALTIME` が未設定 |
+| `1000` | クライアント側から正常切断 |
+
+### 機能プローブ
+
+クライアントはリアルタイム UI を表示する前に `GET /capabilities` を叩き、
+`{"realtime": true}` のときだけ WebSocket を開くべきです。このフラグは
+`create_realtime_responder()` が成功する（つまり `AZURE_AI_PROJECT_ENDPOINT_REALTIME` が
+空でない）ときに `true` になります。
+
+```bash
+curl -s http://localhost:8080/capabilities
+# → {"realtime":true}
+```
+
+### CLI ステータス確認
+
+WebSocket を開かずにリアルタイム設定の正常性をチェックしたい場合は、
+[`chat-cli realtime status`](cli.ja.md#realtime-status) を使います。

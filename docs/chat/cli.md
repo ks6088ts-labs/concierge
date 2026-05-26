@@ -17,6 +17,7 @@ Top-level structure:
 chat-cli
 ├── conversation     # create / list / get / delete
 ├── message          # post / list / reply
+├── realtime         # status
 └── db               # init / ping / drop  (postgres / azure-postgres only)
 ```
 
@@ -118,6 +119,40 @@ uv run chat-cli db init        # → Database schema initialised successfully.
 uv run chat-cli db drop --yes  # destructive
 ```
 
+### `realtime status` { #realtime-status }
+
+Non-interactive sanity check for the realtime voice configuration. Reads
+`AZURE_AI_PROJECT_ENDPOINT_REALTIME`, `CHAT_REALTIME_MODEL`, and
+`CHAT_REALTIME_VOICE` and reports whether realtime voice is enabled. **No
+live WebSocket connection is made**, so this is safe to run from CI.
+
+```bash
+uv run chat-cli realtime status
+```
+
+Example output (configured):
+
+```text
+AZURE_AI_PROJECT_ENDPOINT_REALTIME : https://myresource.openai.azure.com/
+CHAT_REALTIME_MODEL               : gpt-realtime-1.5
+CHAT_REALTIME_VOICE               : alloy
+導出 WSS ホスト                   : wss://myre****azure.com/openai/v1/realtime
+ステータス: ✅ 設定済み
+```
+
+Example output (not configured):
+
+```text
+AZURE_AI_PROJECT_ENDPOINT_REALTIME : (未設定)
+CHAT_REALTIME_MODEL               : gpt-realtime-1.5
+CHAT_REALTIME_VOICE               : alloy
+ステータス: ❌ 未設定 — リアルタイム機能は無効です
+```
+
+Exit code is `1` when not configured, `0` otherwise. See
+[Realtime voice (optional)](index.md#realtime-voice-optional) for the full
+feature reference.
+
 ## Full walkthrough (with the `postgres` backend)
 
 This is the smoothest CLI experience: a single SQL store backs every
@@ -173,3 +208,11 @@ Pass criteria:
 | `CHAT_BOT_HISTORY_LIMIT` | `20` | int | Maximum context messages forwarded to the model |
 | `CHAT_BOT_AGENT_TYPE` | `foundry` | string | Responder selector: `foundry` (default, streaming) or a registered agent type (`echo`, `langgraph`, `github-copilot-sdk`, `microsoft-agent-framework`) |
 | `AZURE_AI_PROJECT_ENDPOINT` | unset | URL string | Required to enable the Foundry responder (otherwise `message reply` exits with code 1) |
+| `AZURE_AI_PROJECT_ENDPOINT_REALTIME` | unset | URL string | Required to enable realtime voice. Accepts both `https://<r>.openai.azure.com/` and `https://<r>.services.ai.azure.com/` (auto-normalised). `realtime status` exits with code 1 when empty. |
+| `CHAT_REALTIME_MODEL` | `gpt-realtime-1.5` | string | Realtime model deployment name |
+| `CHAT_REALTIME_VOICE` | `alloy` | string | Voice id: `alloy` / `ash` / `ballad` / `coral` / `echo` / `sage` / `shimmer` / `verse` |
+| `CHAT_REALTIME_LOCALE` | `ja-JP` | string | Transcription locale. BCP-47 values like `ja-JP` are reduced to the ISO-639-1 primary subtag (`ja`) when forwarded to Foundry. |
+| `CHAT_REALTIME_SYSTEM_PROMPT` | Japanese default prompt | string | System message used by the realtime session |
+| `CHAT_REALTIME_AUDIO_SAMPLE_RATE_HZ` | `24000` | int | PCM16 sample rate (Foundry fixed value) |
+| `CHAT_REALTIME_MAX_SESSION_SECONDS` | `600` | int | Server-side session timeout in seconds |
+| `CHAT_REALTIME_TRANSCRIPTION_MODEL` | `""` | string | Azure deployment name for input-audio transcription. When empty the `transcription` block is omitted from `session.update`. |

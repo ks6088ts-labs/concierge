@@ -324,6 +324,60 @@
       .chip.agent { background: var(--agent-soft); color: var(--agent); border-color: #ddd6fe; }
       .chip.system { background: #fffbeb; color: #92400e; border-color: #fcd34d; }
 
+      /* ---------- Call (realtime voice) ---------- */
+      .call-status {
+        display: none;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        padding: 0.15rem 0.5rem;
+        border-radius: 999px;
+        background: var(--surface-muted);
+      }
+      .call-status.visible { display: inline-flex; }
+      .call-status .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--text-subtle);
+      }
+      .call-status.connecting .dot { background: var(--warning); animation: pulse 1.2s infinite ease-in-out; }
+      .call-status.active .dot { background: var(--danger); animation: pulse 1.2s infinite ease-in-out; }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.3; }
+      }
+      button.call-btn {
+        background: var(--success);
+        border-color: var(--success);
+        color: #fff;
+      }
+      button.call-btn:hover:not(:disabled) {
+        background: #15803d;
+        border-color: #15803d;
+      }
+      button.call-btn.active {
+        background: var(--danger);
+        border-color: var(--danger);
+      }
+      button.call-btn.active:hover:not(:disabled) {
+        background: #b91c1c;
+        border-color: #b91c1c;
+      }
+      button.call-btn[hidden] { display: none; }
+
+      #interim-transcript {
+        display: none;
+        padding: 0.4rem 1rem;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        font-style: italic;
+        background: var(--surface-muted);
+        border-top: 1px solid var(--border);
+      }
+      #interim-transcript.visible { display: block; }
+
       /* ---------- Messages ---------- */
       .messages-list {
         flex: 1;
@@ -687,6 +741,10 @@
             <div id="participants" class="participants"></div>
           </div>
           <div class="chat-actions">
+            <span id="call-status" class="call-status" aria-live="polite">
+              <span class="dot"></span><span class="label"></span>
+            </span>
+            <button id="call-toggle" class="call-btn" type="button" title="リアルタイム音声通話を開始" aria-label="通話を開始" disabled hidden>🎙 通話開始</button>
             <button id="reload-messages" class="icon-btn ghost" type="button" title="再読込" aria-label="メッセージを再読込" disabled>⟳</button>
             <button id="delete-conversation" class="ghost-danger" type="button" title="この会話を削除" aria-label="会話を削除" disabled>🗑</button>
           </div>
@@ -699,6 +757,8 @@
             <p>左の「新しい会話」から始めるか、一覧から選択してください。</p>
           </div>
         </div>
+
+        <div id="interim-transcript" aria-live="polite"></div>
 
         <div class="composer-wrapper">
           <div id="ai-banner" class="ai-banner hidden" role="status">
@@ -819,8 +879,11 @@
         participants: document.getElementById('participants'),
         reloadMessages: document.getElementById('reload-messages'),
         deleteConversation: document.getElementById('delete-conversation'),
+        callToggle: document.getElementById('call-toggle'),
+        callStatus: document.getElementById('call-status'),
         // Messages / composer
         messages: document.getElementById('messages'),
+        interimTranscript: document.getElementById('interim-transcript'),
         postForm: document.getElementById('post-message-form'),
         messageContent: document.getElementById('message-content'),
         voiceInputToggle: document.getElementById('voice-input-toggle'),
@@ -859,11 +922,16 @@
         // "use the server-configured default" (no query parameter).
         agentType: '',
         availableAgentTypes: [],
+        // Realtime voice call state.
+        realtimeSupported: false,
+        // 'idle' | 'connecting' | 'active'
+        callState: 'idle',
       };
 
       const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const MAX_MESSAGE_LENGTH = Number(els.messageContent.getAttribute('maxlength') || 4000);
       const TTS_MAX_CHARS = 4000;
+      const REALTIME_SAMPLE_RATE = 24000;
       const ttsSupported = typeof window !== 'undefined' && 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
       const VOICE_INPUT_TITLE = '音声入力 (クリックで開始/停止。音声認識はブラウザベンダーのクラウドで処理される場合があります)';
       const voiceInput = {
@@ -1059,6 +1127,21 @@
 
       // -------- Profile --------
       function ensureProfile() {
+        // One-time migration from the standalone realtime UI's localStorage
+        // keys (``chat_rt_user_id`` / ``chat_rt_display_name``) so users who
+        // bookmarked the old ``/realtime`` page keep their identity after the
+        // UIs were merged.
+        const legacyUserId = localStorage.getItem('chat_rt_user_id');
+        const legacyDisplayName = localStorage.getItem('chat_rt_display_name');
+        if (legacyUserId && !localStorage.getItem('chat_user_id') && UUID_RE.test(legacyUserId)) {
+          localStorage.setItem('chat_user_id', legacyUserId);
+        }
+        if (legacyDisplayName && !localStorage.getItem('chat_display_name')) {
+          localStorage.setItem('chat_display_name', legacyDisplayName);
+        }
+        if (legacyUserId) localStorage.removeItem('chat_rt_user_id');
+        if (legacyDisplayName) localStorage.removeItem('chat_rt_display_name');
+
         let userId = localStorage.getItem('chat_user_id');
         if (!userId || !UUID_RE.test(userId)) {
           userId = crypto.randomUUID();
@@ -1178,6 +1261,18 @@
         }
       }
 
+      async function loadCapabilities() {
+        try {
+          const r = await fetch('/capabilities', { headers: { 'Accept': 'application/json' } });
+          if (!r.ok) throw new Error(`${r.status}`);
+          const caps = await r.json();
+          state.realtimeSupported = !!caps.realtime;
+        } catch (_) {
+          state.realtimeSupported = false;
+        }
+        updateCallButton();
+      }
+
       // -------- Date helpers --------
       function formatRelative(iso) {
         const date = new Date(iso);
@@ -1238,6 +1333,10 @@
       }
 
       async function selectConversation(id) {
+        if (state.callState !== 'idle' && id !== state.selectedConversationId) {
+          // Tear down any active call before switching conversations.
+          try { await endCall({ silent: true }); } catch (_) { /* noop */ }
+        }
         state.selectedConversationId = id;
         renderConversations();
         els.reloadMessages.disabled = false;
@@ -1246,6 +1345,7 @@
         els.sendButton.disabled = false;
         updateVoiceInputAvailability();
         updateManualAgentButton();
+        updateCallButton();
         await loadMessages();
         renderParticipants();
         els.messageContent.focus();
@@ -1422,6 +1522,9 @@
         const conv = state.conversations.find((c) => c.id === id);
         if (!confirm(`会話「${conv ? conv.title : id}」を削除します。よろしいですか?`)) return;
         try {
+          if (state.callState !== 'idle') {
+            try { await endCall({ silent: true }); } catch (_) { /* noop */ }
+          }
           await api(`/conversations/${id}`, { method: 'DELETE' });
           toast('会話を削除しました', 'success');
           state.selectedConversationId = null;
@@ -1433,6 +1536,7 @@
           updateVoiceInputAvailability();
           els.participants.innerHTML = '';
           updateManualAgentButton();
+          updateCallButton();
           await loadConversations();
           await loadMessages();
         } catch (err) {
@@ -1679,11 +1783,339 @@
         }
       }
 
+      // -------- Realtime voice call (WebSocket) --------
+      const call = {
+        ws: null,
+        mediaStream: null,
+        audioCtx: null,
+        workletNode: null,
+        playbackCtx: null,
+        playbackQueue: [],
+        isPlaying: false,
+        interimText: '',
+        endingOnPurpose: false,
+      };
+
+      const WORKLET_SRC = `
+class PCM16Processor extends AudioWorkletProcessor {
+  constructor() { super(); this._buf = []; }
+  process(inputs) {
+    const ch = inputs[0]?.[0];
+    if (!ch) return true;
+    for (let i = 0; i < ch.length; i++) {
+      this._buf.push(Math.max(-1, Math.min(1, ch[i])));
+      if (this._buf.length >= 4800) {
+        const pcm = new Int16Array(this._buf.length);
+        for (let j = 0; j < this._buf.length; j++)
+          pcm[j] = this._buf[j] < 0 ? this._buf[j] * 32768 : this._buf[j] * 32767;
+        this.port.postMessage({ pcm: pcm.buffer }, [pcm.buffer]);
+        this._buf = [];
+      }
+    }
+    return true;
+  }
+}
+registerProcessor('pcm16-processor', PCM16Processor);
+`;
+
+      function setCallState(next, label = '') {
+        state.callState = next;
+        els.callStatus.classList.remove('connecting', 'active', 'visible');
+        if (next === 'connecting' || next === 'active') {
+          els.callStatus.classList.add('visible', next);
+          els.callStatus.querySelector('.label').textContent = label;
+        } else {
+          els.callStatus.querySelector('.label').textContent = '';
+        }
+        const isActive = next === 'active' || next === 'connecting';
+        els.callToggle.classList.toggle('active', isActive);
+        els.callToggle.textContent = isActive ? '🛑 通話終了' : '🎙 通話開始';
+        els.callToggle.title = isActive ? 'リアルタイム音声通話を終了' : 'リアルタイム音声通話を開始';
+        els.callToggle.setAttribute('aria-label', isActive ? '通話を終了' : '通話を開始');
+        updateCallButton();
+        // While the call is active, text-only controls would race with the
+        // realtime pipeline. Disable them to keep one input mode at a time.
+        const lockText = isActive;
+        els.messageContent.disabled = lockText || !state.selectedConversationId;
+        els.sendButton.disabled = lockText || !state.selectedConversationId;
+        updateVoiceInputAvailability();
+        updateManualAgentButton();
+        if (!isActive) clearInterim();
+      }
+
+      function updateCallButton() {
+        const hide = !state.realtimeSupported;
+        els.callToggle.hidden = hide;
+        if (hide) {
+          els.callToggle.disabled = true;
+          return;
+        }
+        // Allow ending the call even with no selection (rare race).
+        if (state.callState === 'active' || state.callState === 'connecting') {
+          els.callToggle.disabled = false;
+        } else {
+          els.callToggle.disabled = !state.selectedConversationId;
+        }
+      }
+
+      function setInterim(text) {
+        if (text) {
+          els.interimTranscript.textContent = `🤖 ${text}`;
+          els.interimTranscript.classList.add('visible');
+        } else {
+          els.interimTranscript.textContent = '';
+          els.interimTranscript.classList.remove('visible');
+        }
+      }
+
+      function clearInterim() {
+        call.interimText = '';
+        setInterim('');
+      }
+
+      function arrayBufferToBase64(buf) {
+        const bytes = new Uint8Array(buf);
+        let bin = '';
+        for (const b of bytes) bin += String.fromCharCode(b);
+        return btoa(bin);
+      }
+
+      function ensurePlaybackCtx() {
+        if (!call.playbackCtx) call.playbackCtx = new AudioContext({ sampleRate: REALTIME_SAMPLE_RATE });
+      }
+
+      function scheduleAudio(b64) {
+        ensurePlaybackCtx();
+        const raw = atob(b64);
+        const buf = new Int16Array(raw.length / 2);
+        for (let i = 0; i < buf.length; i++) {
+          buf[i] = (raw.charCodeAt(i * 2)) | (raw.charCodeAt(i * 2 + 1) << 8);
+        }
+        const float32 = new Float32Array(buf.length);
+        for (let i = 0; i < buf.length; i++) float32[i] = buf[i] / 32768;
+        const audioBuf = call.playbackCtx.createBuffer(1, float32.length, REALTIME_SAMPLE_RATE);
+        audioBuf.getChannelData(0).set(float32);
+        call.playbackQueue.push(audioBuf);
+        if (!call.isPlaying) drainAudioQueue();
+      }
+
+      function drainAudioQueue() {
+        if (!call.playbackQueue.length) { call.isPlaying = false; return; }
+        call.isPlaying = true;
+        const buf = call.playbackQueue.shift();
+        const src = call.playbackCtx.createBufferSource();
+        src.buffer = buf;
+        src.connect(call.playbackCtx.destination);
+        src.onended = drainAudioQueue;
+        src.start();
+      }
+
+      async function startMic() {
+        call.audioCtx = new AudioContext({ sampleRate: REALTIME_SAMPLE_RATE });
+        const blob = new Blob([WORKLET_SRC], { type: 'application/javascript' });
+        const url = URL.createObjectURL(blob);
+        await call.audioCtx.audioWorklet.addModule(url);
+        URL.revokeObjectURL(url);
+
+        const source = call.audioCtx.createMediaStreamSource(call.mediaStream);
+        call.workletNode = new AudioWorkletNode(call.audioCtx, 'pcm16-processor');
+        call.workletNode.port.onmessage = (ev) => {
+          if (call.ws && call.ws.readyState === WebSocket.OPEN) {
+            const b64 = arrayBufferToBase64(ev.data.pcm);
+            call.ws.send(JSON.stringify({
+              type: 'oai-event',
+              payload: { type: 'input_audio_buffer.append', audio: b64 }
+            }));
+          }
+        };
+        source.connect(call.workletNode);
+        // Route the worklet through a silent gain node so the
+        // ``process()`` callback keeps firing without feeding the mic signal
+        // back to the speakers.
+        const silent = call.audioCtx.createGain();
+        silent.gain.value = 0;
+        call.workletNode.connect(silent);
+        silent.connect(call.audioCtx.destination);
+      }
+
+      function stopMic() {
+        if (call.workletNode) { call.workletNode.disconnect(); call.workletNode = null; }
+        if (call.audioCtx) { call.audioCtx.close().catch(() => {}); call.audioCtx = null; }
+        if (call.mediaStream) { call.mediaStream.getTracks().forEach(t => t.stop()); call.mediaStream = null; }
+      }
+
+      function cleanupCall() {
+        stopMic();
+        call.ws = null;
+        call.playbackQueue = [];
+        call.isPlaying = false;
+        call.endingOnPurpose = false;
+        clearInterim();
+      }
+
+      async function ensureJoined(conversationId) {
+        if (state.joinedConversations.has(conversationId)) return;
+        try {
+          await api(`/conversations/${conversationId}/participants`, {
+            method: 'POST',
+            body: JSON.stringify({ display_name: els.displayName.value.trim() || null }),
+          });
+        } catch (err) {
+          // 409-equivalent or already-joined is non-fatal.
+          console.warn('join warning', err);
+        }
+        state.joinedConversations.add(conversationId);
+      }
+
+      async function startCall() {
+        if (!state.selectedConversationId) return;
+        if (!state.realtimeSupported) {
+          toast('リアルタイム音声機能はサーバ側で無効です', 'warning');
+          return;
+        }
+        if (state.callState !== 'idle') return;
+
+        const userId = els.userId.value.trim();
+        if (!UUID_RE.test(userId)) {
+          toast('User ID が不正です', 'error');
+          return;
+        }
+
+        setCallState('connecting', '接続中…');
+        // If the user is typing or recording text-input voice, pause those.
+        if (voiceInput.recording) stopVoiceInput();
+        stopSpeaking();
+
+        try {
+          call.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (e) {
+          toast(`マイクへのアクセスが拒否されました: ${e.message}`, 'error');
+          setCallState('idle');
+          return;
+        }
+
+        try {
+          await ensureJoined(state.selectedConversationId);
+        } catch (_) { /* already logged */ }
+
+        const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+        const displayName = els.displayName.value.trim();
+        const dn = displayName ? `&display_name=${encodeURIComponent(displayName)}` : '';
+        const wsUrl = `${proto}://${location.host}/conversations/${state.selectedConversationId}/realtime?user_id=${encodeURIComponent(userId)}${dn}`;
+
+        try {
+          call.ws = new WebSocket(wsUrl);
+        } catch (e) {
+          toast(`WebSocket 接続に失敗: ${e.message}`, 'error');
+          stopMic();
+          setCallState('idle');
+          return;
+        }
+
+        call.ws.addEventListener('message', (ev) => {
+          let msg;
+          try { msg = JSON.parse(ev.data); } catch (_) { return; }
+          handleRealtimeMessage(msg);
+        });
+
+        call.ws.addEventListener('close', (ev) => {
+          const codeMap = {
+            4400: '不正なリクエスト',
+            4404: '会話が見つかりません',
+            4503: 'リアルタイム機能が未設定です',
+          };
+          if (!call.endingOnPurpose && ev.code >= 4000) {
+            const reason = codeMap[ev.code] || ev.reason || `切断 (code=${ev.code})`;
+            toast(`接続エラー: ${reason}`, 'error');
+          }
+          cleanupCall();
+          setCallState('idle');
+        });
+
+        call.ws.addEventListener('error', () => {
+          if (!call.endingOnPurpose) toast('WebSocket エラーが発生しました', 'error');
+        });
+      }
+
+      async function endCall(opts = {}) {
+        const { silent = false } = opts;
+        if (state.callState === 'idle') return;
+        call.endingOnPurpose = true;
+        if (call.ws && call.ws.readyState === WebSocket.OPEN) {
+          try { call.ws.close(1000, 'user ended call'); } catch (_) { /* noop */ }
+        }
+        cleanupCall();
+        setCallState('idle');
+        if (!silent) toast('通話を終了しました', 'info', 1500);
+      }
+
+      async function handleRealtimeMessage(msg) {
+        const type = msg.type;
+
+        if (type === 'concierge.session.ready') {
+          setCallState('active', '通話中 🔴');
+          try {
+            await startMic();
+          } catch (e) {
+            toast(`マイク開始エラー: ${e.message}`, 'error');
+            await endCall({ silent: true });
+          }
+          return;
+        }
+
+        if (type === 'concierge.message.persisted') {
+          clearInterim();
+          // Reload from the server so the new message picks up the
+          // canonical participant info / ordering.
+          await Promise.all([loadConversations(), loadMessages()]);
+          return;
+        }
+
+        if (type === 'concierge.error') {
+          toast(`サーバーエラー: ${msg.detail}`, 'error');
+          return;
+        }
+
+        if (type === 'oai-event') {
+          const payload = msg.payload || {};
+          const evType = payload.type || '';
+          if (evType === 'response.output_audio.delta' && payload.delta) {
+            scheduleAudio(payload.delta);
+          } else if (evType === 'response.output_audio_transcript.delta' && payload.delta) {
+            call.interimText += payload.delta;
+            setInterim(call.interimText);
+          } else if (evType === 'response.output_audio_transcript.done') {
+            clearInterim();
+          }
+        }
+      }
+
+      els.callToggle.addEventListener('click', () => {
+        if (state.callState === 'idle') {
+          startCall().catch((err) => {
+            console.warn('startCall error', err);
+            toast(`通話開始に失敗: ${err.message}`, 'error');
+          });
+        } else {
+          endCall().catch((err) => {
+            console.warn('endCall error', err);
+          });
+        }
+      });
+
+      window.addEventListener('beforeunload', () => {
+        if (state.callState !== 'idle' && call.ws && call.ws.readyState === WebSocket.OPEN) {
+          call.endingOnPurpose = true;
+          try { call.ws.close(1000, 'page unload'); } catch (_) { /* noop */ }
+        }
+      });
+
       // -------- Init --------
       ensureProfile();
       loadAiPreference();
       initVoiceInput();
       checkHealth();
+      loadCapabilities();
       loadAgentTypes();
       loadConversations();
       autoResize();

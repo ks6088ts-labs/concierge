@@ -37,7 +37,9 @@ flowchart LR
 
 | URL | What it is |
 |---|---|
-| <http://localhost:8080/> | Built-in chat UI (Japanese labels) |
+| <http://localhost:8080/> | Unified chat UI — text chat + realtime voice (Japanese labels) |
+| <http://localhost:8080/realtime> | Legacy path; returns `301` redirect to `/` |
+| <http://localhost:8080/capabilities> | Feature-flag JSON (`{"realtime": bool}`) consumed by the UI to show / hide the call button |
 | <http://localhost:8080/docs> | Swagger UI (interactive REST docs) |
 | <http://localhost:8080/openapi.json> | OpenAPI schema |
 | <http://localhost:8080/healthz> | Liveness probe (`{"status":"ok"}`) |
@@ -67,8 +69,9 @@ export USER_ID=$(python -c 'import uuid; print(uuid.uuid4())')
 | POST | `/conversations/{conversation_id}/agent-replies` | Stream an AI agent reply over Server-Sent Events |
 | WS | `/conversations/{conversation_id}/realtime` | Realtime voice session (WebSocket proxy to Foundry) |
 | GET | `/healthz` | Health check |
-| GET | `/` | Static HTML front-end |
-| GET | `/realtime` | Realtime voice HTML front-end |
+| GET | `/capabilities` | `{"realtime": bool}` — `true` when `AZURE_AI_PROJECT_ENDPOINT_REALTIME` is configured |
+| GET | `/` | Unified HTML front-end (text + realtime voice) |
+| GET | `/realtime` | `301` redirect to `/` (kept for backward compatibility) |
 
 ## End-to-end curl walkthrough
 
@@ -219,3 +222,67 @@ The `complete` event payload matches the `MessageResponse` schema:
   "created_at": "2026-05-14T06:03:23.000000Z"
 }
 ```
+
+## Realtime voice WebSocket
+
+The realtime voice feature streams microphone audio to Microsoft Foundry's
+GPT Realtime API through a server-side WebSocket proxy and persists the
+resulting user / AI transcripts as regular `Message` objects. See the
+[Realtime voice (optional)](index.md#realtime-voice-optional) section of
+the overview for setup, the `.env` reference, and UI walkthrough.
+
+This section documents the wire protocol only.
+
+### Endpoint
+
+```
+WS /conversations/{conversation_id}/realtime
+   ?user_id=<uuid>
+   [&display_name=<string>]
+```
+
+The `user_id` query parameter is the same UUID as the `X-User-Id` header
+used by the REST endpoints. WebSocket frames must not include the header
+because browsers cannot attach custom headers to a WebSocket handshake.
+
+### Server → Client events
+
+| `type` | Payload | Notes |
+|--------|---------|-------|
+| `concierge.session.ready` | `{"conversation_id": "..."}` | First message after accept |
+| `oai-event` | `{"payload": <Foundry event JSON>}` | Transparent relay of all Foundry events (`response.output_audio.delta`, `response.output_audio_transcript.delta`, etc.) |
+| `concierge.message.persisted` | `{"message": <MessageResponse>}` | USER or AGENT transcript saved |
+| `concierge.error` | `{"detail": "..."}` | Unhandled server error |
+
+### Client → Server events
+
+| `type` | Payload | Notes |
+|--------|---------|-------|
+| `oai-event` | `{"payload": <Foundry event JSON>}` | Forwarded to Foundry (typically `input_audio_buffer.append` with base64 PCM16) |
+
+### Close codes
+
+| Code | Meaning |
+|------|---------|
+| `4400` | `user_id` is missing or not a valid UUID |
+| `4404` | `conversation_id` does not exist |
+| `4503` | `AZURE_AI_PROJECT_ENDPOINT_REALTIME` is not configured |
+| `1000` | Normal client-initiated close |
+
+### Capability probe
+
+Clients should call `GET /capabilities` before showing realtime UI and only
+open the WebSocket when the response is `{"realtime": true}`. The flag is
+`true` whenever `create_realtime_responder()` succeeds, which currently
+means `AZURE_AI_PROJECT_ENDPOINT_REALTIME` is non-empty.
+
+```bash
+curl -s http://localhost:8080/capabilities
+# → {"realtime":true}
+```
+
+### CLI status check
+
+For a non-interactive sanity check that the realtime endpoint is wired
+correctly without opening a WebSocket, use
+[`chat-cli realtime status`](cli.md#realtime-status).

@@ -400,6 +400,54 @@ def test_build_copilot_sdk_telemetry_config_returns_config_for_http_tracking_uri
     }
 
 
+def test_build_copilot_sdk_telemetry_config_sets_bsp_schedule_delay_default(monkeypatch) -> None:
+    """A short BSP delay is required so the CLI subprocess flushes spans before exiting."""
+    _reset_state()
+    monkeypatch.delenv("OTEL_BSP_SCHEDULE_DELAY", raising=False)
+    monkeypatch.setattr(observability, "is_mlflow_enabled", lambda: True)
+    monkeypatch.setattr(
+        observability,
+        "get_observability_settings",
+        lambda: SimpleNamespace(mlflow_tracking_uri="http://127.0.0.1:5000"),
+    )
+
+    observability.build_copilot_sdk_telemetry_config()
+
+    import os
+
+    assert os.environ["OTEL_BSP_SCHEDULE_DELAY"] == "500"
+
+
+def test_build_copilot_sdk_telemetry_config_keeps_existing_bsp_schedule_delay(monkeypatch) -> None:
+    _reset_state()
+    monkeypatch.setenv("OTEL_BSP_SCHEDULE_DELAY", "1234")
+    monkeypatch.setattr(observability, "is_mlflow_enabled", lambda: True)
+    monkeypatch.setattr(
+        observability,
+        "get_observability_settings",
+        lambda: SimpleNamespace(mlflow_tracking_uri="http://127.0.0.1:5000"),
+    )
+
+    observability.build_copilot_sdk_telemetry_config()
+
+    import os
+
+    assert os.environ["OTEL_BSP_SCHEDULE_DELAY"] == "1234"
+
+
+def test_build_copilot_sdk_telemetry_config_does_not_set_bsp_when_disabled(monkeypatch) -> None:
+    """No env-var side effect when telemetry config returns None."""
+    _reset_state()
+    monkeypatch.delenv("OTEL_BSP_SCHEDULE_DELAY", raising=False)
+    monkeypatch.setattr(observability, "is_mlflow_enabled", lambda: False)
+
+    assert observability.build_copilot_sdk_telemetry_config() is None
+
+    import os
+
+    assert "OTEL_BSP_SCHEDULE_DELAY" not in os.environ
+
+
 def test_bootstrap_from_env_toggles_tracing(monkeypatch) -> None:
     _reset_state()
     monkeypatch.setenv("CONCIERGE_TRACING_ENABLED", "true")

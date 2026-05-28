@@ -43,7 +43,8 @@ class FoundryAgentServiceAgent:
         try:
             project = self._build_project_client()
             self._ensure_agent_once(project)
-            openai = project.get_openai_client()
+            # pyrefly: ignore[missing-attribute]
+            openai = project.get_openai_client()  # ty: ignore[unresolved-attribute]
             conversation = openai.conversations.create()
             response = openai.responses.create(
                 conversation=conversation.id,

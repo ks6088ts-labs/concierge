@@ -859,6 +859,7 @@ source = { editable = "." }
 dependencies = [
     { name = "agent-framework-core" },
     { name = "agent-framework-foundry" },
+    { name = "azure-ai-projects" },
     { name = "azure-identity" },
     { name = "azure-storage-queue" },
     { name = "fastapi" },
@@ -903,6 +904,7 @@ docs = [
 requires-dist = [
     { name = "agent-framework-core", specifier = ">=1.5.0" },
     { name = "agent-framework-foundry", specifier = ">=1.5.0" },
+    { name = "azure-ai-projects", specifier = ">=2.0.0" },
     { name = "azure-identity", specifier = ">=1.25.3" },
     { name = "azure-storage-queue", specifier = ">=12.16.0" },
     { name = "fastapi", specifier = ">=0.136.1" },

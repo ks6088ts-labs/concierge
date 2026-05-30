@@ -127,3 +127,15 @@ mlflow: ## run MLflow server
 		--port 5000 \
 		--allowed-hosts "*" \
 		--cors-allowed-origins "*"
+
+.PHONY: copilot-otel-up
+copilot-otel-up: ## start the OTel collector that forwards VS Code Copilot OTLP to App Insights
+	docker compose --profile copilot-otel up -d otel-collector
+
+.PHONY: copilot-otel-down
+copilot-otel-down: ## stop the VS Code Copilot OTel collector
+	docker compose --profile copilot-otel down
+
+.PHONY: copilot-otel-logs
+copilot-otel-logs: ## tail the VS Code Copilot OTel collector logs
+	docker compose --profile copilot-otel logs -f otel-collector

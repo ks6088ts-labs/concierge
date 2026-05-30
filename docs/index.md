@@ -98,6 +98,14 @@ so you can keep going as far as you want.
     It shows how to send LangChain runs to Azure Monitor and how to view them
     locally in the MLflow UI - screenshots included.
 
+=== "I want to monitor VS Code Copilot itself"
+
+    Read [Monitor VS Code Copilot via App Insights](tutorial/appendix-monitor-vscode-copilot.md).
+    A bundled OTel Collector forwards Copilot Chat operations, tokens, tool
+    calls, and per-model latency to Azure Application Insights — queryable
+    from the portal and the prebuilt Grafana dashboard at
+    [aka.ms/amg/dash/gh-copilot](https://aka.ms/amg/dash/gh-copilot).
+
 === "I want a persistent vector store"
 
     Read [Step 3 - PostgreSQL (pgvector) CRUD](tutorial/03-postgres-vector-store.md).

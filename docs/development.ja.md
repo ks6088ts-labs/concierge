@@ -66,6 +66,21 @@ uv run todo-cli --tracing --mlflow --help
 make mlflow
 ```
 
+VS Code GitHub Copilot Chat の OpenTelemetry シグナルを Azure Application
+Insights へ転送するには、同梱の OTel Collector を起動します（オプトイン。
+`.env` に `APPLICATIONINSIGHTS_CONNECTION_STRING` が必要）。
+
+```bash
+make copilot-otel-up    # docker-compose の otel-collector サービスを起動
+make copilot-otel-logs  # Collector ログを追尾
+make copilot-otel-down  # Collector を停止
+```
+
+VS Code `settings.json` の設定、KQL での疎通確認、トラブルシューティング
+まで含めた手順は
+[VS Code Copilot を Application Insights で可視化する](tutorial/appendix-monitor-vscode-copilot.md)
+を参照してください。
+
 ## 開発コマンド
 
 よく使う操作は Makefile target にまとめています。

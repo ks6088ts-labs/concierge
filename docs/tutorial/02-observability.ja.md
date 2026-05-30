@@ -11,6 +11,15 @@
 
 両者は独立しており、同時に有効化することもできます。
 
+!!! info "VS Code GitHub Copilot 自体の観測"
+    本ステップが対象とするのは **concierge アプリケーション側**
+    （LangChain / LangGraph / MAF / Copilot SDK のコードパス）の
+    観測性です。エディタ上の **VS Code Copilot Chat 拡張機能** 自体の
+    挙動（オペレーション数 / トークン / ツール呼び出し / モデル別 TTFT）
+    を OTel Collector と Azure Application Insights で可視化する手順は
+    [VS Code Copilot を Application Insights で可視化する](appendix-monitor-vscode-copilot.md)
+    にまとめています。両者は独立しており、並行運用できます。
+
 !!! info "Microsoft Agent Framework 対応について"
     MLflow には Microsoft Agent Framework 専用の ``mlflow.<flavour>.autolog()``
     は存在しません。代わりに、OpenTelemetry HTTP exporter 経由でトラッキ

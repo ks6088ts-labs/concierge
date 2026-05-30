@@ -51,5 +51,33 @@ services:
     #   postgres:
     #     condition: service_healthy
 
+  # OpenTelemetry Collector (contrib) that forwards OTLP signals from VS Code
+  # GitHub Copilot to Azure Application Insights. Opt-in via the
+  # `copilot-otel` profile so it never starts with a plain `docker compose up`.
+  #
+  # Start:        docker compose --profile copilot-otel up -d otel-collector
+  # Stop:         docker compose --profile copilot-otel down
+  # Tail logs:    docker compose --profile copilot-otel logs -f otel-collector
+  #
+  # Requires APPLICATIONINSIGHTS_CONNECTION_STRING in `.env`.
+  # See docs/tutorial/appendix-monitor-vscode-copilot.md for the end-to-end walkthrough.
+  otel-collector:
+    container_name: concierge-otel-collector
+    image: otel/opentelemetry-collector-contrib:latest
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    environment:
+      # Soft default keeps `docker compose config` (and other-service `up`)
+      # working when the variable is unset — only matters when the
+      # `copilot-otel` profile is active. When empty, the azuremonitor
+      # exporter fails fast at collector startup with a clear log line.
+      APPLICATIONINSIGHTS_CONNECTION_STRING: ${APPLICATIONINSIGHTS_CONNECTION_STRING:-}
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "${COPILOT_OTEL_COLLECTOR_OTLP_HTTP_PORT:-4318}:4318"
+      - "${COPILOT_OTEL_COLLECTOR_OTLP_GRPC_PORT:-4317}:4317"
+    profiles: ["copilot-otel"]
+
 volumes:
   postgres-data:

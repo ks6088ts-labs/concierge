@@ -25,6 +25,7 @@ from concierge.agents.application.contracts import AgentRequest
 from concierge.agents.application.registry import AgentRegistry
 from concierge.agents.domain.agent_types import AgentType
 from concierge.agents.infrastructure.echo_agent import EchoAgent
+from concierge.agents.infrastructure.foundry_agent_service_agent import FoundryAgentServiceAgent
 from concierge.agents.infrastructure.github_copilot_sdk_agent import GitHubCopilotSdkAgent
 from concierge.agents.infrastructure.langgraph_agent import LangGraphAgent
 from concierge.agents.infrastructure.microsoft_agent_framework_agent import MicrosoftAgentFrameworkAgent
@@ -148,6 +149,14 @@ def get_agent_registry() -> AgentRegistry:
                 *knowledge_builders_maf,
             ],
             project_endpoint=foundry_endpoint,
+        )
+    )
+    registry.register(
+        FoundryAgentServiceAgent(
+            project_endpoint=foundry_endpoint,
+            model=settings.foundry_agent_service_model,
+            system_prompt=settings.foundry_agent_service_system_prompt,
+            agent_name=settings.foundry_agent_service_agent_name,
         )
     )
     return registry

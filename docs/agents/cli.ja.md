@@ -36,7 +36,7 @@ uv run agents-cli list
 出力例:
 
 ```json
-["echo", "langgraph", "github-copilot-sdk", "microsoft-agent-framework"]
+["echo", "langgraph", "github-copilot-sdk", "microsoft-agent-framework", "foundry-agent-service"]
 ```
 
 ### 設定済み Knowledge retrieval ツール一覧
@@ -78,18 +78,21 @@ uv run agents-cli invoke \
   --context '{"task_id": "00000000-0000-0000-0000-000000000001"}'
 ```
 
-組み込みエージェント（`echo` / `langgraph` / `github-copilot-sdk` / `microsoft-agent-framework`）は
+組み込みエージェント（`echo` / `langgraph` / `github-copilot-sdk` / `microsoft-agent-framework` / `foundry-agent-service`）は
 `payload.message` を読むので、同じショートカットが使えます。フレームワークベースの
 エージェント (`langgraph` / `microsoft-agent-framework`) には `echo` /
 `generate_image_tool` に加えてサンドボックス化されたファイル操作ツール
 （デフォルト: `read_file` / `list_directory` / `file_search`）と、任意有効化の
 許可リスト方式 shell 実行ツール（`shell_exec`）も載せられます。LLM がユーザーの
-リクエストに応じて適切なツールを選択します。
+リクエストに応じて適切なツールを選択します。`foundry-agent-service` は
+ Azure AI Foundry Prompt Agent の薄いクライアントで、クライアント側ツールは
+読み込まれません（ツール / knowledge は Foundry 側エージェント定義で設定）。
 
 ```bash
 uv run agents-cli invoke --agent-type langgraph --message "Hello LangGraph"
 uv run agents-cli invoke --agent-type github-copilot-sdk --message "Hello Copilot"
 uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Hello MAF"
+uv run agents-cli invoke --agent-type foundry-agent-service --message "フランスの面積を平方マイルで教えて"
 uv run agents-cli invoke --agent-type langgraph --message "Create an image of a red fox in watercolor style"
 uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Create an image of a red fox in watercolor style"
 # ファイル操作（AGENTS_FILE_ROOT_DIR 配下のみ）
@@ -130,6 +133,7 @@ uv run agents-cli invoke --agent-type langgraph --message "shell_exec で terraf
 uv run agents-cli info --agent-type langgraph
 uv run agents-cli info --agent-type github-copilot-sdk
 uv run agents-cli info --agent-type microsoft-agent-framework
+uv run agents-cli info --agent-type foundry-agent-service
 ```
 
 出力例:
@@ -162,6 +166,9 @@ agents CLI が読むのは `AGENTS_*` 変数のみです。リポジトリ／キ
 | `AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT` | _(組み込み)_ | `github-copilot-sdk` のシステムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルト: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | `microsoft-agent-framework` の `FoundryChatClient(model=...)` に渡すモデル文字列 |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(組み込み)_ | `microsoft-agent-framework` のシステムプロンプト（`Agent(instructions=...)` に渡される）。デフォルトでは `echo` と `generate_image_tool` を使い分けるよう LLM に指示します。 |
+| `AGENTS_FOUNDRY_AGENT_SERVICE_MODEL` | `gpt-5` | `foundry-agent-service` の `PromptAgentDefinition.model` に使う Foundry デプロイ名 |
+| `AGENTS_FOUNDRY_AGENT_SERVICE_SYSTEM_PROMPT` | `You are a helpful assistant.` | `foundry-agent-service` の Foundry 側 `PromptAgentDefinition` に永続化される instructions |
+| `AGENTS_FOUNDRY_AGENT_SERVICE_AGENT_NAME` | `concierge-foundry-agent` | `foundry-agent-service` で使う Foundry 側 Prompt Agent 名 |
 | `AGENTS_FILE_ROOT_DIR` | `""`（`<cwd>/workspace`） | ファイル操作ツール（`read_file` / `list_directory` / `file_search` / 任意の書き込み系）の sandbox root |
 | `AGENTS_FILE_TOOLS_ENABLED` | `read_file,list_directory,file_search` | 有効化するファイル操作ツールのカンマ区切り。`""` で全無効化 |
 | `AGENTS_SHELL_TOOLS_ENABLED` | `""` | 有効化する shell ツール名のカンマ区切り。空なら無効（デフォルト・opt-in） |

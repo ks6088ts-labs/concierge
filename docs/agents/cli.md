@@ -37,7 +37,7 @@ uv run agents-cli list
 Output:
 
 ```json
-["echo", "langgraph", "github-copilot-sdk", "microsoft-agent-framework"]
+["echo", "langgraph", "github-copilot-sdk", "microsoft-agent-framework", "foundry-agent-service"]
 ```
 
 ### List configured knowledge retrieval tools
@@ -79,17 +79,20 @@ uv run agents-cli invoke \
   --context '{"task_id": "00000000-0000-0000-0000-000000000001"}'
 ```
 
-All built-in agents (`echo`, `langgraph`, `github-copilot-sdk`, and `microsoft-agent-framework`) read `payload.message`,
+All built-in agents (`echo`, `langgraph`, `github-copilot-sdk`, `microsoft-agent-framework`, and `foundry-agent-service`) read `payload.message`,
 so the same shortcut works for all of them. The framework-backed agents
 (`langgraph` / `microsoft-agent-framework`) carry `echo`, `generate_image_tool`,
 sandboxed file-management tools (`read_file`, `list_directory`, `file_search`
 by default), and optional allowlisted shell execution (`shell_exec`) — the LLM
-picks the right one based on the user's request:
+picks the right one based on the user's request. `foundry-agent-service` is a
+thin client over the Azure AI Foundry Prompt Agent and carries no client-side
+tools (tools and knowledge are configured on the Foundry agent itself):
 
 ```bash
 uv run agents-cli invoke --agent-type langgraph --message "Hello LangGraph"
 uv run agents-cli invoke --agent-type github-copilot-sdk --message "Hello Copilot"
 uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Hello MAF"
+uv run agents-cli invoke --agent-type foundry-agent-service --message "What is the size of France in square miles?"
 uv run agents-cli invoke --agent-type langgraph --message "Create an image of a red fox in watercolor style"
 uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Create an image of a red fox in watercolor style"
 # file tools (reads from AGENTS_FILE_ROOT_DIR sandbox)
@@ -130,6 +133,7 @@ Options:
 uv run agents-cli info --agent-type langgraph
 uv run agents-cli info --agent-type github-copilot-sdk
 uv run agents-cli info --agent-type microsoft-agent-framework
+uv run agents-cli info --agent-type foundry-agent-service
 ```
 
 Output:
@@ -162,6 +166,9 @@ belong to the `cloud_agent` and `chat` services and are not relevant here.
 | `AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-sdk` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Default: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | Model string passed to `FoundryChatClient(model=...)` for `microsoft-agent-framework` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `microsoft-agent-framework` (passed as `Agent(instructions=...)`). Default tells the LLM to pick between `echo` and `generate_image_tool` based on the user's request. |
+| `AGENTS_FOUNDRY_AGENT_SERVICE_MODEL` | `gpt-5` | Foundry deployment name used as `PromptAgentDefinition.model` for `foundry-agent-service` |
+| `AGENTS_FOUNDRY_AGENT_SERVICE_SYSTEM_PROMPT` | `You are a helpful assistant.` | Instructions persisted on the Foundry-side `PromptAgentDefinition` for `foundry-agent-service` |
+| `AGENTS_FOUNDRY_AGENT_SERVICE_AGENT_NAME` | `concierge-foundry-agent` | Name of the Foundry-side Prompt Agent for `foundry-agent-service` |
 | `AGENTS_FILE_ROOT_DIR` | `""` (`<cwd>/workspace`) | Sandbox root for file-management tools (`read_file`, `list_directory`, `file_search`, optional write tools) |
 | `AGENTS_FILE_TOOLS_ENABLED` | `read_file,list_directory,file_search` | Comma-separated enabled file tools. Set to `""` to disable all file tools |
 | `AGENTS_SHELL_TOOLS_ENABLED` | `""` | Comma-separated enabled shell tools. Keep empty to disable shell tools (default, opt-in) |

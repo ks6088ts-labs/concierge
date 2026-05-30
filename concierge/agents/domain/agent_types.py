@@ -29,3 +29,4 @@ class AgentType(StrEnum):
     LANGGRAPH = "langgraph"
     GITHUB_COPILOT_SDK = "github-copilot-sdk"
     MICROSOFT_AGENT_FRAMEWORK = "microsoft-agent-framework"
+    FOUNDRY_AGENT_SERVICE = "foundry-agent-service"

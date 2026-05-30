@@ -18,12 +18,14 @@ flowchart LR
     Registry --> LG["LangGraphAgent\n(langgraph)"]
     Registry --> GCE[GitHubCopilotSdkAgent]
     Registry --> MAF["MicrosoftAgentFrameworkAgent\n(microsoft-agent-framework)"]
+    Registry --> FAS["FoundryAgentServiceAgent\n(foundry-agent-service)"]
     subgraph agents["concierge/agents (共有カーネル)"]
         Registry
         Echo
         LG
         GCE
         MAF
+        FAS
     end
 ```
 
@@ -42,6 +44,7 @@ concierge/agents/
     github_copilot_sdk_agent.py           # GitHubCopilotSdkAgent
     langgraph_agent.py                     # LangGraphAgent (preset ごとに tools を代入)
     microsoft_agent_framework_agent.py     # MicrosoftAgentFrameworkAgent (preset 構成可)
+    foundry_agent_service_agent.py         # FoundryAgentServiceAgent (Azure AI Foundry Prompt Agent)
     tools/
       echo_tool.py             # build_echo_langchain_tool / build_echo_maf_tool
       file_management.py       # sandboxed file operation core（パス検証 + IO）
@@ -95,12 +98,19 @@ class MyAgent:
 | `langgraph` | `LangGraphAgent` | `echo` / `generate_image_tool` と、共有のサンドボックス化ファイル操作ツール（デフォルト: `read_file` / `list_directory` / `file_search`）、および任意有効化の許可リスト方式 shell ツール（`shell_exec`）を備える LangGraph (`create_agent`) preset。LLM がユーザー入力に応じてツールを選択します。 |
 | `github-copilot-sdk` | `GitHubCopilotSdkAgent` | リクエストごとに GitHub Copilot SDK セッションを開き、ユーザーメッセージを `send` し、アシスタント応答を返します。 |
 | `microsoft-agent-framework` | `MicrosoftAgentFrameworkAgent` | `echo` / `generate_image_tool` と、共有のサンドボックス化ファイル操作ツール（デフォルト: `read_file` / `list_directory` / `file_search`）、および任意有効化の許可リスト方式 shell ツール（`shell_exec`）を備える Microsoft Agent Framework preset。LLM がユーザー入力に応じてツールを選択します。 |
+| `foundry-agent-service` | `FoundryAgentServiceAgent` | Azure AI Foundry の **Prompt Agent**（サーバーサイドホストされるエージェント）を呼び出します。初回起動時に Foundry プロジェクト上に名前付きの `PromptAgentDefinition` を作成し、`openai.responses.create()` に `agent_reference` を渡して騆動します。クライアント側のツールは読み込まれず、ツールや knowledge は Foundry 側のエージェント定義で設定します。 |
 
 フレームワークベースの 2 つのエージェント (`langgraph` /
 `microsoft-agent-framework`) は *汎用* で、それぞれ全ツールビルダーを
 登録した状態で 1 度だけ登録されます。新しいツールを追加するときは
 `registry_factory.py` のリストにビルダーを追加するだけで済み、新しい
 `agent_type` を増やす必要はありません。
+
+`foundry-agent-service` は **サーバーサイド** で、システムプロンプトや
+ツールリストは Foundry プロジェクト側に保持されます。Foundry 側でエージェント
+定義（バージョニング / 評価 / オブザーバビリティフック等）を一元管理したい
+場合に選びます。クライアント側 SDK で `FoundryChatClient` を使う側のエージェント
+が欲しい場合は `microsoft-agent-framework` を使います。
 
 ## 設定
 
@@ -114,6 +124,9 @@ class MyAgent:
 | `AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT` | *(組み込み)* | `github-copilot-sdk` 用システムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルト: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | `microsoft-agent-framework` の `FoundryChatClient(model=...)` に渡すモデル名。 |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | *(組み込み)* | `microsoft-agent-framework` の `Agent(instructions=...)` に渡すシステムプロンプト。デフォルトでは `echo` と `generate_image_tool` を使い分けるよう指示します。 |
+| `AGENTS_FOUNDRY_AGENT_SERVICE_MODEL` | `gpt-5` | `foundry-agent-service` の `PromptAgentDefinition.model` に使う Foundry デプロイ名。 |
+| `AGENTS_FOUNDRY_AGENT_SERVICE_SYSTEM_PROMPT` | `You are a helpful assistant.` | Foundry 側 `PromptAgentDefinition` に永続化される instructions。値を変更すると次回呼び出し時に新しいエージェントバージョンが作成されます。 |
+| `AGENTS_FOUNDRY_AGENT_SERVICE_AGENT_NAME` | `concierge-foundry-agent` | Foundry 側 Prompt Agent の名前。同じ名前を使い回すと既存エージェントレコードが再利用され、環境間で分離したいときは異なる名前を設定します。 |
 | `AGENTS_FILE_ROOT_DIR` | `""`（`<cwd>/workspace`） | ファイル操作ツールの sandbox root。相対パスはカレントディレクトリ起点で解決され、起動時に自動作成されます。 |
 | `AGENTS_FILE_TOOLS_ENABLED` | `read_file,list_directory,file_search` | 有効化するファイル操作ツール名のカンマ区切り。`""` で全無効化。書き込み系（`write_file` / `copy_file` / `move_file` / `delete_file`）は明示的に opt-in が必要です。 |
 | `AGENTS_SHELL_TOOLS_ENABLED` | `""` | 有効化する shell ツール名のカンマ区切り。空文字のままなら shell ツールは無効（デフォルト・完全 opt-in）。 |
@@ -395,6 +408,44 @@ uv run agents-cli info --agent-type microsoft-agent-framework
 uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Say hi"
 # 画像生成パス:
 uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Draw a red fox in watercolor style"
+```
+
+### `foundry-agent-service`
+
+`AZURE_AI_PROJECT_ENDPOINT` と `az login` が必要です。初回起動時に
+`project.agents.create_version()` を呼び出すため、サインインした
+プリンシパルに Foundry プロジェクト上で **Azure AI Developer** ロールが
+必要です。
+
+```bash
+uv run agents-cli info --agent-type foundry-agent-service
+uv run agents-cli invoke --agent-type foundry-agent-service --message "フランスの面積を平方マイルで教えて"
+```
+
+正常時のレスポンスには、Foundry 側エージェントの返答とともに
+実際に使われた model / agent_name が入ります。
+
+```json
+{
+  "status": "succeeded",
+  "result": {
+    "message": "フランスの面積を平方マイルで教えて",
+    "reply": "France is approximately 248,573 square miles.",
+    "model": "gpt-5",
+    "agent_name": "concierge-foundry-agent"
+  },
+  "error": null
+}
+```
+
+初回呼び出しは `create_version` を伴う 1 ラウンドトリップが発生し、
+2 回目以降は同一プロセス内で同じエージェントを再利用します（内部
+ロックでキャッシュ）。agents-cli を介さずに同じコードパスを踏む
+ための小さなプローブスクリプトも用意されています:
+
+```bash
+uv run python -m scripts.microsoft_foundry.prompt_agent invoke \
+  --message "フランスの面積を平方マイルで教えて"
 ```
 
 ### `image generate` (LLM 経由なしの直接実行)

@@ -50,6 +50,9 @@ class AgentsSettings(BaseSettings):
         "and use `shell_exec` only when command execution is required. "
         "Return the tool result as your final answer in one sentence."
     )
+    foundry_agent_service_model: str = "gpt-5"
+    foundry_agent_service_system_prompt: str = "You are a helpful assistant."
+    foundry_agent_service_agent_name: str = "concierge-foundry-agent"
     file_root_dir: str = ""
     file_tools_enabled: str = "read_file,list_directory,file_search"
     shell_tools_enabled: str = ""

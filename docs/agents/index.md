@@ -18,12 +18,14 @@ flowchart LR
     Registry --> LG["LangGraphAgent\n(langgraph)"]
     Registry --> GCE[GitHubCopilotSdkAgent]
     Registry --> MAF["MicrosoftAgentFrameworkAgent\n(microsoft-agent-framework)"]
+    Registry --> FAS["FoundryAgentServiceAgent\n(foundry-agent-service)"]
     subgraph agents["concierge/agents (shared kernel)"]
         Registry
         Echo
         LG
         GCE
         MAF
+        FAS
     end
 ```
 
@@ -42,6 +44,7 @@ concierge/agents/
     github_copilot_sdk_agent.py           # GitHubCopilotSdkAgent
     langgraph_agent.py                     # LangGraphAgent (configurable; tools supplied per preset)
     microsoft_agent_framework_agent.py     # MicrosoftAgentFrameworkAgent (configurable)
+    foundry_agent_service_agent.py         # FoundryAgentServiceAgent (Azure AI Foundry Prompt Agent)
     tools/
       echo_tool.py             # build_echo_langchain_tool / build_echo_maf_tool
       file_management.py       # sandboxed file operation core (path validation + io)
@@ -105,12 +108,20 @@ agent = registry.resolve("my-agent")
 | `langgraph` | `LangGraphAgent` | LangGraph (`create_agent`) preset wired with `echo`, `generate_image_tool`, shared sandboxed file-management tools (`read_file`, `list_directory`, `file_search` by default), and optional allowlisted shell tool (`shell_exec`). The LLM picks the appropriate tool based on user input. |
 | `github-copilot-sdk` | `GitHubCopilotSdkAgent` | Opens a GitHub Copilot SDK session per request, `send`s the user message, and returns the assistant reply. |
 | `microsoft-agent-framework` | `MicrosoftAgentFrameworkAgent` | Microsoft Agent Framework preset wired with `echo`, `generate_image_tool`, shared sandboxed file-management tools (`read_file`, `list_directory`, `file_search` by default), and optional allowlisted shell tool (`shell_exec`). The LLM picks the appropriate tool based on user input. |
+| `foundry-agent-service` | `FoundryAgentServiceAgent` | Azure AI Foundry **Prompt Agent** (server-side hosted agent). Creates a named `PromptAgentDefinition` on the Foundry project on first invocation, then drives it through `openai.responses.create()` with an `agent_reference`. No client-side tools are wired — tools/knowledge are configured on the Foundry agent itself. |
 
 The two framework-backed agents (`langgraph` /
 `microsoft-agent-framework`) are *generic*: they are each registered once
 with the full set of tool builders, and the LLM picks the right tool for
 each request. Adding a new tool means adding another builder to the
 lists in `registry_factory.py` — no new `agent_type` is required.
+
+`foundry-agent-service` is **server-side**: the prompt and the tool list
+live inside the Foundry project, not in this codebase. Use this agent
+when you want Foundry to own the agent definition (versioning,
+evaluations, observability hooks, ...). Use `microsoft-agent-framework`
+when you want a client-side Agent Framework SDK agent backed by
+`FoundryChatClient` chat completions instead.
 
 ## Configuration
 
@@ -124,6 +135,9 @@ Agent settings are read from environment variables with the **`AGENTS_`** prefix
 | `AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT` | *(built-in)* | System prompt for `github-copilot-sdk` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Default: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | Model string passed to `FoundryChatClient(model=...)` for `microsoft-agent-framework`. |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | *(built-in)* | System prompt passed as `Agent(instructions=...)` for `microsoft-agent-framework`. Defaults instruct the LLM to pick between the `echo` and `generate_image_tool` tools based on the user request. |
+| `AGENTS_FOUNDRY_AGENT_SERVICE_MODEL` | `gpt-5` | Foundry deployment name used as `PromptAgentDefinition.model` for the `foundry-agent-service` agent. |
+| `AGENTS_FOUNDRY_AGENT_SERVICE_SYSTEM_PROMPT` | `You are a helpful assistant.` | Instructions persisted on the Foundry-side `PromptAgentDefinition`. Updated on the next call when changed (a new agent version is created). |
+| `AGENTS_FOUNDRY_AGENT_SERVICE_AGENT_NAME` | `concierge-foundry-agent` | Name of the Foundry-side Prompt Agent. Reuse the same name across runs to reuse the existing agent record; use a different name for isolation between environments. |
 | `AGENTS_FILE_ROOT_DIR` | `""` (`<cwd>/workspace`) | Sandbox root for file-management tools. Relative paths are resolved from current working directory; root is auto-created at startup. |
 | `AGENTS_FILE_TOOLS_ENABLED` | `read_file,list_directory,file_search` | Comma-separated enabled file tools. Set `""` to disable all file tools; write tools (`write_file`,`copy_file`,`move_file`,`delete_file`) require explicit opt-in. |
 | `AGENTS_SHELL_TOOLS_ENABLED` | `""` | Comma-separated enabled shell tools. Keep empty to disable shell tools (default, fully opt-in). |
@@ -433,6 +447,44 @@ uv run agents-cli info --agent-type microsoft-agent-framework
 uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Say hi"
 # Image-generation path:
 uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Draw a red fox in watercolor style"
+```
+
+### `foundry-agent-service`
+
+Requires `AZURE_AI_PROJECT_ENDPOINT` plus `az login`. The signed-in
+principal must hold the **Azure AI Developer** role on the Foundry
+project (the agent calls `project.agents.create_version()` on first
+invocation).
+
+```bash
+uv run agents-cli info --agent-type foundry-agent-service
+uv run agents-cli invoke --agent-type foundry-agent-service --message "What is the size of France in square miles?"
+```
+
+A successful response surfaces the Foundry agent reply along with the
+model and agent name actually used on the Foundry side:
+
+```json
+{
+  "status": "succeeded",
+  "result": {
+    "message": "What is the size of France in square miles?",
+    "reply": "France is approximately 248,573 square miles.",
+    "model": "gpt-5",
+    "agent_name": "concierge-foundry-agent"
+  },
+  "error": null
+}
+```
+
+The first invocation incurs a `create_version` round-trip; subsequent
+calls within the same process reuse the agent (cached behind an internal
+lock). To exercise the same code path without the agents CLI, use the
+dedicated probe script:
+
+```bash
+uv run python -m scripts.microsoft_foundry.prompt_agent invoke \
+  --message "What is the size of France in square miles?"
 ```
 
 ### `image generate` (direct, no LLM mediation)

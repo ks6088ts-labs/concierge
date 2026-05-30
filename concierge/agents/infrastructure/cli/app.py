@@ -301,6 +301,13 @@ def agent_info(
             "image_n": agents_settings.image_n,
             "image_api_version": agents_settings.image_api_version,
         }
+    if agent_type == AgentType.FOUNDRY_AGENT_SERVICE:
+        agents_settings = get_agents_settings()
+        info["settings"] = {
+            "foundry_agent_service_model": agents_settings.foundry_agent_service_model,
+            "foundry_agent_service_system_prompt": agents_settings.foundry_agent_service_system_prompt,
+            "foundry_agent_service_agent_name": agents_settings.foundry_agent_service_agent_name,
+        }
 
     _print_json(info)
 

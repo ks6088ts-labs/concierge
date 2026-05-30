@@ -98,6 +98,15 @@ flowchart LR
     を読みます。LangChain 実行を Azure Monitor に送り、ローカル MLflow
     UI で閲覧する方法をスクリーンショット付きで紹介しています。
 
+=== "VS Code Copilot 自体を可視化したい"
+
+    [VS Code Copilot を Application Insights で可視化する](tutorial/appendix-monitor-vscode-copilot.md)
+    を読みます。同梱の OTel Collector が Copilot Chat のオペレーション数 /
+    トークン / ツール呼び出し / モデル別レイテンシを Azure Application
+    Insights に転送し、ポータルや
+    [aka.ms/amg/dash/gh-copilot](https://aka.ms/amg/dash/gh-copilot)
+    のプリビルド Grafana ダッシュボードからクエリできます。
+
 === "永続ベクトルストアを使いたい"
 
     [ステップ 3 - PostgreSQL (pgvector) CRUD](tutorial/03-postgres-vector-store.md)

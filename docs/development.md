@@ -66,6 +66,19 @@ Start a local MLflow UI in a separate terminal when using `--mlflow`.
 make mlflow
 ```
 
+Forward VS Code GitHub Copilot Chat OpenTelemetry signals to Azure
+Application Insights via the bundled OTel collector (opt-in; requires
+`APPLICATIONINSIGHTS_CONNECTION_STRING` in `.env`):
+
+```bash
+make copilot-otel-up    # start the docker-compose otel-collector service
+make copilot-otel-logs  # tail collector logs
+make copilot-otel-down  # stop the collector
+```
+
+Full setup (VS Code `settings.json`, KQL verification, troubleshooting) is in
+[Monitor VS Code Copilot via App Insights](tutorial/appendix-monitor-vscode-copilot.md).
+
 ## Development Commands
 
 Use Makefile targets for common operations.

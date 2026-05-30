@@ -12,6 +12,15 @@ same Typer CLI:
 
 Both toggles are mutually independent and can be combined.
 
+!!! info "Observing VS Code GitHub Copilot itself"
+    This step targets observability of the **concierge application**
+    (LangChain / LangGraph / MAF / Copilot SDK code paths). To monitor
+    the **VS Code Copilot Chat extension** in the editor (Copilot
+    operations, tokens, tool calls, per-model TTFT) via an OTel
+    collector and Azure Application Insights, see
+    [Monitor VS Code Copilot via App Insights](appendix-monitor-vscode-copilot.md).
+    The two pipelines are independent and can run in parallel.
+
 !!! info "Microsoft Agent Framework support"
     MLflow does not provide a dedicated ``mlflow.<flavour>.autolog()`` for
     Microsoft Agent Framework. Instead, MAF spans are forwarded to the

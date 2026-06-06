@@ -565,6 +565,32 @@ All realtime settings use the `CHAT_` prefix (full schema in
 | `CHAT_REALTIME_AUDIO_SAMPLE_RATE_HZ` | `24000` | PCM16 sample rate (Foundry fixed value) |
 | `CHAT_REALTIME_MAX_SESSION_SECONDS` | `600` | Server-side session timeout in seconds |
 | `CHAT_REALTIME_TRANSCRIPTION_MODEL` | `""` | Azure deployment name for input-audio transcription. When empty the `transcription` block is omitted from `session.update`. |
+| `CHAT_REALTIME_TURN_DETECTION_TYPE` | `server_vad` | How the model decides the user finished a turn: `server_vad` (silence-based), `semantic_vad` (decides from sentence meaning; much less likely to interrupt), or `none` (push-to-talk; client commits the buffer and sends `response.create`). |
+| `CHAT_REALTIME_VAD_THRESHOLD` | `0.5` | `server_vad` activation threshold (0.0-1.0). Higher needs louder speech, better in noisy rooms. |
+| `CHAT_REALTIME_VAD_PREFIX_PADDING_MS` | `300` | `server_vad` audio (ms) retained before detected speech start. |
+| `CHAT_REALTIME_VAD_SILENCE_DURATION_MS` | `700` | `server_vad` silence (ms) required before the turn ends. Raised above the API default so brief pauses don't trigger a reply; increase further if the model still cuts in. |
+| `CHAT_REALTIME_VAD_EAGERNESS` | `low` | `semantic_vad` eagerness: `low` / `medium` / `high` / `auto`. `low` lets the user finish before the model responds. |
+| `CHAT_REALTIME_VAD_CREATE_RESPONSE` | `true` | Auto-generate a response when a turn ends. `false` requires an explicit `response.create`. |
+| `CHAT_REALTIME_VAD_INTERRUPT_RESPONSE` | `true` | Whether new user speech interrupts (barges in on) an in-progress response. |
+
+#### Stopping the AI from interrupting you { #realtime-turn-detection-tuning }
+
+If the assistant starts talking the moment you pause — before you've finished
+your thought — the turn-detection (VAD) settings above are the fix. The model
+is taking its turn too eagerly. Two recommended approaches:
+
+- **Semantic VAD (recommended).** Set `CHAT_REALTIME_TURN_DETECTION_TYPE=semantic_vad`
+  and `CHAT_REALTIME_VAD_EAGERNESS=low`. The model decides you've finished based
+  on sentence meaning rather than raw silence, so mid-sentence pauses no longer
+  trigger a response.
+- **Tune server VAD.** Keep `server_vad` and raise
+  `CHAT_REALTIME_VAD_SILENCE_DURATION_MS` (e.g. `1000`-`1200`) so a longer pause
+  is required before the model replies. Raise `CHAT_REALTIME_VAD_THRESHOLD`
+  (e.g. `0.6`) if background noise is triggering false speech detection.
+
+For full manual control (push-to-talk), set
+`CHAT_REALTIME_TURN_DETECTION_TYPE=none`; the client must then send
+`input_audio_buffer.commit` and `response.create` itself.
 
 ### Tool calling (function calling) { #realtime-tool-calling }
 

@@ -498,6 +498,31 @@ uv run chat-web
 | `CHAT_REALTIME_AUDIO_SAMPLE_RATE_HZ` | `24000` | PCM16 サンプルレート（Foundry 固定値） |
 | `CHAT_REALTIME_MAX_SESSION_SECONDS` | `600` | サーバ側セッションタイムアウト（秒） |
 | `CHAT_REALTIME_TRANSCRIPTION_MODEL` | `""` | 入力音声の transcription 用 Azure デプロイ名。空のとき `session.update` に `transcription` ブロックを含めません。 |
+| `CHAT_REALTIME_TURN_DETECTION_TYPE` | `server_vad` | ユーザーの発話終了をどう判定するか：`server_vad`（無音ベース）/ `semantic_vad`（文の意味から判定。割り込みが大幅に減る）/ `none`（push-to-talk。クライアントが自分でバッファを commit し `response.create` を送る）。 |
+| `CHAT_REALTIME_VAD_THRESHOLD` | `0.5` | `server_vad` の発話検出しきい値（0.0-1.0）。高いほど大きな声が必要で、雑音の多い環境に有効。 |
+| `CHAT_REALTIME_VAD_PREFIX_PADDING_MS` | `300` | `server_vad` で検出した発話開始の手前に残す音声（ミリ秒）。 |
+| `CHAT_REALTIME_VAD_SILENCE_DURATION_MS` | `700` | `server_vad` でターン終了とみなすまでに必要な無音（ミリ秒）。API デフォルトより長くして、ちょっとした間で割り込まれないようにしています。まだ割り込む場合はさらに増やします。 |
+| `CHAT_REALTIME_VAD_EAGERNESS` | `low` | `semantic_vad` の積極度：`low` / `medium` / `high` / `auto`。`low` はユーザーが話し終えるのを待ちます。 |
+| `CHAT_REALTIME_VAD_CREATE_RESPONSE` | `true` | ターン終了時に応答を自動生成するか。`false` なら明示的な `response.create` が必要。 |
+| `CHAT_REALTIME_VAD_INTERRUPT_RESPONSE` | `true` | 新しいユーザー発話が応答中のAIに割り込む（バージイン）かどうか。 |
+
+#### AI が話に割り込んでくるのを抑える { #realtime-turn-detection-tuning }
+
+少し間を置いただけ、話し終える前に AI が話し始めてしまう場合は、上記の
+ターン検出（VAD）設定で調整できます。原因はモデルが積極的にターンを取りすぎて
+いることです。おすすめは次の 2 つです。
+
+- **Semantic VAD（推奨）。** `CHAT_REALTIME_TURN_DETECTION_TYPE=semantic_vad` と
+  `CHAT_REALTIME_VAD_EAGERNESS=low` を設定します。無音ではなく文の意味で発話終了を
+  判定するため、文中の小さな間で応答が始まらなくなります。
+- **Server VAD を調整。** `server_vad` のまま
+  `CHAT_REALTIME_VAD_SILENCE_DURATION_MS` を大きく（例：`1000`〜`1200`）して、
+  応答までに必要な無音を長くします。雑音で誤検出する場合は
+  `CHAT_REALTIME_VAD_THRESHOLD` を上げます（例：`0.6`）。
+
+完全な手動制御（push-to-talk）にするには
+`CHAT_REALTIME_TURN_DETECTION_TYPE=none` を設定します。その場合クライアントが
+`input_audio_buffer.commit` と `response.create` を自分で送る必要があります。
 
 ### ツール呼び出し（function calling） { #realtime-tool-calling }
 

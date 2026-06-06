@@ -50,6 +50,38 @@ class ChatSettings(BaseSettings):
     # ``gpt-4o-mini-transcribe`` does not correspond to an Azure deployment in
     # most resources, so leaving this empty avoids silent failures.
     realtime_transcription_model: str = ""
+
+    # --- Realtime turn detection (VAD) tuning ---
+    # Controls how eagerly the model decides the user has finished speaking and
+    # starts replying. This is the knob to turn when "the AI cuts in as soon as
+    # I pause". Type can be:
+    # - ``server_vad``  : silence-based detection (tune threshold / padding /
+    #                     silence_duration below). Universally supported.
+    # - ``semantic_vad``: the model decides from sentence semantics and is much
+    #                     less likely to interrupt mid-thought. Pair with
+    #                     ``realtime_vad_eagerness`` (use ``low`` to let the user
+    #                     finish). Recommended fix for premature responses.
+    # - ``none``        : push-to-talk; the client must commit the buffer and
+    #                     send ``response.create`` itself (no auto turn-taking).
+    realtime_turn_detection_type: str = "server_vad"
+    # ``server_vad`` activation threshold (0.0-1.0). Higher needs louder speech
+    # to trigger, which helps in noisy rooms.
+    realtime_vad_threshold: float = 0.5
+    # ``server_vad`` audio (ms) retained before detected speech start.
+    realtime_vad_prefix_padding_ms: int = 300
+    # ``server_vad`` silence (ms) required before the turn is considered over.
+    # Raised above the API default (~200-500 ms) so brief thinking pauses no
+    # longer make the model jump in.
+    realtime_vad_silence_duration_ms: int = 700
+    # ``semantic_vad`` eagerness: ``low`` | ``medium`` | ``high`` | ``auto``.
+    # ``low`` lets the user take their time before the model responds.
+    realtime_vad_eagerness: str = "low"
+    # Whether the model auto-generates a response when a turn ends. Set to
+    # ``False`` to require an explicit ``response.create`` (server-side
+    # moderation / manual gating). Applies to ``server_vad`` and ``semantic_vad``.
+    realtime_vad_create_response: bool = True
+    # Whether new user speech interrupts (barges in on) an in-progress response.
+    realtime_vad_interrupt_response: bool = True
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

@@ -139,4 +139,11 @@ def create_realtime_responder() -> RealtimeVoiceResponder:
         system_prompt=settings.realtime_system_prompt,
         transcription_model=settings.realtime_transcription_model,
         tools=build_default_realtime_tools(),
+        turn_detection_type=settings.realtime_turn_detection_type,
+        vad_threshold=settings.realtime_vad_threshold,
+        vad_prefix_padding_ms=settings.realtime_vad_prefix_padding_ms,
+        vad_silence_duration_ms=settings.realtime_vad_silence_duration_ms,
+        vad_eagerness=settings.realtime_vad_eagerness,
+        vad_create_response=settings.realtime_vad_create_response,
+        vad_interrupt_response=settings.realtime_vad_interrupt_response,
     )

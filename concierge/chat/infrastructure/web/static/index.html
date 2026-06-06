@@ -1792,6 +1792,8 @@
         playbackCtx: null,
         playbackQueue: [],
         isPlaying: false,
+        currentSource: null,
+        userSpeaking: false,
         interimText: '',
         endingOnPurpose: false,
       };
@@ -1885,6 +1887,10 @@ registerProcessor('pcm16-processor', PCM16Processor);
       }
 
       function scheduleAudio(b64) {
+        // Drop audio that belongs to a response the user just barged in on.
+        // Between speech_started and speech_stopped any deltas are from the
+        // cancelled response, so playing them would talk over the user.
+        if (call.userSpeaking) return;
         ensurePlaybackCtx();
         const raw = atob(b64);
         const buf = new Int16Array(raw.length / 2);
@@ -1900,7 +1906,7 @@ registerProcessor('pcm16-processor', PCM16Processor);
       }
 
       function drainAudioQueue() {
-        if (!call.playbackQueue.length) { call.isPlaying = false; return; }
+        if (!call.playbackQueue.length) { call.isPlaying = false; call.currentSource = null; return; }
         call.isPlaying = true;
         const buf = call.playbackQueue.shift();
         const src = call.playbackCtx.createBufferSource();
@@ -1908,6 +1914,21 @@ registerProcessor('pcm16-processor', PCM16Processor);
         src.connect(call.playbackCtx.destination);
         src.onended = drainAudioQueue;
         src.start();
+        call.currentSource = src;
+      }
+
+      // Immediately silence the assistant: drop buffered audio and stop the
+      // node that is currently playing. Used for barge-in (user interruption).
+      function stopPlayback() {
+        call.playbackQueue = [];
+        if (call.currentSource) {
+          // Detach onended first so stopping doesn't re-enter drainAudioQueue.
+          try { call.currentSource.onended = null; } catch (_) { /* noop */ }
+          try { call.currentSource.stop(); } catch (_) { /* already stopped */ }
+          try { call.currentSource.disconnect(); } catch (_) { /* noop */ }
+          call.currentSource = null;
+        }
+        call.isPlaying = false;
       }
 
       async function startMic() {
@@ -1946,9 +1967,9 @@ registerProcessor('pcm16-processor', PCM16Processor);
 
       function cleanupCall() {
         stopMic();
+        stopPlayback();
         call.ws = null;
-        call.playbackQueue = [];
-        call.isPlaying = false;
+        call.userSpeaking = false;
         call.endingOnPurpose = false;
         clearInterim();
       }
@@ -2081,6 +2102,17 @@ registerProcessor('pcm16-processor', PCM16Processor);
           const evType = payload.type || '';
           if (evType === 'response.output_audio.delta' && payload.delta) {
             scheduleAudio(payload.delta);
+          } else if (evType === 'input_audio_buffer.speech_started') {
+            // Barge-in: the user started talking. Silence the assistant right
+            // away so the conversation feels interruptible. The server also
+            // cancels its in-progress response when interrupt_response is on,
+            // but the client must flush its own buffered audio regardless.
+            call.userSpeaking = true;
+            stopPlayback();
+            clearInterim();
+          } else if (evType === 'input_audio_buffer.speech_stopped') {
+            // User finished; allow the next response's audio to play again.
+            call.userSpeaking = false;
           } else if (evType === 'response.output_audio_transcript.delta' && payload.delta) {
             call.interimText += payload.delta;
             setInterim(call.interimText);

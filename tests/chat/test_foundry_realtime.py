@@ -110,6 +110,7 @@ def test_semantic_vad_uses_eagerness_and_omits_silence_params() -> None:
         "create_response": False,
         "interrupt_response": False,
     }
+    assert td is not None
     assert "silence_duration_ms" not in td
     assert "threshold" not in td
 

@@ -9,6 +9,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Response, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import StreamingResponse
 
+from concierge.chat.application.realtime_tools import build_default_realtime_tools
 from concierge.chat.application.repositories import ConversationRepository, MessageRepository
 from concierge.chat.application.responders import ChatbotResponder, RealtimeVoiceResponder
 from concierge.chat.application.use_cases import (
@@ -325,6 +326,7 @@ async def realtime_voice(
         bot_participant=bot_participant,
         current_participant=current_participant,
         history_limit=chat_settings.bot_history_limit,
+        tools=build_default_realtime_tools(),
     )
 
     try:

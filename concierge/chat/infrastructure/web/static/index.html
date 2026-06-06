@@ -2086,6 +2086,21 @@ registerProcessor('pcm16-processor', PCM16Processor);
             setInterim(call.interimText);
           } else if (evType === 'response.output_audio_transcript.done') {
             clearInterim();
+          } else if (evType === 'response.output_item.done') {
+            // The model requested a function (tool) call. Surface it in the UI.
+            const item = payload.item || {};
+            if (item.type === 'function_call') {
+              let argSummary = '';
+              try {
+                const args = item.arguments ? JSON.parse(item.arguments) : {};
+                const keys = Object.keys(args);
+                if (keys.length) {
+                  argSummary = ` (${keys.map((k) => `${k}=${args[k]}`).join(', ')})`;
+                }
+              } catch (_) { /* arguments not valid JSON; ignore */ }
+              console.info('[realtime] tool call', item.name, item.arguments);
+              toast(`🔧 ツール呼び出し: ${item.name || '(unknown)'}${argSummary}`, 'info');
+            }
           }
         }
       }

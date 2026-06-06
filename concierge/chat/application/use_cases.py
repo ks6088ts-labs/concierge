@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 import logging
 import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime
 
+from concierge.chat.application.realtime_tools import RealtimeTool
 from concierge.chat.application.repositories import ConversationRepository, MessageRepository
 from concierge.chat.application.responders import ChatbotResponder, RealtimeVoiceResponder
 from concierge.chat.domain.entities import Conversation, Message
@@ -200,6 +202,7 @@ class StreamRealtimeVoiceUseCase:
         bot_participant: Participant,
         current_participant: Participant,
         history_limit: int = 20,
+        tools: list[RealtimeTool] | None = None,
     ):
         self.conversation_repository = conversation_repository
         self.message_repository = message_repository
@@ -207,6 +210,7 @@ class StreamRealtimeVoiceUseCase:
         self.bot_participant = bot_participant
         self.current_participant = current_participant
         self.history_limit = history_limit
+        self._tools = {tool.name: tool for tool in tools or []}
 
     def execute(self, conversation_id: uuid.UUID) -> Iterator[RealtimeEvent]:
         conversation = self.conversation_repository.find_by_id(conversation_id)
@@ -258,6 +262,15 @@ class StreamRealtimeVoiceUseCase:
                         logger.info("Persisted AGENT transcript id=%s", saved.id)
                         yield RealtimeMessagePersisted(message=saved)
 
+                # Execute a tool the model asked for, then let it continue.
+                # Foundry surfaces a completed ``function_call`` item via
+                # ``response.output_item.done`` (containing name, call_id and the
+                # full arguments JSON).
+                elif event_type == "response.output_item.done":
+                    item = server_event.get("item") or {}
+                    if self._tools and item.get("type") == "function_call":
+                        self._handle_function_call(session, item)
+
                 # Always relay the raw server event to the browser
                 yield RealtimeServerEvent(payload=server_event)
         except Exception as exc:  # noqa: BLE001
@@ -265,6 +278,53 @@ class StreamRealtimeVoiceUseCase:
             yield RealtimeError(detail=str(exc))
         finally:
             session.close()
+
+    def _handle_function_call(self, session, item: dict) -> None:  # type: ignore[type-arg]
+        """Run a model-requested tool and feed the result back to the session."""
+        name = item.get("name", "")
+        call_id = item.get("call_id", "")
+        raw_args = item.get("arguments") or "{}"
+        try:
+            arguments = json.loads(raw_args) if isinstance(raw_args, str) else dict(raw_args)
+        except (json.JSONDecodeError, TypeError):
+            arguments = {}
+
+        logger.info(
+            "Realtime tool call requested name=%s call_id=%s arguments=%s",
+            name,
+            call_id,
+            arguments,
+        )
+
+        tool = self._tools.get(name)
+        if tool is None:
+            logger.warning("Realtime tool call for unknown tool name=%s call_id=%s", name, call_id)
+            output = json.dumps({"error": f"unknown tool: {name!r}"})
+        else:
+            try:
+                output = tool.handler(arguments)
+                logger.info(
+                    "Realtime tool call succeeded name=%s call_id=%s output=%s",
+                    name,
+                    call_id,
+                    output,
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.exception("Realtime tool call failed name=%s call_id=%s", name, call_id)
+                output = json.dumps({"error": str(exc)})
+
+        session.send_client_event(
+            {
+                "type": "conversation.item.create",
+                "item": {
+                    "type": "function_call_output",
+                    "call_id": call_id,
+                    "output": output,
+                },
+            }
+        )
+        # Ask the model to continue now that the tool result is in context.
+        session.send_client_event({"type": "response.create"})
 
 
 # ---------------------------------------------------------------------------

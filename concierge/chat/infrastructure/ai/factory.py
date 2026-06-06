@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import warnings
 
+from concierge.chat.application.realtime_tools import build_default_realtime_tools
 from concierge.chat.application.responders import ChatbotResponder, RealtimeVoiceResponder
 from concierge.chat.infrastructure.ai.exceptions import ChatbotNotConfiguredError
 from concierge.chat.infrastructure.ai.foundry_realtime import FoundryRealtimeResponder
@@ -137,4 +138,5 @@ def create_realtime_responder() -> RealtimeVoiceResponder:
         locale=settings.realtime_locale,
         system_prompt=settings.realtime_system_prompt,
         transcription_model=settings.realtime_transcription_model,
+        tools=build_default_realtime_tools(),
     )

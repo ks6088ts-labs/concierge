@@ -566,6 +566,94 @@ All realtime settings use the `CHAT_` prefix (full schema in
 | `CHAT_REALTIME_MAX_SESSION_SECONDS` | `600` | Server-side session timeout in seconds |
 | `CHAT_REALTIME_TRANSCRIPTION_MODEL` | `""` | Azure deployment name for input-audio transcription. When empty the `transcription` block is omitted from `session.update`. |
 
+### Tool calling (function calling) { #realtime-tool-calling }
+
+The realtime session is wired as a tool-using AI agent: the model can call
+server-side Python functions mid-conversation and continue speaking with the
+result in context. This follows the
+[OpenAI Realtime function-calling contract](https://learn.microsoft.com/en-us/azure/ai-foundry/openai/realtime-audio-reference)
+(also used by Foundry's GA endpoint):
+
+1. `session.update` advertises the available tools under `session.tools`
+   (`tool_choice: "auto"`).
+2. When the model decides to call a tool it emits a `function_call` item,
+   surfaced as a `response.output_item.done` server event.
+3. The server runs the tool locally and replies with a
+   `conversation.item.create` event carrying a `function_call_output` item.
+4. A `response.create` event asks the model to continue with the tool result.
+
+All of this happens server-side inside `StreamRealtimeVoiceUseCase`; the
+browser only hears the spoken answer (no front-end changes are required).
+
+#### Built-in tools
+
+| Tool | Description |
+|---|---|
+| `get_current_time` | Returns the current date/time, optionally for a given IANA timezone (e.g. `Asia/Tokyo`). |
+
+#### Adding a new tool
+
+Tools live in a single registry,
+[`concierge/chat/application/realtime_tools.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/chat/application/realtime_tools.py).
+Each tool bundles its JSON schema and its Python handler in one `RealtimeTool`,
+so the responder (which needs the schema) and the use case (which runs the
+handler) share a single source of truth. To add a capability, append a new
+entry to `build_default_realtime_tools()`:
+
+```python
+from concierge.chat.application.realtime_tools import RealtimeTool
+
+RealtimeTool(
+    name="get_weather",
+    description="Get the current weather for a city. Use when the user asks about weather.",
+    parameters={
+        "type": "object",
+        "properties": {
+            "city": {"type": "string", "description": "City name, e.g. 'Tokyo'."},
+        },
+        "required": ["city"],
+    },
+    handler=lambda args: fetch_weather(args["city"]),  # returns a str (JSON recommended)
+)
+```
+
+Guidelines:
+
+- The `handler` signature is `dict -> str`. Return a JSON string when possible;
+  the value is sent back to the model verbatim as `function_call_output`.
+- Keep handlers fast and synchronous — they run on the relay thread between
+  audio turns. Offload slow I/O or wrap it with a short timeout.
+- Handler exceptions are caught and returned to the model as
+  `{"error": "..."}`, so a failing tool degrades gracefully instead of
+  dropping the call.
+- No env var or restart wiring is needed beyond editing the registry:
+  `create_realtime_responder()` and the WebSocket route both pull from
+  `build_default_realtime_tools()` automatically.
+
+#### Minimal end-to-end check
+
+```bash
+# 1. Configure + verify the realtime endpoint (see Quick start above).
+uv run chat-cli realtime status   # → ステータス: ✅ 設定済み
+
+# 2. Start the server and open http://localhost:8080/.
+uv run chat-web
+
+# 3. Start a call and ask a question that triggers a tool, e.g.
+#    「今何時?」(What time is it?) → the model calls get_current_time and
+#    answers with the real time. Server logs show:
+#       INFO Executed realtime tool name=get_current_time call_id=...
+```
+
+Unit tests for the flow (tool execution, unknown-tool error output, and the
+no-tools fall-through) live in
+[`tests/chat/test_realtime_use_case.py`](https://github.com/ks6088ts-labs/concierge/blob/main/tests/chat/test_realtime_use_case.py)
+and run without any live Foundry call:
+
+```bash
+uv run pytest tests/chat/test_realtime_use_case.py -o addopts=""
+```
+
 ### Where to look next
 
 - WebSocket wire protocol (events, close codes) → [REST API Reference → Realtime voice WebSocket](api.md#realtime-voice-websocket).

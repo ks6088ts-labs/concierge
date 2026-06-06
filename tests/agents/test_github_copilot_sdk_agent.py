@@ -364,19 +364,11 @@ def test_build_client_with_telemetry_passes_subprocess_config(monkeypatch) -> No
     }
     sentinel = object()
 
-    def _fake_subprocess_config(*, telemetry: TelemetryConfig) -> dict[str, Any]:
-        captured["telemetry"] = telemetry
-        return {"telemetry": telemetry}
-
     def _fake_copilot_client(*args: Any, **kwargs: Any) -> object:
         captured["args"] = args
         captured["kwargs"] = kwargs
         return sentinel
 
-    monkeypatch.setattr(
-        "concierge.agents.infrastructure.github_copilot_sdk_agent.SubprocessConfig",
-        _fake_subprocess_config,
-    )
     monkeypatch.setattr(
         "concierge.agents.infrastructure.github_copilot_sdk_agent.CopilotClient",
         _fake_copilot_client,
@@ -391,6 +383,5 @@ def test_build_client_with_telemetry_passes_subprocess_config(monkeypatch) -> No
     built = agent._build_client()
 
     assert built is sentinel
-    assert captured["telemetry"] == telemetry
     assert captured["args"] == ()
-    assert captured["kwargs"] == {"config": {"telemetry": telemetry}}
+    assert captured["kwargs"] == {"telemetry": telemetry}

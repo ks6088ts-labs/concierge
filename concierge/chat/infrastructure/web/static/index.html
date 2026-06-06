@@ -367,6 +367,144 @@
       }
       button.call-btn[hidden] { display: none; }
 
+      /* Camera button in the chat header (visible only during an active call). */
+      button.camera-btn {
+        border-color: var(--agent);
+        color: var(--agent);
+        background: var(--agent-soft);
+      }
+      button.camera-btn:hover:not(:disabled) {
+        background: #ede9fe;
+        border-color: var(--agent);
+      }
+      button.camera-btn[hidden] { display: none; }
+
+      /* ---------- Camera capture overlay (realtime image input) ---------- */
+      .camera-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1200;
+        background: #000;
+        display: flex;
+        flex-direction: column;
+        /* Respect notches / home indicators on phones. */
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      }
+      .camera-overlay[hidden] { display: none; }
+      .camera-stage {
+        position: relative;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        background: #000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .camera-video,
+      .camera-preview {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background: #000;
+      }
+      .camera-preview[hidden] { display: none; }
+      .camera-hint {
+        position: absolute;
+        top: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: 90%;
+        text-align: center;
+        color: #fff;
+        font-size: 0.8rem;
+        background: rgba(0, 0, 0, 0.45);
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        pointer-events: none;
+      }
+      .camera-controls {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1.1rem 1.5rem calc(1.1rem + env(safe-area-inset-bottom));
+        background: #000;
+      }
+      .camera-confirm { justify-content: center; gap: 0.75rem; }
+      .camera-confirm[hidden] { display: none; }
+      .camera-ctrl-btn {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0.55rem 1rem;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+        font-size: 0.95rem;
+        cursor: pointer;
+      }
+      .camera-ctrl-btn:hover { background: rgba(255, 255, 255, 0.22); }
+      .camera-ctrl-secondary { flex: 0 0 auto; }
+      .camera-ctrl-primary {
+        background: var(--primary);
+        border-color: var(--primary);
+        font-weight: 600;
+      }
+      .camera-ctrl-primary:hover { background: var(--primary-strong, #1d4ed8); }
+      .camera-shutter {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        border: 4px solid rgba(255, 255, 255, 0.85);
+        background: transparent;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+      }
+      .camera-shutter:active { transform: scale(0.94); }
+      .camera-shutter-ring {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: #fff;
+        transition: background 0.15s ease;
+      }
+      .camera-shutter:disabled { opacity: 0.5; cursor: default; }
+
+      /* Shared-image message bubble (locally rendered camera captures). */
+      .message.image-message .content { padding: 0; }
+      .message .shared-image {
+        display: block;
+        max-width: 240px;
+        max-height: 240px;
+        width: auto;
+        height: auto;
+        border-radius: 10px;
+        cursor: zoom-in;
+      }
+
+      /* Tap-to-enlarge lightbox for shared images. */
+      .image-viewer {
+        position: fixed;
+        inset: 0;
+        z-index: 1300;
+        background: rgba(0, 0, 0, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        cursor: zoom-out;
+      }
+      .image-viewer img {
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: 8px;
+      }
+
       #interim-transcript {
         display: none;
         padding: 0.4rem 1rem;
@@ -745,6 +883,7 @@
               <span class="dot"></span><span class="label"></span>
             </span>
             <button id="call-toggle" class="call-btn" type="button" title="リアルタイム音声通話を開始" aria-label="通話を開始" disabled hidden>🎙 通話開始</button>
+            <button id="camera-toggle" class="icon-btn camera-btn" type="button" title="カメラで画像を共有 (通話中のみ)" aria-label="カメラを開いて画像を共有" hidden>📷</button>
             <button id="reload-messages" class="icon-btn ghost" type="button" title="再読込" aria-label="メッセージを再読込" disabled>⟳</button>
             <button id="delete-conversation" class="ghost-danger" type="button" title="この会話を削除" aria-label="会話を削除" disabled>🗑</button>
           </div>
@@ -862,6 +1001,27 @@
       </div>
     </div>
 
+    <!-- Camera capture overlay (realtime image input) -->
+    <div id="camera-overlay" class="camera-overlay" hidden role="dialog" aria-modal="true" aria-label="カメラ撮影">
+      <div class="camera-stage">
+        <video id="camera-video" class="camera-video" playsinline autoplay muted></video>
+        <img id="camera-preview" class="camera-preview" alt="撮影した画像のプレビュー" hidden />
+        <canvas id="camera-canvas" hidden></canvas>
+        <div id="camera-hint" class="camera-hint">被写体をフレームに収めてシャッターを押してください</div>
+      </div>
+
+      <div id="camera-live-controls" class="camera-controls">
+        <button id="camera-cancel" class="camera-ctrl-btn camera-ctrl-secondary" type="button" aria-label="カメラを閉じる">✕</button>
+        <button id="camera-shutter" class="camera-shutter" type="button" aria-label="撮影"><span class="camera-shutter-ring"></span></button>
+        <button id="camera-flip" class="camera-ctrl-btn camera-ctrl-secondary" type="button" aria-label="前面/背面カメラを切り替え" title="カメラ切替">🔄</button>
+      </div>
+
+      <div id="camera-confirm-controls" class="camera-controls camera-confirm" hidden>
+        <button id="camera-retake" class="camera-ctrl-btn camera-ctrl-secondary" type="button">↩︎ 撮り直し</button>
+        <button id="camera-send" class="camera-ctrl-btn camera-ctrl-primary" type="button">この画像を送信 →</button>
+      </div>
+    </div>
+
     <div id="toasts" class="toast-container" aria-live="polite"></div>
 
     <script>
@@ -881,6 +1041,20 @@
         deleteConversation: document.getElementById('delete-conversation'),
         callToggle: document.getElementById('call-toggle'),
         callStatus: document.getElementById('call-status'),
+        cameraToggle: document.getElementById('camera-toggle'),
+        // Camera overlay (realtime image input)
+        cameraOverlay: document.getElementById('camera-overlay'),
+        cameraVideo: document.getElementById('camera-video'),
+        cameraPreview: document.getElementById('camera-preview'),
+        cameraCanvas: document.getElementById('camera-canvas'),
+        cameraHint: document.getElementById('camera-hint'),
+        cameraLiveControls: document.getElementById('camera-live-controls'),
+        cameraConfirmControls: document.getElementById('camera-confirm-controls'),
+        cameraCancel: document.getElementById('camera-cancel'),
+        cameraShutter: document.getElementById('camera-shutter'),
+        cameraFlip: document.getElementById('camera-flip'),
+        cameraRetake: document.getElementById('camera-retake'),
+        cameraSend: document.getElementById('camera-send'),
         // Messages / composer
         messages: document.getElementById('messages'),
         interimTranscript: document.getElementById('interim-transcript'),
@@ -926,6 +1100,11 @@
         realtimeSupported: false,
         // 'idle' | 'connecting' | 'active'
         callState: 'idle',
+        // Camera images injected into the live realtime session. These are NOT
+        // persisted server-side (see CHAT realtime image input); kept in memory
+        // so they stay visible across in-session message re-renders. Each entry:
+        // { conversationId, dataUrl, createdAt }.
+        localImages: [],
       };
 
       const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -1392,7 +1571,10 @@
 
       function renderMessages(messages) {
         els.messages.innerHTML = '';
-        if (messages.length === 0) {
+        const localImages = state.localImages.filter(
+          (im) => im.conversationId === state.selectedConversationId,
+        );
+        if (messages.length === 0 && localImages.length === 0) {
           const empty = document.createElement('div');
           empty.className = 'messages-empty';
           empty.innerHTML = `
@@ -1404,10 +1586,14 @@
           return;
         }
         const myUserId = els.userId.value.trim();
-        messages
-          .slice()
-          .reverse()
-          .forEach((m) => appendMessage(m, myUserId));
+        // Build one chronological timeline from persisted text messages and the
+        // in-memory camera images so a capture keeps its place when the list is
+        // re-rendered (e.g. after a transcript is persisted mid-call).
+        const timeline = [
+          ...messages.map((m) => ({ at: m.created_at, render: () => appendMessage(m, myUserId) })),
+          ...localImages.map((im) => ({ at: im.createdAt, render: () => appendImageMessage(im) })),
+        ].sort((a, b) => new Date(a.at) - new Date(b.at));
+        timeline.forEach((item) => item.render());
         scrollMessagesToBottom();
       }
 
@@ -1436,6 +1622,40 @@
           });
         }
         els.messages.appendChild(div);
+      }
+
+      // Render a locally-captured camera image as a "mine" bubble. These images
+      // live only in ``state.localImages`` (not persisted server-side), so they
+      // are re-attached on every render and disappear on a full page reload.
+      function appendImageMessage(im) {
+        const div = document.createElement('div');
+        div.className = 'message mine image-message';
+        const who = els.displayName.value.trim() || 'あなた';
+        div.innerHTML = `
+          <div class="meta">
+            <strong>${escapeHtml(who)}</strong>
+            <span title="${escapeHtml(im.createdAt)}">${escapeHtml(formatRelative(im.createdAt))}</span>
+            <span class="chip" style="margin-left:auto;">📷 画像</span>
+          </div>
+          <div class="content"><img class="shared-image" alt="共有した画像" /></div>
+        `;
+        // Assign the (potentially large) data URL via the DOM rather than the
+        // HTML string to avoid running it through escapeHtml.
+        const img = div.querySelector('img.shared-image');
+        img.src = im.dataUrl;
+        img.addEventListener('click', () => openImageViewer(im.dataUrl));
+        els.messages.appendChild(div);
+      }
+
+      function openImageViewer(src) {
+        const overlay = document.createElement('div');
+        overlay.className = 'image-viewer';
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = '共有した画像';
+        overlay.appendChild(img);
+        overlay.addEventListener('click', () => overlay.remove());
+        document.body.appendChild(overlay);
       }
 
       function scrollMessagesToBottom() {
@@ -1835,6 +2055,11 @@ registerProcessor('pcm16-processor', PCM16Processor);
         els.callToggle.title = isActive ? 'リアルタイム音声通話を終了' : 'リアルタイム音声通話を開始';
         els.callToggle.setAttribute('aria-label', isActive ? '通話を終了' : '通話を開始');
         updateCallButton();
+        // The camera (realtime image input) only makes sense while a live
+        // session is open, so it is revealed once the call is fully active and
+        // torn down (closing any open viewfinder) as soon as the call ends.
+        els.cameraToggle.hidden = next !== 'active';
+        if (next !== 'active') closeCamera();
         // While the call is active, text-only controls would race with the
         // realtime pipeline. Disable them to keep one input mode at a time.
         const lockText = isActive;
@@ -2136,6 +2361,165 @@ registerProcessor('pcm16-processor', PCM16Processor);
           }
         }
       }
+
+      // -------- Camera capture (realtime image input) --------
+      // The viewfinder reuses the open realtime call: a captured frame is
+      // downscaled, shown locally, and sent over the same WebSocket as a
+      // ``concierge.image.input`` control message. The server injects it into
+      // the Foundry session as an ``input_image`` conversation item so the model
+      // can ground its next (voice) turn in what the user is showing.
+      const camera = {
+        stream: null,
+        facingMode: 'environment',
+        capturedDataUrl: '',
+        opening: false,
+      };
+
+      function showCameraLiveMode() {
+        els.cameraPreview.hidden = true;
+        els.cameraPreview.removeAttribute('src');
+        els.cameraVideo.hidden = false;
+        els.cameraLiveControls.hidden = false;
+        els.cameraConfirmControls.hidden = true;
+        els.cameraHint.style.display = '';
+        camera.capturedDataUrl = '';
+      }
+
+      function showCameraConfirmMode(dataUrl) {
+        els.cameraPreview.src = dataUrl;
+        els.cameraPreview.hidden = false;
+        els.cameraVideo.hidden = true;
+        els.cameraLiveControls.hidden = true;
+        els.cameraConfirmControls.hidden = false;
+        els.cameraHint.style.display = 'none';
+        camera.capturedDataUrl = dataUrl;
+      }
+
+      async function startCameraStream() {
+        stopCameraStream();
+        const constraints = { video: { facingMode: { ideal: camera.facingMode } }, audio: false };
+        camera.stream = await navigator.mediaDevices.getUserMedia(constraints);
+        els.cameraVideo.srcObject = camera.stream;
+        // ``autoplay`` covers most browsers; call play() for the strict ones.
+        try { await els.cameraVideo.play(); } catch (_) { /* noop */ }
+      }
+
+      function stopCameraStream() {
+        if (camera.stream) {
+          camera.stream.getTracks().forEach((t) => t.stop());
+          camera.stream = null;
+        }
+        els.cameraVideo.srcObject = null;
+      }
+
+      async function openCamera() {
+        if (state.callState !== 'active') {
+          toast('画像の共有は通話中のみ利用できます', 'warning');
+          return;
+        }
+        if (camera.opening || !els.cameraOverlay.hidden) return;
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          toast('このブラウザはカメラに対応していません', 'error');
+          return;
+        }
+        camera.opening = true;
+        try {
+          await startCameraStream();
+          showCameraLiveMode();
+          els.cameraOverlay.hidden = false;
+        } catch (e) {
+          toast(`カメラを開けませんでした: ${e.message}`, 'error');
+          stopCameraStream();
+        } finally {
+          camera.opening = false;
+        }
+      }
+
+      function closeCamera() {
+        // Safe to call unconditionally (setCallState calls it on every
+        // non-active transition, even when the viewfinder was never opened).
+        if (!els.cameraOverlay) return;
+        els.cameraOverlay.hidden = true;
+        stopCameraStream();
+        els.cameraPreview.hidden = true;
+        els.cameraPreview.removeAttribute('src');
+        camera.capturedDataUrl = '';
+      }
+
+      async function flipCamera() {
+        camera.facingMode = camera.facingMode === 'environment' ? 'user' : 'environment';
+        try {
+          await startCameraStream();
+          showCameraLiveMode();
+        } catch (e) {
+          toast(`カメラの切り替えに失敗: ${e.message}`, 'error');
+        }
+      }
+
+      function captureToDataUrl(video, maxDim = 1024, quality = 0.7) {
+        // Downscale to keep the base64 payload small on mobile networks while
+        // preserving enough detail for the model to read text / recognise items.
+        const vw = video.videoWidth || 1280;
+        const vh = video.videoHeight || 720;
+        const scale = Math.min(1, maxDim / Math.max(vw, vh));
+        const cw = Math.max(1, Math.round(vw * scale));
+        const ch = Math.max(1, Math.round(vh * scale));
+        const canvas = els.cameraCanvas;
+        canvas.width = cw;
+        canvas.height = ch;
+        const ctx = canvas.getContext('2d');
+        // Mirror front-camera frames so the saved image matches the preview.
+        if (camera.facingMode === 'user') {
+          ctx.translate(cw, 0);
+          ctx.scale(-1, 1);
+        }
+        ctx.drawImage(video, 0, 0, cw, ch);
+        return canvas.toDataURL('image/jpeg', quality);
+      }
+
+      function captureFrame() {
+        if (!camera.stream) return;
+        // Keep the stream running (hidden) so "撮り直し" is instant.
+        showCameraConfirmMode(captureToDataUrl(els.cameraVideo));
+      }
+
+      function recordLocalImage(dataUrl) {
+        const im = {
+          conversationId: state.selectedConversationId,
+          dataUrl,
+          createdAt: new Date().toISOString(),
+        };
+        state.localImages.push(im);
+        // Bound memory: keep only the most recent captures across the session.
+        if (state.localImages.length > 30) state.localImages.shift();
+        return im;
+      }
+
+      function sendCapturedImage() {
+        const dataUrl = camera.capturedDataUrl;
+        if (!dataUrl) return;
+        if (!call.ws || call.ws.readyState !== WebSocket.OPEN) {
+          toast('通話が接続されていません', 'error');
+          closeCamera();
+          return;
+        }
+        call.ws.send(JSON.stringify({ type: 'concierge.image.input', image_url: dataUrl }));
+        const im = recordLocalImage(dataUrl);
+        appendImageMessage(im);
+        scrollMessagesToBottom();
+        closeCamera();
+        toast('画像を送信しました。話しかけて質問してください 🗣️', 'info', 2600);
+      }
+
+      els.cameraToggle.addEventListener('click', () => { openCamera(); });
+      els.cameraShutter.addEventListener('click', captureFrame);
+      els.cameraFlip.addEventListener('click', () => { flipCamera(); });
+      els.cameraCancel.addEventListener('click', closeCamera);
+      els.cameraRetake.addEventListener('click', showCameraLiveMode);
+      els.cameraSend.addEventListener('click', sendCapturedImage);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !els.cameraOverlay.hidden) closeCamera();
+      });
 
       els.callToggle.addEventListener('click', () => {
         if (state.callState === 'idle') {

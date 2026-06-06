@@ -122,6 +122,52 @@ def test_client_event_is_forwarded() -> None:
     assert responder.last_session.sent_events == [{"type": "input_audio_buffer.commit"}]
 
 
+def test_send_image_injects_input_image_item() -> None:
+    """send_image() forwards a conversation.item.create with an input_image part."""
+    uc, responder, conv_repo, _ = _make_use_case([])
+    from concierge.chat.application.use_cases import CreateConversationUseCase  # noqa: PLC0415
+
+    conv = CreateConversationUseCase(conv_repo).execute("test", uc.current_participant)
+    list(uc.execute(conv.id))
+    assert responder.last_session is not None
+
+    data_url = "data:image/png;base64,iVBORw0KGgo="
+    uc.send_image(data_url)
+
+    items = [e for e in responder.last_session.sent_events if e.get("type") == "conversation.item.create"]
+    assert len(items) == 1
+    item = items[0]["item"]
+    assert item["type"] == "message"
+    assert item["role"] == "user"
+    assert item["content"] == [{"type": "input_image", "image_url": data_url}]
+
+
+def test_send_image_includes_optional_prompt() -> None:
+    """An optional prompt is appended as an input_text content part."""
+    uc, responder, conv_repo, _ = _make_use_case([])
+    from concierge.chat.application.use_cases import CreateConversationUseCase  # noqa: PLC0415
+
+    conv = CreateConversationUseCase(conv_repo).execute("test", uc.current_participant)
+    list(uc.execute(conv.id))
+    assert responder.last_session is not None
+
+    data_url = "data:image/png;base64,iVBORw0KGgo="
+    uc.send_image(data_url, prompt="これは何ですか?")
+
+    items = [e for e in responder.last_session.sent_events if e.get("type") == "conversation.item.create"]
+    assert items[0]["item"]["content"] == [
+        {"type": "input_image", "image_url": data_url},
+        {"type": "input_text", "text": "これは何ですか?"},
+    ]
+
+
+def test_send_image_without_session_is_noop() -> None:
+    """Calling send_image() before execute() opens a session does not raise."""
+    uc, _, _, _ = _make_use_case([])
+    # No exception and nothing forwarded because no session exists yet.
+    uc.send_image("data:image/png;base64,iVBORw0KGgo=")
+
+
 def test_user_transcript_persisted() -> None:
     """USER transcript is saved when conversation.item.input_audio_transcription.completed arrives."""
     transcript_event = {

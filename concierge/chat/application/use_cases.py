@@ -6,6 +6,7 @@ import uuid
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
 from concierge.chat.application.realtime_tools import RealtimeTool
 from concierge.chat.application.repositories import ConversationRepository, MessageRepository
@@ -226,6 +227,35 @@ class StreamRealtimeVoiceUseCase:
         """Forward a client event to the upstream session."""
         if hasattr(self, "_session") and self._session is not None:
             self._session.send_client_event(event)
+
+    def send_image(self, image_url: str, prompt: str | None = None) -> None:
+        """Inject a user-provided image into the live realtime conversation.
+
+        Builds a ``conversation.item.create`` event carrying an ``input_image``
+        content part (plus an optional ``input_text`` prompt) and forwards it to
+        the upstream session so the model can ground subsequent turns in what the
+        user is showing. See the Foundry image-input reference:
+        https://learn.microsoft.com/azure/ai-foundry/openai/how-to/realtime-audio#image-input
+
+        No response is triggered here: the user's next spoken turn drives the
+        reply. That keeps turn-taking natural and avoids the model talking over a
+        user who is about to ask a question about the image.
+
+        This method is the single seam for image input, so future enhancements
+        (persisting the image as a :class:`Message`, moderation, server-side
+        downscaling) can be added here without touching the transport layer.
+        """
+        if getattr(self, "_session", None) is None:
+            return
+        content: list[dict[str, Any]] = [{"type": "input_image", "image_url": image_url}]
+        if prompt and prompt.strip():
+            content.append({"type": "input_text", "text": prompt.strip()})
+        self._session.send_client_event(
+            {
+                "type": "conversation.item.create",
+                "item": {"type": "message", "role": "user", "content": content},
+            }
+        )
 
     def _relay(self, session, conversation_id: uuid.UUID) -> Iterator[RealtimeEvent]:  # type: ignore[type-arg]
         try:

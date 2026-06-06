@@ -259,6 +259,17 @@ because browsers cannot attach custom headers to a WebSocket handshake.
 | `type` | Payload | Notes |
 |--------|---------|-------|
 | `oai-event` | `{"payload": <Foundry event JSON>}` | Forwarded to Foundry (typically `input_audio_buffer.append` with base64 PCM16) |
+| `concierge.image.input` | `{"image_url": "data:image/jpeg;base64,…", "prompt": "<optional>"}` | Injects a camera image into the live session. The server builds a `conversation.item.create` (`input_image`) item so the model can ground its next turn in the image. No response is triggered — the user's next spoken turn drives the reply. |
+
+!!! note "Image input is server-mediated"
+    The browser sends a `concierge.image.input` control frame rather than the
+    raw Foundry `conversation.item.create` event. The server owns the Foundry
+    wire format and validates the payload: `image_url` must be an inline
+    `data:image/*;base64,…` URL (remote `http(s)` URLs are rejected so the
+    model never fetches attacker-controlled URLs) and is capped at ~12 MB.
+    Invalid payloads return a `concierge.error` and are not forwarded. This
+    single seam is also where future enhancements (persisting the image,
+    moderation, server-side downscaling) would live.
 
 !!! note "Tool calling is handled server-side"
     When the model requests a tool the relay processes the

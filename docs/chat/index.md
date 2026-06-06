@@ -543,6 +543,29 @@ voice calls. Legacy keys `chat_rt_user_id` / `chat_rt_display_name` from
 the previous standalone realtime UI are migrated automatically on first
 load.
 
+### Sharing a photo during a call { #realtime-image-input }
+
+While a call is active a **📷 camera button** appears in the conversation
+header. It is designed for phones: tapping it opens an in-app live
+viewfinder (no context switch to the OS camera app) with a shutter, a
+front/back toggle, and cancel. After capturing, you confirm or retake; on
+send the frame is downscaled to a 1024 px JPEG and delivered over the same
+WebSocket as a `concierge.image.input` control frame.
+
+The server injects it into the live session as a `conversation.item.create`
+`input_image` item, so the model can ground its next spoken turn in what you
+showed — just snap the photo, then ask *"これ何に見える？"*. No reply is
+forced on send, which keeps turn-taking natural. The captured image is shown
+inline in the message log for the rest of the session.
+
+!!! note "Images are session-scoped (not persisted)"
+    Shared images are injected into the live conversation and rendered
+    locally, but they are **not** written to the message repository, so they
+    disappear on a full page reload. The assistant's spoken answer about the
+    image is still persisted as a normal AGENT transcript. Persisting images
+    (blob storage + `Message` attachments) is a deliberate future extension —
+    the server-side seam for it is `StreamRealtimeVoiceUseCase.send_image`.
+
 ### Browser support
 
 The UI relies on `AudioWorklet`, `WebSocket`, `MediaDevices.getUserMedia`,

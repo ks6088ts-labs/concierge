@@ -499,6 +499,93 @@ uv run chat-web
 | `CHAT_REALTIME_MAX_SESSION_SECONDS` | `600` | サーバ側セッションタイムアウト（秒） |
 | `CHAT_REALTIME_TRANSCRIPTION_MODEL` | `""` | 入力音声の transcription 用 Azure デプロイ名。空のとき `session.update` に `transcription` ブロックを含めません。 |
 
+### ツール呼び出し（function calling） { #realtime-tool-calling }
+
+リアルタイムセッションはツールを使う AI エージェントとして構成されています。
+モデルは会話の途中でサーバ側の Python 関数を呼び出し、その結果を踏まえて
+続きを発話できます。これは
+[OpenAI Realtime の function-calling 契約](https://learn.microsoft.com/ja-jp/azure/ai-foundry/openai/realtime-audio-reference)
+（Foundry の GA エンドポイントも同準拠）に従います。
+
+1. `session.update` で利用可能なツールを `session.tools` として提示
+   （`tool_choice: "auto"`）。
+2. モデルがツール呼び出しを決めると `function_call` アイテムを生成し、
+   `response.output_item.done` サーバイベントとして通知される。
+3. サーバがツールをローカル実行し、`function_call_output` アイテムを載せた
+   `conversation.item.create` イベントで結果を返す。
+4. `response.create` イベントでモデルに続きの発話を促す。
+
+これらはすべて `StreamRealtimeVoiceUseCase` 内のサーバ側で完結します。
+ブラウザは発話された回答を聞くだけで、フロントエンドの変更は不要です。
+
+#### 組み込みツール
+
+| ツール | 説明 |
+|---|---|
+| `get_current_time` | 現在の日時を返します。IANA タイムゾーン（例：`Asia/Tokyo`）を任意で指定できます。 |
+
+#### 新しいツールの追加方法
+
+ツールは単一のレジストリ
+[`concierge/chat/application/realtime_tools.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/chat/application/realtime_tools.py)
+に定義されています。各ツールは JSON スキーマと Python ハンドラを 1 つの
+`RealtimeTool` にまとめており、スキーマを必要とする responder と、ハンドラを
+実行する use case が同一の定義を共有します。機能を追加するには
+`build_default_realtime_tools()` にエントリを追記するだけです。
+
+```python
+from concierge.chat.application.realtime_tools import RealtimeTool
+
+RealtimeTool(
+    name="get_weather",
+    description="都市の現在の天気を取得する。ユーザーが天気を尋ねたときに使う。",
+    parameters={
+        "type": "object",
+        "properties": {
+            "city": {"type": "string", "description": "都市名。例：'Tokyo'。"},
+        },
+        "required": ["city"],
+    },
+    handler=lambda args: fetch_weather(args["city"]),  # str を返す（JSON 推奨）
+)
+```
+
+指針：
+
+- `handler` のシグネチャは `dict -> str`。可能なら JSON 文字列を返します。
+  値はそのまま `function_call_output` としてモデルに渡されます。
+- ハンドラは高速・同期に保ちます。音声ターンの合間にリレースレッド上で
+  実行されるため、遅い I/O は外出しするか短いタイムアウトでラップします。
+- ハンドラの例外は捕捉され、`{"error": "..."}` としてモデルに返されます。
+  ツールが失敗しても通話を落とさず穏当に縮退します。
+- レジストリを編集する以外に環境変数や再起動の配線は不要です。
+  `create_realtime_responder()` と WebSocket ルートの両方が
+  `build_default_realtime_tools()` を自動的に参照します。
+
+#### 最小の動作確認
+
+```bash
+# 1. リアルタイムエンドポイントを設定・確認（上のクイックスタート参照）
+uv run chat-cli realtime status   # → ステータス: ✅ 設定済み
+
+# 2. サーバを起動し http://localhost:8080/ を開く
+uv run chat-web
+
+# 3. 通話を開始し、ツールを誘発する質問をする。例：
+#    「今何時?」→ モデルが get_current_time を呼び、実際の時刻で回答する。
+#    サーバログに次が出ます：
+#       INFO Executed realtime tool name=get_current_time call_id=...
+```
+
+このフロー（ツール実行・未知ツールのエラー出力・ツール未設定時の素通し）の
+ユニットテストは
+[`tests/chat/test_realtime_use_case.py`](https://github.com/ks6088ts-labs/concierge/blob/main/tests/chat/test_realtime_use_case.py)
+にあり、実際の Foundry 接続なしで実行できます。
+
+```bash
+uv run pytest tests/chat/test_realtime_use_case.py -o addopts=""
+```
+
 ### その他の参照先
 
 - WebSocket ワイヤープロトコル（イベント、クローズコード）→ [REST API リファレンス → リアルタイム音声 WebSocket](api.ja.md#realtime-voice-websocket)

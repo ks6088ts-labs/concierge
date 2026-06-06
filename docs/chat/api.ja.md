@@ -246,6 +246,15 @@ WS /conversations/{conversation_id}/realtime
 |--------|-----------|------|
 | `oai-event` | `{"payload": <Foundry イベント JSON>}` | Foundry への透過転送（通常は `input_audio_buffer.append` ＋ base64 PCM16） |
 
+!!! note "ツール呼び出しはサーバ側で処理されます"
+    モデルがツールを要求すると、リレーが `response.output_item.done`
+    （`function_call`）イベントを自分で処理します。ツールを実行し、
+    `conversation.item.create`（`function_call_output`）と `response.create` を
+    Foundry に返します。ブラウザは透過リレーされる `oai-event` フレームと
+    最終的な発話／transcript の回答を受け取るだけで、function-calling の
+    往復を実装する必要はありません。新しいツールの登録方法は
+    [ツール呼び出し（function calling）](index.ja.md#realtime-tool-calling) を参照してください。
+
 ### クローズコード
 
 | コード | 意味 |

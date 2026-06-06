@@ -7,6 +7,7 @@ from collections.abc import Iterator
 
 import pytest
 
+from concierge.chat.application.realtime_tools import RealtimeTool
 from concierge.chat.application.responders import RealtimeVoiceSession
 from concierge.chat.application.use_cases import (
     RealtimeMessagePersisted,
@@ -73,6 +74,7 @@ def _make_use_case(
     *,
     conv_repo: InMemoryConversationRepository | None = None,
     msg_repo: InMemoryMessageRepository | None = None,
+    tools: list[RealtimeTool] | None = None,
 ) -> tuple[
     StreamRealtimeVoiceUseCase,
     FakeRealtimeResponder,
@@ -91,6 +93,7 @@ def _make_use_case(
         bot_participant=bot,
         current_participant=current,
         history_limit=20,
+        tools=tools,
     )
     return uc, responder, conv_repo, msg_repo
 
@@ -223,3 +226,87 @@ def test_empty_transcript_not_persisted() -> None:
     persisted = [e for e in events if isinstance(e, RealtimeMessagePersisted)]
     assert persisted == []
     assert msg_repo.find_by_conversation(conv.id, limit=100) == []
+
+
+# ---------------------------------------------------------------------------
+# Tool calling
+# ---------------------------------------------------------------------------
+
+
+def _echo_tool() -> RealtimeTool:
+    return RealtimeTool(
+        name="echo",
+        description="Echo the given text back.",
+        parameters={
+            "type": "object",
+            "properties": {"text": {"type": "string"}},
+            "required": ["text"],
+        },
+        handler=lambda args: f"echo:{args.get('text', '')}",
+    )
+
+
+def test_function_call_executes_tool_and_replies() -> None:
+    """A function_call item runs the tool and feeds the result back to the session."""
+    function_call_event = {
+        "type": "response.output_item.done",
+        "item": {
+            "type": "function_call",
+            "name": "echo",
+            "call_id": "call_123",
+            "arguments": '{"text": "hi"}',
+        },
+    }
+    uc, responder, conv_repo, _ = _make_use_case([function_call_event], tools=[_echo_tool()])
+    from concierge.chat.application.use_cases import CreateConversationUseCase  # noqa: PLC0415
+
+    conv = CreateConversationUseCase(conv_repo).execute("test", uc.current_participant)
+    list(uc.execute(conv.id))
+
+    assert responder.last_session is not None
+    sent = responder.last_session.sent_events
+    # function_call_output carrying the tool result, then response.create
+    output_event = next(e for e in sent if e.get("type") == "conversation.item.create")
+    assert output_event["item"]["type"] == "function_call_output"
+    assert output_event["item"]["call_id"] == "call_123"
+    assert output_event["item"]["output"] == "echo:hi"
+    assert any(e.get("type") == "response.create" for e in sent)
+
+
+def test_unknown_function_call_returns_error_output() -> None:
+    """An unknown tool still produces a function_call_output describing the error."""
+    function_call_event = {
+        "type": "response.output_item.done",
+        "item": {
+            "type": "function_call",
+            "name": "does_not_exist",
+            "call_id": "call_x",
+            "arguments": "{}",
+        },
+    }
+    uc, responder, conv_repo, _ = _make_use_case([function_call_event], tools=[_echo_tool()])
+    from concierge.chat.application.use_cases import CreateConversationUseCase  # noqa: PLC0415
+
+    conv = CreateConversationUseCase(conv_repo).execute("test", uc.current_participant)
+    list(uc.execute(conv.id))
+
+    assert responder.last_session is not None
+    output_event = next(e for e in responder.last_session.sent_events if e.get("type") == "conversation.item.create")
+    assert "error" in output_event["item"]["output"]
+
+
+def test_function_call_ignored_when_no_tools_configured() -> None:
+    """Without a tool registry, function_call items are relayed but not executed."""
+    function_call_event = {
+        "type": "response.output_item.done",
+        "item": {"type": "function_call", "name": "echo", "call_id": "c", "arguments": "{}"},
+    }
+    uc, responder, conv_repo, _ = _make_use_case([function_call_event])
+    from concierge.chat.application.use_cases import CreateConversationUseCase  # noqa: PLC0415
+
+    conv = CreateConversationUseCase(conv_repo).execute("test", uc.current_participant)
+    events = list(uc.execute(conv.id))
+
+    assert responder.last_session is not None
+    assert responder.last_session.sent_events == []
+    assert any(isinstance(e, RealtimeServerEvent) for e in events)

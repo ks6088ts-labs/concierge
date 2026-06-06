@@ -30,6 +30,7 @@ from concierge.chat.application.use_cases import (
 from concierge.chat.domain.exceptions import ConversationNotFoundError
 from concierge.chat.domain.value_objects import Participant, ParticipantKind
 from concierge.chat.infrastructure.ai.factory import list_available_agent_types
+from concierge.chat.infrastructure.ai.realtime_tools import build_default_realtime_tools
 from concierge.chat.infrastructure.web.dependencies import (
     get_chatbot_responder,
     get_conversation_repository,
@@ -325,6 +326,7 @@ async def realtime_voice(
         bot_participant=bot_participant,
         current_participant=current_participant,
         history_limit=chat_settings.bot_history_limit,
+        tools=build_default_realtime_tools(),
     )
 
     try:

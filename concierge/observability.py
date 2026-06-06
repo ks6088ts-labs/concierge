@@ -104,7 +104,7 @@ _COPILOT_SDK_OTEL_BSP_SCHEDULE_DELAY_MS = "500"
 def _apply_copilot_sdk_otel_env_defaults() -> None:
     """Apply OTel BatchSpanProcessor defaults inherited by the Copilot CLI.
 
-    The :class:`copilot.client.SubprocessConfig` defaults to ``env=None``, which
+    The :class:`copilot.client.CopilotClient` defaults to ``env=None``, which
     causes the SDK to spawn the CLI with ``dict(os.environ)``. Setting these
     variables in the parent process therefore propagates them to the
     subprocess. ``setdefault`` is used so any value the operator already

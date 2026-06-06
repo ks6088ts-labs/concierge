@@ -7,6 +7,7 @@ from concierge.chat.application.responders import ChatbotResponder, RealtimeVoic
 from concierge.chat.infrastructure.ai.exceptions import ChatbotNotConfiguredError
 from concierge.chat.infrastructure.ai.foundry_realtime import FoundryRealtimeResponder
 from concierge.chat.infrastructure.ai.foundry_responder import FoundryChatbotResponder
+from concierge.chat.infrastructure.ai.realtime_tools import build_default_realtime_tools
 from concierge.settings import get_chat_settings, get_microsoft_foundry_settings
 from concierge.settings.chat import FOUNDRY_BOT_AGENT_TYPE
 
@@ -137,4 +138,5 @@ def create_realtime_responder() -> RealtimeVoiceResponder:
         locale=settings.realtime_locale,
         system_prompt=settings.realtime_system_prompt,
         transcription_model=settings.realtime_transcription_model,
+        tools=build_default_realtime_tools(),
     )

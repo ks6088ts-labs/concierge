@@ -28,7 +28,7 @@ from collections.abc import Callable
 from typing import Any
 
 from copilot import CopilotClient
-from copilot.client import SubprocessConfig, TelemetryConfig
+from copilot.client import TelemetryConfig
 from copilot.generated.session_events import (
     AssistantMessageData,
     SessionEvent,
@@ -190,4 +190,4 @@ class GitHubCopilotSdkAgent:
         telemetry = self._telemetry_factory()
         if telemetry is None:
             return CopilotClient()
-        return CopilotClient(config=SubprocessConfig(telemetry=telemetry))
+        return CopilotClient(telemetry=telemetry)

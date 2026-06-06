@@ -260,6 +260,16 @@ because browsers cannot attach custom headers to a WebSocket handshake.
 |--------|---------|-------|
 | `oai-event` | `{"payload": <Foundry event JSON>}` | Forwarded to Foundry (typically `input_audio_buffer.append` with base64 PCM16) |
 
+!!! note "Tool calling is handled server-side"
+    When the model requests a tool the relay processes the
+    `response.output_item.done` (`function_call`) event itself: it runs the
+    tool and sends `conversation.item.create` (`function_call_output`) plus
+    `response.create` back to Foundry. The browser only sees the relayed
+    `oai-event` frames and the final spoken/transcribed answer — it never has
+    to implement the function-calling round-trip. See
+    [Tool calling (function calling)](index.md#realtime-tool-calling) for how
+    to register new tools.
+
 ### Close codes
 
 | Code | Meaning |

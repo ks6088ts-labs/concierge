@@ -67,6 +67,48 @@ def _derive_wss_host(endpoint: str) -> str:
     return host
 
 
+def build_turn_detection(
+    detection_type: str,
+    *,
+    threshold: float = 0.5,
+    prefix_padding_ms: int = 300,
+    silence_duration_ms: int = 700,
+    eagerness: str = "low",
+    create_response: bool = True,
+    interrupt_response: bool = True,
+) -> dict[str, Any] | None:
+    """Build the ``audio.input.turn_detection`` block for ``session.update``.
+
+    Returns ``None`` for push-to-talk (``none``/``null``), which the caller
+    should translate into omitting the key entirely so the model performs no
+    automatic turn-taking.
+
+    See the VAD reference:
+    https://learn.microsoft.com/en-us/azure/ai-foundry/openai/how-to/realtime-audio#voice-activity-detection-vad-and-the-audio-buffer
+    """
+    normalized = (detection_type or "").strip().lower()
+    if normalized in {"none", "null"}:
+        return None
+    if normalized == "semantic_vad":
+        # ``eagerness=low`` widens the wait timeout so the model lets the user
+        # finish before responding — the documented fix for premature replies.
+        return {
+            "type": "semantic_vad",
+            "eagerness": eagerness,
+            "create_response": create_response,
+            "interrupt_response": interrupt_response,
+        }
+    # Default / explicit ``server_vad``: silence-based detection.
+    return {
+        "type": "server_vad",
+        "threshold": threshold,
+        "prefix_padding_ms": prefix_padding_ms,
+        "silence_duration_ms": silence_duration_ms,
+        "create_response": create_response,
+        "interrupt_response": interrupt_response,
+    }
+
+
 class _FoundryRealtimeSession:
     """Wraps a ``websockets`` sync connection in the :class:`RealtimeVoiceSession` protocol."""
 
@@ -165,6 +207,14 @@ class FoundryRealtimeResponder:
         system_prompt: str,
         transcription_model: str = "",
         tools: list[RealtimeTool] | None = None,
+        *,
+        turn_detection_type: str = "server_vad",
+        vad_threshold: float = 0.5,
+        vad_prefix_padding_ms: int = 300,
+        vad_silence_duration_ms: int = 700,
+        vad_eagerness: str = "low",
+        vad_create_response: bool = True,
+        vad_interrupt_response: bool = True,
     ) -> None:
         self._host = _derive_wss_host(endpoint_realtime)
         self._deployment = deployment
@@ -173,6 +223,15 @@ class FoundryRealtimeResponder:
         self._system_prompt = system_prompt
         self._transcription_model = transcription_model
         self._tools = tools or []
+        self._turn_detection = build_turn_detection(
+            turn_detection_type,
+            threshold=vad_threshold,
+            prefix_padding_ms=vad_prefix_padding_ms,
+            silence_duration_ms=vad_silence_duration_ms,
+            eagerness=vad_eagerness,
+            create_response=vad_create_response,
+            interrupt_response=vad_interrupt_response,
+        )
 
     def open(self, conversation: Conversation, history: list[Message]) -> RealtimeVoiceSession:
         token = DefaultAzureCredential().get_token(_COGNITIVE_SERVICES_SCOPE).token
@@ -191,8 +250,12 @@ class FoundryRealtimeResponder:
         # unknown_parameter`` on GA.
         input_audio: dict[str, Any] = {
             "format": {"type": "audio/pcm", "rate": 24000},
-            "turn_detection": {"type": "server_vad"},
         }
+        # ``turn_detection`` controls how eagerly the model takes its turn. When
+        # ``None`` (push-to-talk), omit the key so the model performs no
+        # automatic turn-taking and waits for client-driven commits.
+        if self._turn_detection is not None:
+            input_audio["turn_detection"] = self._turn_detection
         if self._transcription_model:
             # On Azure the ``model`` field must be a deployment name in the same
             # resource. Omit the block entirely when no deployment is configured

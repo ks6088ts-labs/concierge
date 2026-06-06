@@ -6,12 +6,14 @@ from fastapi import Header, HTTPException, Query, status
 
 from concierge.chat.application.repositories import ConversationRepository, MessageRepository
 from concierge.chat.application.responders import ChatbotResponder, RealtimeVoiceResponder
+from concierge.chat.application.use_cases import RealtimeToolExecutor
 from concierge.chat.domain.exceptions import ParticipantValidationError
 from concierge.chat.domain.value_objects import Participant, ParticipantKind
 from concierge.chat.infrastructure.ai.factory import (
     ChatbotNotConfiguredError,
     create_chatbot_responder,
     create_realtime_responder,
+    create_realtime_tool_executor,
 )
 from concierge.chat.infrastructure.persistence.factory import (
     get_conversation_repository as _factory_get_conversation_repository,
@@ -65,6 +67,10 @@ def get_realtime_responder_optional() -> RealtimeVoiceResponder | None:
         return create_realtime_responder()
     except ChatbotNotConfiguredError:
         return None
+
+
+def get_realtime_tool_executor_optional() -> RealtimeToolExecutor | None:
+    return create_realtime_tool_executor()
 
 
 def get_current_participant(

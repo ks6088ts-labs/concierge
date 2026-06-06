@@ -4,9 +4,14 @@ import os
 import warnings
 
 from concierge.chat.application.responders import ChatbotResponder, RealtimeVoiceResponder
+from concierge.chat.application.use_cases import RealtimeToolExecutor
 from concierge.chat.infrastructure.ai.exceptions import ChatbotNotConfiguredError
 from concierge.chat.infrastructure.ai.foundry_realtime import FoundryRealtimeResponder
 from concierge.chat.infrastructure.ai.foundry_responder import FoundryChatbotResponder
+from concierge.chat.infrastructure.ai.realtime_knowledge import (
+    get_realtime_tool_definitions,
+    get_realtime_tool_executor,
+)
 from concierge.settings import get_chat_settings, get_microsoft_foundry_settings
 from concierge.settings.chat import FOUNDRY_BOT_AGENT_TYPE
 
@@ -15,6 +20,7 @@ __all__ = [
     "ChatbotNotConfiguredError",
     "create_chatbot_responder",
     "create_realtime_responder",
+    "create_realtime_tool_executor",
     "list_available_agent_types",
 ]
 
@@ -137,4 +143,9 @@ def create_realtime_responder() -> RealtimeVoiceResponder:
         locale=settings.realtime_locale,
         system_prompt=settings.realtime_system_prompt,
         transcription_model=settings.realtime_transcription_model,
+        realtime_tools=get_realtime_tool_definitions(),
     )
+
+
+def create_realtime_tool_executor() -> RealtimeToolExecutor | None:
+    return get_realtime_tool_executor()

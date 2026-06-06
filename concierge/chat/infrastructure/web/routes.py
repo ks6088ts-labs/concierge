@@ -25,6 +25,7 @@ from concierge.chat.application.use_cases import (
     RealtimeError,
     RealtimeMessagePersisted,
     RealtimeServerEvent,
+    RealtimeToolExecutor,
     StreamRealtimeVoiceUseCase,
 )
 from concierge.chat.domain.exceptions import ConversationNotFoundError
@@ -36,6 +37,7 @@ from concierge.chat.infrastructure.web.dependencies import (
     get_current_participant,
     get_message_repository,
     get_realtime_responder_optional,
+    get_realtime_tool_executor_optional,
 )
 from concierge.chat.infrastructure.web.schemas import (
     AgentTypesResponse,
@@ -270,6 +272,7 @@ async def realtime_voice(
     user_id: str,
     display_name: str | None = None,
     realtime_responder: RealtimeVoiceResponder | None = Depends(get_realtime_responder_optional),
+    realtime_tool_executor: RealtimeToolExecutor | None = Depends(get_realtime_tool_executor_optional),
     conversation_repo: ConversationRepository = Depends(get_conversation_repository),
     message_repo: MessageRepository = Depends(get_message_repository),
 ) -> None:
@@ -325,6 +328,7 @@ async def realtime_voice(
         bot_participant=bot_participant,
         current_participant=current_participant,
         history_limit=chat_settings.bot_history_limit,
+        tool_executor=realtime_tool_executor,
     )
 
     try:

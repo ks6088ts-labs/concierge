@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import json
 import logging
 import uuid
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -177,6 +178,8 @@ class BotReplyComplete:
 
 BotReplyEvent = BotReplyDelta | BotReplyComplete
 
+RealtimeToolExecutor = Callable[[str, dict[str, object]], str | None]
+
 
 class StreamRealtimeVoiceUseCase:
     """Relay bidirectional voice events between a browser client and the upstream model.
@@ -200,6 +203,7 @@ class StreamRealtimeVoiceUseCase:
         bot_participant: Participant,
         current_participant: Participant,
         history_limit: int = 20,
+        tool_executor: RealtimeToolExecutor | None = None,
     ):
         self.conversation_repository = conversation_repository
         self.message_repository = message_repository
@@ -207,6 +211,7 @@ class StreamRealtimeVoiceUseCase:
         self.bot_participant = bot_participant
         self.current_participant = current_participant
         self.history_limit = history_limit
+        self.tool_executor = tool_executor
 
     def execute(self, conversation_id: uuid.UUID) -> Iterator[RealtimeEvent]:
         conversation = self.conversation_repository.find_by_id(conversation_id)
@@ -257,6 +262,8 @@ class StreamRealtimeVoiceUseCase:
                         saved = self.message_repository.save(msg)
                         logger.info("Persisted AGENT transcript id=%s", saved.id)
                         yield RealtimeMessagePersisted(message=saved)
+                elif event_type == "response.function_call_arguments.done":
+                    self._execute_realtime_tool_call(session, server_event)
 
                 # Always relay the raw server event to the browser
                 yield RealtimeServerEvent(payload=server_event)
@@ -265,6 +272,51 @@ class StreamRealtimeVoiceUseCase:
             yield RealtimeError(detail=str(exc))
         finally:
             session.close()
+
+    def _execute_realtime_tool_call(self, session, server_event: dict) -> None:  # type: ignore[type-arg]
+        if self.tool_executor is None:
+            return
+
+        tool_name = server_event.get("name")
+        call_id = server_event.get("call_id")
+        if not isinstance(tool_name, str) or not tool_name:
+            return
+        if not isinstance(call_id, str) or not call_id:
+            return
+
+        raw_arguments = server_event.get("arguments", "{}")
+        if isinstance(raw_arguments, dict):
+            arguments: dict[str, object] = raw_arguments
+        elif isinstance(raw_arguments, str):
+            try:
+                parsed = json.loads(raw_arguments)
+            except json.JSONDecodeError:
+                parsed = {}
+            arguments = parsed if isinstance(parsed, dict) else {}
+        else:
+            arguments = {}
+
+        logger.info("Executing realtime tool call: name=%s call_id=%s", tool_name, call_id)
+        output = self.tool_executor(tool_name, arguments)
+        if output is None:
+            output = json.dumps(
+                {"error": f"unsupported tool: {tool_name}"},
+                ensure_ascii=False,
+                separators=(",", ":"),
+            )
+
+        session.send_client_event(
+            {
+                "type": "conversation.item.create",
+                "item": {
+                    "type": "function_call_output",
+                    "call_id": call_id,
+                    "output": output,
+                },
+            }
+        )
+        session.send_client_event({"type": "response.create"})
+        logger.info("Completed realtime tool call: name=%s call_id=%s", tool_name, call_id)
 
 
 # ---------------------------------------------------------------------------

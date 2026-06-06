@@ -163,6 +163,7 @@ class FoundryRealtimeResponder:
         locale: str,
         system_prompt: str,
         transcription_model: str = "",
+        realtime_tools: list[dict[str, Any]] | None = None,
     ) -> None:
         self._host = _derive_wss_host(endpoint_realtime)
         self._deployment = deployment
@@ -170,6 +171,7 @@ class FoundryRealtimeResponder:
         self._locale = locale
         self._system_prompt = system_prompt
         self._transcription_model = transcription_model
+        self._realtime_tools = list(realtime_tools or [])
 
     def open(self, conversation: Conversation, history: list[Message]) -> RealtimeVoiceSession:
         token = DefaultAzureCredential().get_token(_COGNITIVE_SERVICES_SCOPE).token
@@ -212,6 +214,9 @@ class FoundryRealtimeResponder:
                 },
             },
         }
+        if self._realtime_tools:
+            session_config["tools"] = self._realtime_tools
+            session_config["tool_choice"] = "auto"
         # Build initial conversation items from history (newest-first → reverse for
         # chronological order). These must be sent as separate ``conversation.item.create``
         # events *after* the ``session.update`` event — they are not valid fields inside

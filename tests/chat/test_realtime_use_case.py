@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Iterator
+from typing import Any
 
 import pytest
 
@@ -11,6 +12,7 @@ from concierge.chat.application.responders import RealtimeVoiceSession
 from concierge.chat.application.use_cases import (
     RealtimeMessagePersisted,
     RealtimeServerEvent,
+    RealtimeToolExecutor,
     StreamRealtimeVoiceUseCase,
 )
 from concierge.chat.domain.entities import Conversation, Message
@@ -73,6 +75,7 @@ def _make_use_case(
     *,
     conv_repo: InMemoryConversationRepository | None = None,
     msg_repo: InMemoryMessageRepository | None = None,
+    tool_executor: RealtimeToolExecutor | None = None,
 ) -> tuple[
     StreamRealtimeVoiceUseCase,
     FakeRealtimeResponder,
@@ -91,6 +94,7 @@ def _make_use_case(
         bot_participant=bot,
         current_participant=current,
         history_limit=20,
+        tool_executor=tool_executor,
     )
     return uc, responder, conv_repo, msg_repo
 
@@ -206,6 +210,47 @@ def test_session_closed_after_relay() -> None:
 
     assert responder.last_session is not None
     assert responder.last_session.closed
+
+
+def test_function_call_arguments_event_executes_tool_and_returns_output() -> None:
+    function_call_event = {
+        "type": "response.function_call_arguments.done",
+        "name": "search_docs",
+        "call_id": "call_123",
+        "arguments": '{"query":"realtime function calling","k":2}',
+    }
+    captured: dict[str, Any] = {}
+
+    def _tool_executor(name: str, arguments: dict[str, object]) -> str | None:
+        captured["name"] = name
+        captured["arguments"] = arguments
+        return '{"hits":[{"content":"ok"}]}'
+
+    uc, responder, conv_repo, _ = _make_use_case([function_call_event], tool_executor=_tool_executor)
+    from concierge.chat.application.use_cases import CreateConversationUseCase  # noqa: PLC0415
+
+    conv = CreateConversationUseCase(conv_repo).execute("test", uc.current_participant)
+    events = list(uc.execute(conv.id))
+
+    assert captured["name"] == "search_docs"
+    assert captured["arguments"] == {"query": "realtime function calling", "k": 2}
+
+    assert responder.last_session is not None
+    assert responder.last_session.sent_events == [
+        {
+            "type": "conversation.item.create",
+            "item": {
+                "type": "function_call_output",
+                "call_id": "call_123",
+                "output": '{"hits":[{"content":"ok"}]}',
+            },
+        },
+        {"type": "response.create"},
+    ]
+
+    server_events = [e for e in events if isinstance(e, RealtimeServerEvent)]
+    assert len(server_events) == 1
+    assert server_events[0].payload == function_call_event
 
 
 def test_empty_transcript_not_persisted() -> None:

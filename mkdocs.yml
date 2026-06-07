@@ -14,6 +14,7 @@ nav:
       - 4. LangGraph Todo Agent CLI: tutorial/04-langgraph-todo-agent.md
       - Appendix - References: tutorial/appendix.md
       - Appendix - Monitor VS Code Copilot (App Insights): tutorial/appendix-monitor-vscode-copilot.md
+      - Appendix - Deploy to Azure Container Apps (Terraform): tutorial/appendix-deploy-azure-container-apps.md
   - Todo App (Clean Architecture):
       - Overview: todo/index.md
       - REST API Reference: todo/api.md

@@ -17,8 +17,8 @@ PostgreSQL、Azure Storage Queue、Application Insights) へのアクセスを�
 
 !!! info "このガイドが前提とするテンプレートの機能"
     本ガイドはシナリオの
-    [`feature/cosmetic-changes`](https://github.com/ks6088ts/template-terraform/tree/feature/cosmetic-changes/infra/scenarios/azure_container_apps)
-    ブランチに追従しています。このブランチの時点で、シナリオは concierge が
+    [`main`](https://github.com/ks6088ts/template-terraform/tree/main/infra/scenarios/azure_container_apps)
+    ブランチに追従しています。シナリオは concierge が
     必要とするものを標準でサポートしており、モジュールをフォークしたり拡張
     したりする必要は **ありません**:
 
@@ -79,7 +79,7 @@ Entra 認証のみです。したがってこの 2 つのサービスについ�
   [Azure CLI](https://learn.microsoft.com/ja-jp/cli/azure/install-azure-cli)
   (`az login`)。
 - [Terraform CLI](https://developer.hashicorp.com/terraform/install) `>= 1.6.0`。
-- `feature/cosmetic-changes` ブランチ (マージ後は `main`) の
+- `main` ブランチの
   [ks6088ts/template-terraform](https://github.com/ks6088ts/template-terraform)
   のクローン。
 - 公開済みの concierge イメージ。CI が以下にプッシュします:
@@ -402,7 +402,7 @@ terraform destroy
 
 ## 参考資料
 
-- [template-terraform — `azure_container_apps` シナリオ (`feature/cosmetic-changes`)](https://github.com/ks6088ts/template-terraform/tree/feature/cosmetic-changes/infra/scenarios/azure_container_apps)
+- [template-terraform — `azure_container_apps` シナリオ (`main`)](https://github.com/ks6088ts/template-terraform/tree/main/infra/scenarios/azure_container_apps)
 - [Azure Container Apps のドキュメント](https://learn.microsoft.com/ja-jp/azure/container-apps/)
 - [`azurerm_container_app` リソース](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/container_app)
 - [Azure Container Apps のマネージド ID](https://learn.microsoft.com/ja-jp/azure/container-apps/managed-identity)

@@ -17,8 +17,8 @@ ID / managed identity** instead of secrets wherever possible.
 
 !!! info "Template capabilities used by this guide"
     This guide tracks the
-    [`feature/cosmetic-changes`](https://github.com/ks6088ts/template-terraform/tree/feature/cosmetic-changes/infra/scenarios/azure_container_apps)
-    branch of the scenario. As of that branch the scenario already supports
+    [`main`](https://github.com/ks6088ts/template-terraform/tree/main/infra/scenarios/azure_container_apps)
+    branch of the scenario. The scenario already supports
     everything concierge needs out of the box — you do **not** need to fork or
     extend the module:
 
@@ -79,7 +79,7 @@ on RBAC role assignments.
 - [Terraform CLI](https://developer.hashicorp.com/terraform/install) `>= 1.6.0`.
 - A clone of
   [ks6088ts/template-terraform](https://github.com/ks6088ts/template-terraform)
-  on the `feature/cosmetic-changes` branch (or `main` once it is merged).
+  on the `main` branch.
 - A published concierge image. The CI pipelines push to:
   - GHCR: `ghcr.io/ks6088ts-labs/concierge:latest` (see
       [`ghcr-release.yaml`](https://github.com/ks6088ts-labs/concierge/blob/main/.github/workflows/ghcr-release.yaml))
@@ -392,7 +392,7 @@ Insights) are not managed by this scenario and must be deleted separately.
 
 ## References
 
-- [template-terraform — `azure_container_apps` scenario (`feature/cosmetic-changes`)](https://github.com/ks6088ts/template-terraform/tree/feature/cosmetic-changes/infra/scenarios/azure_container_apps)
+- [template-terraform — `azure_container_apps` scenario (`main`)](https://github.com/ks6088ts/template-terraform/tree/main/infra/scenarios/azure_container_apps)
 - [Azure Container Apps documentation](https://learn.microsoft.com/en-us/azure/container-apps/)
 - [`azurerm_container_app` resource](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/container_app)
 - [Managed identities in Azure Container Apps](https://learn.microsoft.com/en-us/azure/container-apps/managed-identity)

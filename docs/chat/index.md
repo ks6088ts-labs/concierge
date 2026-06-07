@@ -565,7 +565,12 @@ text chat continues to work normally.
 4. Foundry-emitted `response.output_audio.delta` events are decoded back to
    PCM16 and played through a queued `AudioBufferSource` graph. The partial
    transcript (`response.output_audio_transcript.delta`) streams into the
-   interim line until the final message is persisted.
+   interim line (prefixed `🤖`) until the final message is persisted.
+5. The user's own speech is shown in the same interim line, prefixed `🗣️`,
+   from `conversation.item.input_audio_transcription.delta` / `.completed`
+   events. This requires `CHAT_REALTIME_TRANSCRIPTION_MODEL` to be set; when
+   it is empty Foundry does not transcribe the user's audio, so no input text
+   appears (assistant speech still works).
 
 The text composer is locked while a call is active to avoid input-mode
 conflicts. The conversation list, message log, and `localStorage` profile
@@ -573,6 +578,56 @@ conflicts. The conversation list, message log, and `localStorage` profile
 voice calls. Legacy keys `chat_rt_user_id` / `chat_rt_display_name` from
 the previous standalone realtime UI are migrated automatically on first
 load.
+
+### Seeing your own recognized speech (input transcription) { #realtime-input-transcription }
+
+By default a realtime call shows only the **assistant's** words in the interim
+line (prefixed `🤖`). Your own speech is still streamed to Foundry as audio and
+the model replies correctly, but the text of what *you* said is not shown —
+Foundry transcribes the user's microphone audio only when you explicitly enable
+an input-transcription model. Enable it to make your recognized speech appear
+live in the interim line (prefixed `🗣️`) and to have the final text saved as a
+USER message in the conversation log.
+
+#### How to enable
+
+1. **Deploy a transcription model** in the **same** Foundry resource as
+   `AZURE_AI_PROJECT_ENDPOINT_REALTIME` (the realtime resource — not necessarily
+   the one used for text chat). Suitable models include `gpt-4o-mini-transcribe`,
+   `gpt-4o-transcribe`, and `whisper`.
+2. **Set the deployment name** (not the bare OpenAI model id) in `.env`:
+
+   ```bash
+   CHAT_REALTIME_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe
+   ```
+
+3. Restart `chat-web` and start a new call. As you speak, the recognized text
+   streams into the interim line; when you finish, it is persisted as a USER
+   `Message` and appears in the conversation alongside the assistant's reply.
+
+#### What happens under the hood
+
+When `CHAT_REALTIME_TRANSCRIPTION_MODEL` is non-empty, the server adds a
+`transcription` block to the `audio.input` section of `session.update`, using
+the deployment name as `model` and the ISO-639-1 primary subtag of
+`CHAT_REALTIME_LOCALE` as `language` (so `ja-JP` becomes `ja`). Foundry then
+emits two server events that the web UI consumes:
+
+- `conversation.item.input_audio_transcription.delta` — partial user transcript,
+  streamed into the `🗣️` interim line as you speak (some models skip deltas and
+  send only the final result).
+- `conversation.item.input_audio_transcription.completed` — final user
+  transcript. The server persists it as a USER `Message`, which replaces the
+  interim line with a real message bubble on the next reload.
+
+!!! warning "Use a deployment name, not the OpenAI model id"
+    On Azure the `model` field must be the name of a deployment in the same
+    resource. The OpenAI model id `gpt-4o-mini-transcribe` does **not**
+    correspond to a deployment in most resources, so the default is left empty
+    to avoid a silent failure (no transcript and no error). If you set this and
+    no input text appears, confirm that a deployment with exactly that name
+    exists in the realtime Foundry resource and that the signed-in principal can
+    use it.
 
 ### Sharing a photo during a call { #realtime-image-input }
 
@@ -619,7 +674,7 @@ All realtime settings use the `CHAT_` prefix (full schema in
 | `CHAT_REALTIME_SYSTEM_PROMPT` | Japanese default prompt | System message for the realtime session |
 | `CHAT_REALTIME_AUDIO_SAMPLE_RATE_HZ` | `24000` | PCM16 sample rate (Foundry fixed value) |
 | `CHAT_REALTIME_MAX_SESSION_SECONDS` | `600` | Server-side session timeout in seconds |
-| `CHAT_REALTIME_TRANSCRIPTION_MODEL` | `""` | Azure deployment name for input-audio transcription. When empty the `transcription` block is omitted from `session.update`. |
+| `CHAT_REALTIME_TRANSCRIPTION_MODEL` | `""` | Azure deployment name for input-audio transcription. When empty the `transcription` block is omitted from `session.update` and your spoken input is neither shown nor saved. See [Seeing your own recognized speech](#realtime-input-transcription). |
 | `CHAT_REALTIME_TURN_DETECTION_TYPE` | `server_vad` | How the model decides the user finished a turn: `server_vad` (silence-based), `semantic_vad` (decides from sentence meaning; much less likely to interrupt), or `none` (push-to-talk; client commits the buffer and sends `response.create`). |
 | `CHAT_REALTIME_VAD_THRESHOLD` | `0.5` | `server_vad` activation threshold (0.0-1.0). Higher needs louder speech, better in noisy rooms. |
 | `CHAT_REALTIME_VAD_PREFIX_PADDING_MS` | `300` | `server_vad` audio (ms) retained before detected speech start. |

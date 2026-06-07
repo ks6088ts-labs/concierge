@@ -2111,6 +2111,7 @@
         currentSource: null,
         userSpeaking: false,
         interimText: '',
+        userInterimText: '',
         endingOnPurpose: false,
       };
 
@@ -2208,9 +2209,12 @@ registerProcessor('pcm16-processor', PCM16Processor);
         els.pendingImage.hidden = true;
       }
 
-      function setInterim(text) {
+      // ``role`` selects the speaker prefix so users can tell their own
+      // recognized speech (🗣️) apart from the assistant's reply (🤖).
+      function setInterim(text, role = 'agent') {
         if (text) {
-          els.interimTranscript.textContent = `🤖 ${text}`;
+          const prefix = role === 'user' ? '🗣️' : '🤖';
+          els.interimTranscript.textContent = `${prefix} ${text}`;
           els.interimTranscript.classList.add('visible');
         } else {
           els.interimTranscript.textContent = '';
@@ -2220,6 +2224,7 @@ registerProcessor('pcm16-processor', PCM16Processor);
 
       function clearInterim() {
         call.interimText = '';
+        call.userInterimText = '';
         setInterim('');
       }
 
@@ -2461,9 +2466,24 @@ registerProcessor('pcm16-processor', PCM16Processor);
           } else if (evType === 'input_audio_buffer.speech_stopped') {
             // User finished; allow the next response's audio to play again.
             call.userSpeaking = false;
+          } else if (evType === 'conversation.item.input_audio_transcription.delta' && payload.delta) {
+            // Live transcript of the *user's* speech. Requires
+            // CHAT_REALTIME_TRANSCRIPTION_MODEL; stream it into the interim line
+            // so users can see what was recognized as they speak.
+            call.userInterimText += payload.delta;
+            setInterim(call.userInterimText, 'user');
+          } else if (evType === 'conversation.item.input_audio_transcription.completed') {
+            // Final user transcript. Some models (e.g. whisper-1) skip deltas and
+            // only send this, so fall back to its transcript. Skip while the
+            // assistant is already replying so we don't overwrite its transcript;
+            // the server persists this as a USER message and emits
+            // concierge.message.persisted, which clears the interim and reloads.
+            const finalText = payload.transcript || call.userInterimText;
+            if (finalText && !call.interimText) setInterim(finalText, 'user');
+            call.userInterimText = '';
           } else if (evType === 'response.output_audio_transcript.delta' && payload.delta) {
             call.interimText += payload.delta;
-            setInterim(call.interimText);
+            setInterim(call.interimText, 'agent');
           } else if (evType === 'response.output_audio_transcript.done') {
             clearInterim();
           } else if (evType === 'response.output_item.done') {

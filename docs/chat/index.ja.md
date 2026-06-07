@@ -468,13 +468,68 @@ uv run chat-web
    `{"type":"oai-event","payload":{"type":"input_audio_buffer.append","audio":"<b64>"}}` として送信。
 4. Foundry が返す `response.output_audio.delta` イベントを PCM16 にデコードし、
    キュー付き `AudioBufferSource` で順次再生。部分 transcript
-   （`response.output_audio_transcript.delta`）は確定前の仮行にストリーミングされます。
+   （`response.output_audio_transcript.delta`）は確定前の仮行（`🤖` 接頭辞）に
+   ストリーミングされます。
+5. ユーザー自身の発話も同じ仮行に `🗣️` 接頭辞で表示されます
+   （`conversation.item.input_audio_transcription.delta` / `.completed` イベント）。
+   これには `CHAT_REALTIME_TRANSCRIPTION_MODEL` の設定が必要です。空の場合は
+   Foundry がユーザー音声を文字起こししないため入力テキストは表示されません
+   （アシスタントの音声出力は引き続き動作します）。
 
 通話中は入力モードの競合を避けるためテキストコンポザーがロックされます。
 会話リスト、メッセージログ、`localStorage` プロフィール
 （`chat_user_id` / `chat_display_name`）はテキストチャットと音声通話で共有されます。
 以前の単体リアルタイム UI で使われていた `chat_rt_user_id` / `chat_rt_display_name` は
 初回ロード時に自動移行されます。
+
+### 自分の発話を画面で確認する（入力の文字起こし） { #realtime-input-transcription }
+
+デフォルトでは、リアルタイム通話の仮行に表示されるのは**アシスタント**の発話
+（`🤖` 接頭辞）だけです。あなたの発話も音声として Foundry に送られ、モデルは
+正しく応答しますが、*あなたが*話した内容のテキストは表示されません。Foundry が
+ユーザーのマイク音声を文字起こしするのは、入力文字起こし用モデルを明示的に
+有効化したときだけだからです。有効化すると、認識したあなたの発話が仮行に
+（`🗣️` 接頭辞で）リアルタイム表示され、確定したテキストは会話ログに USER
+メッセージとして保存されます。
+
+#### 有効化の手順
+
+1. `AZURE_AI_PROJECT_ENDPOINT_REALTIME` と**同じ** Foundry リソース（テキスト
+   チャット用とは別になることがあるリアルタイム用リソース）に**文字起こし用
+   モデルをデプロイ**します。`gpt-4o-mini-transcribe` / `gpt-4o-transcribe` /
+   `whisper` などが利用できます。
+2. `.env` に（素の OpenAI モデル ID ではなく）**デプロイ名**を設定します。
+
+   ```bash
+   CHAT_REALTIME_TRANSCRIPTION_MODEL=gpt-4o-mini-transcribe
+   ```
+
+3. `chat-web` を再起動して新しい通話を開始します。話すと認識テキストが仮行に
+   ストリーミング表示され、話し終えると USER `Message` として保存されて、
+   アシスタントの応答と並んで会話に表示されます。
+
+#### 内部の動作
+
+`CHAT_REALTIME_TRANSCRIPTION_MODEL` が空でないとき、サーバは `session.update` の
+`audio.input` セクションに `transcription` ブロックを追加します。`model` には
+デプロイ名を、`language` には `CHAT_REALTIME_LOCALE` の ISO-639-1 主サブタグを
+使います（`ja-JP` は `ja` になります）。すると Foundry は、Web UI が処理する
+次の 2 つのサーバイベントを送出します。
+
+- `conversation.item.input_audio_transcription.delta` — ユーザーの部分 transcript。
+  話している間 `🗣️` の仮行にストリーミングされます（一部のモデルは delta を
+  省略し、確定結果のみを送ります）。
+- `conversation.item.input_audio_transcription.completed` — ユーザーの確定
+  transcript。サーバが USER `Message` として保存し、次回のリロードで仮行が
+  実際のメッセージ吹き出しに置き換わります。
+
+!!! warning "OpenAI のモデル ID ではなくデプロイ名を使う"
+    Azure では `model` フィールドは同一リソース内のデプロイ名である必要があります。
+    OpenAI のモデル ID `gpt-4o-mini-transcribe` は多くのリソースでデプロイに
+    対応しないため、デフォルトを空にして無音失敗（transcript もエラーも出ない）を
+    避けています。設定したのに入力テキストが表示されない場合は、その名前の
+    デプロイがリアルタイム用 Foundry リソースに正確に存在し、サインイン中の
+    プリンシパルが利用できるか確認してください。
 
 ### 対応ブラウザ
 
@@ -497,7 +552,7 @@ uv run chat-web
 | `CHAT_REALTIME_SYSTEM_PROMPT` | 日本語の既定プロンプト | リアルタイムセッションで使うシステムメッセージ |
 | `CHAT_REALTIME_AUDIO_SAMPLE_RATE_HZ` | `24000` | PCM16 サンプルレート（Foundry 固定値） |
 | `CHAT_REALTIME_MAX_SESSION_SECONDS` | `600` | サーバ側セッションタイムアウト（秒） |
-| `CHAT_REALTIME_TRANSCRIPTION_MODEL` | `""` | 入力音声の transcription 用 Azure デプロイ名。空のとき `session.update` に `transcription` ブロックを含めません。 |
+| `CHAT_REALTIME_TRANSCRIPTION_MODEL` | `""` | 入力音声の transcription 用 Azure デプロイ名。空のとき `session.update` に `transcription` ブロックを含めず、あなたの発話は表示も保存もされません。[自分の発話を画面で確認する](#realtime-input-transcription) を参照。 |
 | `CHAT_REALTIME_TURN_DETECTION_TYPE` | `server_vad` | ユーザーの発話終了をどう判定するか：`server_vad`（無音ベース）/ `semantic_vad`（文の意味から判定。割り込みが大幅に減る）/ `none`（push-to-talk。クライアントが自分でバッファを commit し `response.create` を送る）。 |
 | `CHAT_REALTIME_VAD_THRESHOLD` | `0.5` | `server_vad` の発話検出しきい値（0.0-1.0）。高いほど大きな声が必要で、雑音の多い環境に有効。 |
 | `CHAT_REALTIME_VAD_PREFIX_PADDING_MS` | `300` | `server_vad` で検出した発話開始の手前に残す音声（ミリ秒）。 |

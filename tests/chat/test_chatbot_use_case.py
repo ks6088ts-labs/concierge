@@ -22,9 +22,13 @@ class FakeChatbotResponder:
     def __init__(self, chunks: list[str] | None = None) -> None:
         self.chunks = chunks if chunks is not None else ["Bot ", "reply"]
         self.received_history: list[Message] = []
+        self.received_image_url: str | None = None
 
-    def stream_reply(self, conversation: Conversation, history: list[Message]) -> Iterator[str]:
+    def stream_reply(
+        self, conversation: Conversation, history: list[Message], image_url: str | None = None
+    ) -> Iterator[str]:
         self.received_history = list(history)
+        self.received_image_url = image_url
         yield from self.chunks
 
 
@@ -92,6 +96,39 @@ def test_generate_bot_reply_conversation_not_found() -> None:
     with pytest.raises(ConversationNotFoundError):
         # Validation must run before the iterator yields the first event.
         use_case.execute(uuid.uuid4())
+
+
+def test_generate_bot_reply_threads_image_url_to_responder() -> None:
+    conversation_repo = InMemoryConversationRepository()
+    message_repo = InMemoryMessageRepository()
+    user = _user_participant()
+    bot = _bot_participant()
+    responder = FakeChatbotResponder(["ok"])
+
+    conversation = CreateConversationUseCase(conversation_repo).execute("general", user)
+    PostMessageUseCase(conversation_repo, message_repo).execute(conversation.id, user, "これは何?")
+
+    use_case = GenerateBotReplyUseCase(conversation_repo, message_repo, responder, bot, history_limit=20)
+    data_url = "data:image/png;base64,iVBORw0KGgo="
+    _collect(use_case.execute(conversation.id, image_url=data_url))
+
+    assert responder.received_image_url == data_url
+
+
+def test_generate_bot_reply_image_url_defaults_to_none() -> None:
+    conversation_repo = InMemoryConversationRepository()
+    message_repo = InMemoryMessageRepository()
+    user = _user_participant()
+    bot = _bot_participant()
+    responder = FakeChatbotResponder(["ok"])
+
+    conversation = CreateConversationUseCase(conversation_repo).execute("general", user)
+    PostMessageUseCase(conversation_repo, message_repo).execute(conversation.id, user, "hello")
+
+    use_case = GenerateBotReplyUseCase(conversation_repo, message_repo, responder, bot, history_limit=20)
+    _collect(use_case.execute(conversation.id))
+
+    assert responder.received_image_url is None
 
 
 def test_generate_bot_reply_history_limit() -> None:

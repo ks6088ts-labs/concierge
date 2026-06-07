@@ -109,6 +109,49 @@ def test_stream_reply_empty_history() -> None:
     assert chunks == ["no user message"]
 
 
+class _CapturingAgent:
+    """Agent that records the last request it handled."""
+
+    agent_type: str = "capturing"
+
+    def __init__(self) -> None:
+        self.last_request: AgentRequest | None = None
+
+    async def handle(self, request: AgentRequest) -> AgentResponse:
+        self.last_request = request
+        return AgentResponse(status="succeeded", result={"reply": "ok"})
+
+
+def test_stream_reply_passes_image_url_into_payload() -> None:
+    """An image_url is forwarded to the agent as payload['image_url']."""
+    agent = _CapturingAgent()
+    responder = AgentChatbotResponder(agent)
+
+    conversation = _make_conversation()
+    history = [_make_user_message("これは何?")]
+    data_url = "data:image/png;base64,iVBORw0KGgo="
+
+    list(responder.stream_reply(conversation, history, image_url=data_url))
+
+    assert agent.last_request is not None
+    assert agent.last_request.payload == {"message": "これは何?", "image_url": data_url}
+
+
+def test_stream_reply_omits_image_url_when_absent() -> None:
+    """Without an image, the payload carries only the message (no image_url key)."""
+    agent = _CapturingAgent()
+    responder = AgentChatbotResponder(agent)
+
+    conversation = _make_conversation()
+    history = [_make_user_message("hello")]
+
+    list(responder.stream_reply(conversation, history))
+
+    assert agent.last_request is not None
+    assert agent.last_request.payload == {"message": "hello"}
+    assert "image_url" not in agent.last_request.payload
+
+
 # ---------------------------------------------------------------------------
 # Tests: create_chatbot_responder factory
 # ---------------------------------------------------------------------------

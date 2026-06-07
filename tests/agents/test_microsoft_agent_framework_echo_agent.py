@@ -7,6 +7,7 @@ from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from agent_framework import Message
 
 from concierge.agents.application.contracts import AgentRequest, AgentResponse
 from concierge.agents.domain.agent_types import AgentType
@@ -93,6 +94,90 @@ async def test_handle_framework_exception_returns_failed() -> None:
 def test_agent_type_is_instance_attribute() -> None:
     agent = _make_agent()
     assert agent.agent_type == AgentType.MICROSOFT_AGENT_FRAMEWORK
+
+
+# ---------------------------------------------------------------------------
+# Tests: image input
+# ---------------------------------------------------------------------------
+
+
+def test_extract_image_url_returns_string() -> None:
+    assert (
+        MicrosoftAgentFrameworkAgent._extract_image_url({"image_url": "data:image/png;base64,AAA"})
+        == "data:image/png;base64,AAA"
+    )
+
+
+def test_extract_image_url_strips_whitespace() -> None:
+    assert MicrosoftAgentFrameworkAgent._extract_image_url({"image_url": "   "}) == ""
+
+
+def test_extract_image_url_missing_key() -> None:
+    assert MicrosoftAgentFrameworkAgent._extract_image_url({}) == ""
+
+
+def test_extract_image_url_non_string_value() -> None:
+    assert MicrosoftAgentFrameworkAgent._extract_image_url({"image_url": 42}) == ""  # type: ignore[arg-type]
+
+
+@pytest.mark.anyio
+async def test_handle_with_image_builds_multimodal_message() -> None:
+    """payload.image_url produces a multimodal Message (text + image) run input."""
+    agent = _make_agent()
+    mock_framework_agent = AsyncMock()
+    mock_framework_agent.run = AsyncMock(return_value=SimpleNamespace(text="It's a cat"))
+    data_url = "data:image/jpeg;base64,/9j/4AAQSkZJRg=="
+
+    with patch.object(agent, "_build_agent", return_value=mock_framework_agent):
+        output: AgentResponse = await agent.handle(_make_request({"message": "What is this?", "image_url": data_url}))
+
+    assert output.status == "succeeded"
+    run_input = mock_framework_agent.run.call_args.args[0]
+    assert isinstance(run_input, Message)
+    assert run_input.role == "user"
+    assert run_input.text == "What is this?"
+    assert len(run_input.contents) == 2
+    image_content = run_input.contents[1]
+    assert image_content.type == "data"
+    assert image_content.uri == data_url
+    # The persisted echo of the user's text excludes the image payload.
+    assert output.result is not None
+    assert output.result["message"] == "What is this?"
+
+
+@pytest.mark.anyio
+async def test_handle_image_only_uses_default_prompt() -> None:
+    """An image with no text still runs, using a neutral default prompt."""
+    agent = _make_agent()
+    mock_framework_agent = AsyncMock()
+    mock_framework_agent.run = AsyncMock(return_value=SimpleNamespace(text="A landscape"))
+    data_url = "data:image/png;base64,iVBORw0KGgo="
+
+    with patch.object(agent, "_build_agent", return_value=mock_framework_agent):
+        output: AgentResponse = await agent.handle(_make_request({"image_url": data_url}))
+
+    assert output.status == "succeeded"
+    run_input = mock_framework_agent.run.call_args.args[0]
+    assert isinstance(run_input, Message)
+    assert run_input.text == "Please describe this image."
+    assert run_input.contents[1].uri == data_url
+    assert output.result is not None
+    assert output.result["message"] == ""
+
+
+@pytest.mark.anyio
+async def test_handle_text_only_passes_plain_string() -> None:
+    """Without an image, ``agent.run`` receives the bare message string (unchanged)."""
+    agent = _make_agent()
+    mock_framework_agent = AsyncMock()
+    mock_framework_agent.run = AsyncMock(return_value=SimpleNamespace(text="hi"))
+
+    with patch.object(agent, "_build_agent", return_value=mock_framework_agent):
+        output: AgentResponse = await agent.handle(_make_request({"message": "hello"}))
+
+    assert output.status == "succeeded"
+    run_input = mock_framework_agent.run.call_args.args[0]
+    assert run_input == "hello"
 
 
 def test_registry_includes_microsoft_agent_framework() -> None:

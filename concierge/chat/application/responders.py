@@ -13,12 +13,18 @@ class ChatbotResponder(Protocol):
     The use case concatenates the chunks to form the final persisted message
     content. Streaming is required so that the transport layer can deliver
     incremental updates to clients (e.g. Server-Sent Events).
+
+    ``image_url`` is an optional inline ``data:image/*;base64,…`` URL captured by
+    the client for the current turn. It is request-scoped and ephemeral (never
+    persisted). Vision-capable implementations ground the reply in the image;
+    text-only implementations may ignore it.
     """
 
     def stream_reply(
         self,
         conversation: Conversation,
         history: list[Message],
+        image_url: str | None = None,
     ) -> Iterator[str]: ...
 
 

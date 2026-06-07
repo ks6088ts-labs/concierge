@@ -34,7 +34,7 @@ from copilot.generated.session_events import (
     SessionEvent,
     SessionIdleData,
 )
-from copilot.session import PermissionHandler
+from copilot.session import Attachment, BlobAttachment, PermissionHandler
 
 from concierge.agents.application.contracts import AgentRequest, AgentResponse
 from concierge.agents.domain.agent_types import AgentType
@@ -89,7 +89,8 @@ class GitHubCopilotSdkAgent:
 
     async def handle(self, request: AgentRequest) -> AgentResponse:
         message = self._extract_message(request.payload)
-        if not message:
+        image_url = self._extract_image_url(request.payload)
+        if not message and not image_url:
             return AgentResponse(
                 status="failed",
                 error="payload.message is required (non-empty string)",
@@ -99,7 +100,7 @@ class GitHubCopilotSdkAgent:
         tool_calls: list[dict[str, Any]] = []
 
         try:
-            reply = await self._run_session(message, side_outputs, tool_calls)
+            reply = await self._run_session(message, image_url, side_outputs, tool_calls)
         except Exception as exc:  # noqa: BLE001
             return AgentResponse(status="failed", error=f"{type(exc).__name__}: {exc}")
 
@@ -119,10 +120,11 @@ class GitHubCopilotSdkAgent:
     async def _run_session(
         self,
         message: str,
+        image_url: str,
         side_outputs: dict[str, Any],
         tool_calls: list[dict[str, Any]],
     ) -> str:
-        """Open a session, send ``message``, and return the assistant reply.
+        """Open a session, send the user turn, and return the assistant reply.
 
         Both the :class:`CopilotClient` and the returned session are used
         as async context managers so the CLI subprocess and the JSON-RPC
@@ -130,8 +132,15 @@ class GitHubCopilotSdkAgent:
         accumulates ``AssistantMessageData.content`` chunks (the SDK may
         emit more than one final message per turn) and
         :class:`SessionIdleData` signals end-of-turn.
+
+        When ``image_url`` (an inline ``data:image/*;base64,…`` URL) is
+        supplied it is forwarded as a Copilot ``blob`` attachment so a
+        vision-capable model can ground its reply in what the user captured.
+        A neutral default prompt is used for image-only turns.
         """
         tools = [builder(side_outputs) for builder in self._tool_builders]
+        prompt = message or "Please describe this image."
+        attachments = self._build_attachments(image_url)
 
         def on_pre_tool_use(input_data: dict[str, Any], _invocation: dict[str, str]) -> None:
             tool_calls.append(
@@ -166,7 +175,7 @@ class GitHubCopilotSdkAgent:
                             done.set()
 
                 session.on(on_event)
-                await session.send(message)
+                await session.send(prompt, attachments=attachments)
                 await done.wait()
 
                 return "".join(reply_parts)
@@ -179,6 +188,42 @@ class GitHubCopilotSdkAgent:
     def _extract_message(payload: dict[str, Any]) -> str:
         value = payload.get("message")
         return value if isinstance(value, str) and value.strip() else ""
+
+    @staticmethod
+    def _extract_image_url(payload: dict[str, Any]) -> str:
+        value = payload.get("image_url")
+        return value if isinstance(value, str) and value.strip() else ""
+
+    @staticmethod
+    def _build_attachments(image_url: str) -> list[Attachment] | None:
+        """Build Copilot SDK ``blob`` attachments from an inline image data URL.
+
+        The Copilot SDK carries inline images as ``blob`` attachments with the
+        raw base64 payload and MIME type split apart (unlike the single
+        ``data:`` URL used by the other agents). Returns ``None`` when no usable
+        image is supplied so the turn is sent as plain text.
+        """
+        if not image_url:
+            return None
+        parsed = GitHubCopilotSdkAgent._parse_data_url(image_url)
+        if parsed is None:
+            return None
+        mime_type, data = parsed
+        return [BlobAttachment(type="blob", data=data, mimeType=mime_type)]
+
+    @staticmethod
+    def _parse_data_url(image_url: str) -> tuple[str, str] | None:
+        """Split a ``data:<mime>;base64,<data>`` URL into ``(mime_type, base64)``.
+
+        Returns ``None`` for any value that is not a base64 ``data:`` URL.
+        """
+        if not image_url.startswith("data:") or ";base64," not in image_url:
+            return None
+        header, _, data = image_url.partition(";base64,")
+        mime_type = header[len("data:") :]
+        if not mime_type or not data:
+            return None
+        return mime_type, data
 
     def _build_client(self) -> CopilotClient:
         """Construct a fresh :class:`CopilotClient`.

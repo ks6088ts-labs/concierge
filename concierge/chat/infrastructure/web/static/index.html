@@ -367,6 +367,184 @@
       }
       button.call-btn[hidden] { display: none; }
 
+      /* Camera button: lives in the composer input row as a media-input
+         affordance (alongside the textarea and 🎤). The accent keeps it
+         visibly active even while the rest of the composer is locked during a
+         realtime call. */
+      button.camera-btn {
+        border-color: var(--agent);
+        color: var(--agent);
+        background: var(--agent-soft);
+      }
+      button.camera-btn:hover:not(:disabled) {
+        background: #ede9fe;
+        border-color: var(--agent);
+      }
+      button.camera-btn[hidden] { display: none; }
+
+      /* ---------- Camera capture overlay (realtime image input) ---------- */
+      .camera-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1200;
+        background: #000;
+        display: flex;
+        flex-direction: column;
+        /* Respect notches / home indicators on phones. */
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      }
+      .camera-overlay[hidden] { display: none; }
+      .camera-stage {
+        position: relative;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        background: #000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .camera-video,
+      .camera-preview {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background: #000;
+      }
+      .camera-preview[hidden] { display: none; }
+      .camera-hint {
+        position: absolute;
+        top: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: 90%;
+        text-align: center;
+        color: #fff;
+        font-size: 0.8rem;
+        background: rgba(0, 0, 0, 0.45);
+        padding: 0.35rem 0.75rem;
+        border-radius: 999px;
+        pointer-events: none;
+      }
+      .camera-controls {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1.1rem 1.5rem calc(1.1rem + env(safe-area-inset-bottom));
+        background: #000;
+      }
+      .camera-confirm { justify-content: center; gap: 0.75rem; }
+      .camera-confirm[hidden] { display: none; }
+      .camera-ctrl-btn {
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0.55rem 1rem;
+        border-radius: 999px;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+        font-size: 0.95rem;
+        cursor: pointer;
+      }
+      .camera-ctrl-btn:hover { background: rgba(255, 255, 255, 0.22); }
+      .camera-ctrl-secondary { flex: 0 0 auto; }
+      .camera-ctrl-primary {
+        background: var(--primary);
+        border-color: var(--primary);
+        font-weight: 600;
+      }
+      .camera-ctrl-primary:hover { background: var(--primary-strong, #1d4ed8); }
+      .camera-shutter {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        border: 4px solid rgba(255, 255, 255, 0.85);
+        background: transparent;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+      }
+      .camera-shutter:active { transform: scale(0.94); }
+      .camera-shutter-ring {
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: #fff;
+        transition: background 0.15s ease;
+      }
+      .camera-shutter:disabled { opacity: 0.5; cursor: default; }
+
+      /* Shared-image message bubble (locally rendered camera captures). */
+      .message.image-message .content { padding: 0; }
+      .message .shared-image {
+        display: block;
+        max-width: 240px;
+        max-height: 240px;
+        width: auto;
+        height: auto;
+        border-radius: 10px;
+        cursor: zoom-in;
+      }
+
+      /* Pending camera image attached to the text composer (before send). */
+      .pending-image {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.4rem 0.5rem;
+        margin-bottom: 0.5rem;
+        background: var(--agent-soft);
+        border: 1px solid #ddd6fe;
+        border-radius: 10px;
+      }
+      .pending-image[hidden] { display: none; }
+      .pending-image-thumb {
+        width: 44px;
+        height: 44px;
+        object-fit: cover;
+        border-radius: 6px;
+        flex-shrink: 0;
+      }
+      .pending-image-label {
+        font-size: 0.78rem;
+        color: var(--agent);
+        flex: 1;
+        min-width: 0;
+      }
+      .pending-image-remove {
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        cursor: pointer;
+        padding: 0.2rem 0.4rem;
+        border-radius: 6px;
+        flex-shrink: 0;
+      }
+      .pending-image-remove:hover { background: rgba(0, 0, 0, 0.06); color: var(--text); }
+
+      /* Tap-to-enlarge lightbox for shared images. */
+      .image-viewer {
+        position: fixed;
+        inset: 0;
+        z-index: 1300;
+        background: rgba(0, 0, 0, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+        cursor: zoom-out;
+      }
+      .image-viewer img {
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: 8px;
+      }
+
       #interim-transcript {
         display: none;
         padding: 0.4rem 1rem;
@@ -766,7 +944,20 @@
             <span id="ai-banner-text">AI 自動応答は無効です(Microsoft Foundry が未設定)。</span>
           </div>
           <form id="post-message-form" class="composer">
+            <div id="pending-image" class="pending-image" hidden>
+              <img id="pending-image-preview" class="pending-image-thumb" alt="添付した画像のプレビュー" />
+              <span class="pending-image-label">📷 画像を添付中 — 質問を入力して送信</span>
+              <button id="pending-image-remove" class="pending-image-remove" type="button" aria-label="添付画像を取り消す" title="取り消す">✕</button>
+            </div>
             <div class="composer-input-row">
+              <button
+                id="camera-toggle"
+                class="icon-btn camera-btn"
+                type="button"
+                title="カメラで画像を共有"
+                aria-label="カメラを開いて画像を共有"
+                hidden
+              >📷</button>
               <textarea
                 id="message-content"
                 placeholder="メッセージを入力 (Shift+Enter で送信 / Enter で改行)"
@@ -862,6 +1053,27 @@
       </div>
     </div>
 
+    <!-- Camera capture overlay (realtime image input) -->
+    <div id="camera-overlay" class="camera-overlay" hidden role="dialog" aria-modal="true" aria-label="カメラ撮影">
+      <div class="camera-stage">
+        <video id="camera-video" class="camera-video" playsinline autoplay muted></video>
+        <img id="camera-preview" class="camera-preview" alt="撮影した画像のプレビュー" hidden />
+        <canvas id="camera-canvas" hidden></canvas>
+        <div id="camera-hint" class="camera-hint">被写体をフレームに収めてシャッターを押してください</div>
+      </div>
+
+      <div id="camera-live-controls" class="camera-controls">
+        <button id="camera-cancel" class="camera-ctrl-btn camera-ctrl-secondary" type="button" aria-label="カメラを閉じる">✕</button>
+        <button id="camera-shutter" class="camera-shutter" type="button" aria-label="撮影"><span class="camera-shutter-ring"></span></button>
+        <button id="camera-flip" class="camera-ctrl-btn camera-ctrl-secondary" type="button" aria-label="前面/背面カメラを切り替え" title="カメラ切替">🔄</button>
+      </div>
+
+      <div id="camera-confirm-controls" class="camera-controls camera-confirm" hidden>
+        <button id="camera-retake" class="camera-ctrl-btn camera-ctrl-secondary" type="button">↩︎ 撮り直し</button>
+        <button id="camera-send" class="camera-ctrl-btn camera-ctrl-primary" type="button">この画像を送信 →</button>
+      </div>
+    </div>
+
     <div id="toasts" class="toast-container" aria-live="polite"></div>
 
     <script>
@@ -881,6 +1093,24 @@
         deleteConversation: document.getElementById('delete-conversation'),
         callToggle: document.getElementById('call-toggle'),
         callStatus: document.getElementById('call-status'),
+        cameraToggle: document.getElementById('camera-toggle'),
+        // Pending camera image attached to the text composer
+        pendingImage: document.getElementById('pending-image'),
+        pendingImagePreview: document.getElementById('pending-image-preview'),
+        pendingImageRemove: document.getElementById('pending-image-remove'),
+        // Camera overlay (realtime image input)
+        cameraOverlay: document.getElementById('camera-overlay'),
+        cameraVideo: document.getElementById('camera-video'),
+        cameraPreview: document.getElementById('camera-preview'),
+        cameraCanvas: document.getElementById('camera-canvas'),
+        cameraHint: document.getElementById('camera-hint'),
+        cameraLiveControls: document.getElementById('camera-live-controls'),
+        cameraConfirmControls: document.getElementById('camera-confirm-controls'),
+        cameraCancel: document.getElementById('camera-cancel'),
+        cameraShutter: document.getElementById('camera-shutter'),
+        cameraFlip: document.getElementById('camera-flip'),
+        cameraRetake: document.getElementById('camera-retake'),
+        cameraSend: document.getElementById('camera-send'),
         // Messages / composer
         messages: document.getElementById('messages'),
         interimTranscript: document.getElementById('interim-transcript'),
@@ -926,6 +1156,15 @@
         realtimeSupported: false,
         // 'idle' | 'connecting' | 'active'
         callState: 'idle',
+        // Camera images injected into the live realtime session. These are NOT
+        // persisted server-side (see CHAT realtime image input); kept in memory
+        // so they stay visible across in-session message re-renders. Each entry:
+        // { conversationId, dataUrl, createdAt }.
+        localImages: [],
+        // Camera image attached to the text composer, awaiting send. Ephemeral
+        // (never persisted); passed to the agent as ``image_url`` on the next
+        // agent reply. ``null`` when nothing is attached.
+        pendingImage: null,
       };
 
       const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -1343,9 +1582,13 @@
         els.deleteConversation.disabled = false;
         els.messageContent.disabled = false;
         els.sendButton.disabled = false;
+        // A pending camera image belongs to the conversation it was captured
+        // in; drop it when switching so it can't leak into another thread.
+        clearPendingImage();
         updateVoiceInputAvailability();
         updateManualAgentButton();
         updateCallButton();
+        updateCameraButton();
         await loadMessages();
         renderParticipants();
         els.messageContent.focus();
@@ -1392,7 +1635,10 @@
 
       function renderMessages(messages) {
         els.messages.innerHTML = '';
-        if (messages.length === 0) {
+        const localImages = state.localImages.filter(
+          (im) => im.conversationId === state.selectedConversationId,
+        );
+        if (messages.length === 0 && localImages.length === 0) {
           const empty = document.createElement('div');
           empty.className = 'messages-empty';
           empty.innerHTML = `
@@ -1404,10 +1650,14 @@
           return;
         }
         const myUserId = els.userId.value.trim();
-        messages
-          .slice()
-          .reverse()
-          .forEach((m) => appendMessage(m, myUserId));
+        // Build one chronological timeline from persisted text messages and the
+        // in-memory camera images so a capture keeps its place when the list is
+        // re-rendered (e.g. after a transcript is persisted mid-call).
+        const timeline = [
+          ...messages.map((m) => ({ at: m.created_at, render: () => appendMessage(m, myUserId) })),
+          ...localImages.map((im) => ({ at: im.createdAt, render: () => appendImageMessage(im) })),
+        ].sort((a, b) => new Date(a.at) - new Date(b.at));
+        timeline.forEach((item) => item.render());
         scrollMessagesToBottom();
       }
 
@@ -1436,6 +1686,40 @@
           });
         }
         els.messages.appendChild(div);
+      }
+
+      // Render a locally-captured camera image as a "mine" bubble. These images
+      // live only in ``state.localImages`` (not persisted server-side), so they
+      // are re-attached on every render and disappear on a full page reload.
+      function appendImageMessage(im) {
+        const div = document.createElement('div');
+        div.className = 'message mine image-message';
+        const who = els.displayName.value.trim() || 'あなた';
+        div.innerHTML = `
+          <div class="meta">
+            <strong>${escapeHtml(who)}</strong>
+            <span title="${escapeHtml(im.createdAt)}">${escapeHtml(formatRelative(im.createdAt))}</span>
+            <span class="chip" style="margin-left:auto;">📷 画像</span>
+          </div>
+          <div class="content"><img class="shared-image" alt="共有した画像" /></div>
+        `;
+        // Assign the (potentially large) data URL via the DOM rather than the
+        // HTML string to avoid running it through escapeHtml.
+        const img = div.querySelector('img.shared-image');
+        img.src = im.dataUrl;
+        img.addEventListener('click', () => openImageViewer(im.dataUrl));
+        els.messages.appendChild(div);
+      }
+
+      function openImageViewer(src) {
+        const overlay = document.createElement('div');
+        overlay.className = 'image-viewer';
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = '共有した画像';
+        overlay.appendChild(img);
+        overlay.addEventListener('click', () => overlay.remove());
+        document.body.appendChild(overlay);
       }
 
       function scrollMessagesToBottom() {
@@ -1596,7 +1880,15 @@
 
       els.manualAgentReply.addEventListener('click', async () => {
         if (!state.selectedConversationId) return;
-        await runAgentReply(state.selectedConversationId);
+        // Consume a pending image if one is attached (e.g. the user captured an
+        // image but auto-reply is off), then detach it.
+        const imageToSend = state.pendingImage;
+        if (imageToSend) {
+          recordLocalImage(imageToSend);
+          clearPendingImage();
+          await loadMessages();
+        }
+        await runAgentReply(state.selectedConversationId, imageToSend);
       });
 
       // -------- Composer --------
@@ -1633,9 +1925,20 @@
         e.preventDefault();
         if (!state.selectedConversationId) return;
         const content = els.messageContent.value.trim();
-        if (!content) return;
+        // An attached image still needs an accompanying question so the agent
+        // has a user turn to answer. Nudge instead of silently dropping it.
+        if (!content) {
+          if (state.pendingImage) {
+            toast('画像について質問を入力してください', 'warning');
+          }
+          return;
+        }
         const conversationId = state.selectedConversationId;
         const displayName = els.displayName.value.trim() || null;
+        // Capture and detach the pending image up-front so a slow request can't
+        // race a second send. The image is ephemeral (never persisted): it is
+        // shown locally and passed to this one agent reply only.
+        const imageToSend = state.pendingImage;
         els.sendButton.disabled = true;
         try {
           if (!state.joinedConversations.has(conversationId)) {
@@ -1656,10 +1959,19 @@
           });
           els.messageContent.value = '';
           autoResize();
+          if (imageToSend) {
+            // Record the capture so it renders inline (merged by timestamp) and
+            // survives in-session re-renders, then detach it from the composer.
+            recordLocalImage(imageToSend);
+            clearPendingImage();
+          }
           await Promise.all([loadConversations(), loadMessages()]);
-          // Auto-reply only when the toggle is on and AI is known to be available.
-          if (els.aiAutoReply.checked && state.aiAvailability !== 'unavailable') {
-            runAgentReply(conversationId).catch((err) => {
+          // Trigger a reply when auto-reply is on, OR whenever an image was
+          // attached (sharing an image is an explicit request for a response).
+          const shouldReply =
+            (els.aiAutoReply.checked || !!imageToSend) && state.aiAvailability !== 'unavailable';
+          if (shouldReply) {
+            runAgentReply(conversationId, imageToSend).catch((err) => {
               console.warn('agent reply error', err);
             });
           }
@@ -1689,7 +2001,7 @@
         return div;
       }
 
-      async function runAgentReply(conversationId) {
+      async function runAgentReply(conversationId, imageUrl = null) {
         if (state.agentReplyInFlight) return;
         state.agentReplyInFlight = true;
         updateManualAgentButton();
@@ -1707,13 +2019,17 @@
           const url = state.agentType
             ? `/conversations/${conversationId}/agent-replies?agent_type=${encodeURIComponent(state.agentType)}`
             : `/conversations/${conversationId}/agent-replies`;
-          const response = await fetch(
-            url,
-            {
-              method: 'POST',
-              headers: { 'X-User-Id': userId, 'Accept': 'text/event-stream' },
-            },
-          );
+          // Attach the optional camera image as a JSON body. Sent only when
+          // present so existing no-body requests are unchanged.
+          const fetchOptions = {
+            method: 'POST',
+            headers: { 'X-User-Id': userId, 'Accept': 'text/event-stream' },
+          };
+          if (imageUrl) {
+            fetchOptions.headers['Content-Type'] = 'application/json';
+            fetchOptions.body = JSON.stringify({ image_url: imageUrl });
+          }
+          const response = await fetch(url, fetchOptions);
           if (!response.ok) {
             const body = await response.text().catch(() => '');
             if (response.status === 503) {
@@ -1795,6 +2111,7 @@
         currentSource: null,
         userSpeaking: false,
         interimText: '',
+        userInterimText: '',
         endingOnPurpose: false,
       };
 
@@ -1835,6 +2152,12 @@ registerProcessor('pcm16-processor', PCM16Processor);
         els.callToggle.title = isActive ? 'リアルタイム音声通話を終了' : 'リアルタイム音声通話を開始';
         els.callToggle.setAttribute('aria-label', isActive ? '通話を終了' : '通話を開始');
         updateCallButton();
+        // The camera is available both in a live call (image is injected into
+        // the realtime session) and in text chat (image is attached to the next
+        // agent reply). Keep the button in sync and close any open viewfinder
+        // when a call ends so a call-scoped capture doesn't linger.
+        updateCameraButton();
+        if (next !== 'active') closeCamera();
         // While the call is active, text-only controls would race with the
         // realtime pipeline. Disable them to keep one input mode at a time.
         const lockText = isActive;
@@ -1860,9 +2183,38 @@ registerProcessor('pcm16-processor', PCM16Processor);
         }
       }
 
-      function setInterim(text) {
+      // The camera works in both modes (call → inject into the live session;
+      // text chat → attach to the next agent reply), so it is shown whenever a
+      // conversation is selected — independent of realtime availability.
+      function updateCameraButton() {
+        els.cameraToggle.hidden = !state.selectedConversationId;
+        // The button stays in one place (the composer) for both modes; only the
+        // hint changes so users know what a capture will do right now.
+        const inCall = state.callState === 'active';
+        const title = inCall ? 'カメラで撮影して通話に画像を送る' : 'カメラで撮影してメッセージに画像を添付';
+        els.cameraToggle.title = title;
+        els.cameraToggle.setAttribute('aria-label', title);
+      }
+
+      // -------- Pending composer image (text-chat image input) --------
+      function setPendingImage(dataUrl) {
+        state.pendingImage = dataUrl;
+        els.pendingImagePreview.src = dataUrl;
+        els.pendingImage.hidden = false;
+      }
+
+      function clearPendingImage() {
+        state.pendingImage = null;
+        els.pendingImagePreview.removeAttribute('src');
+        els.pendingImage.hidden = true;
+      }
+
+      // ``role`` selects the speaker prefix so users can tell their own
+      // recognized speech (🗣️) apart from the assistant's reply (🤖).
+      function setInterim(text, role = 'agent') {
         if (text) {
-          els.interimTranscript.textContent = `🤖 ${text}`;
+          const prefix = role === 'user' ? '🗣️' : '🤖';
+          els.interimTranscript.textContent = `${prefix} ${text}`;
           els.interimTranscript.classList.add('visible');
         } else {
           els.interimTranscript.textContent = '';
@@ -1872,6 +2224,7 @@ registerProcessor('pcm16-processor', PCM16Processor);
 
       function clearInterim() {
         call.interimText = '';
+        call.userInterimText = '';
         setInterim('');
       }
 
@@ -2113,9 +2466,24 @@ registerProcessor('pcm16-processor', PCM16Processor);
           } else if (evType === 'input_audio_buffer.speech_stopped') {
             // User finished; allow the next response's audio to play again.
             call.userSpeaking = false;
+          } else if (evType === 'conversation.item.input_audio_transcription.delta' && payload.delta) {
+            // Live transcript of the *user's* speech. Requires
+            // CHAT_REALTIME_TRANSCRIPTION_MODEL; stream it into the interim line
+            // so users can see what was recognized as they speak.
+            call.userInterimText += payload.delta;
+            setInterim(call.userInterimText, 'user');
+          } else if (evType === 'conversation.item.input_audio_transcription.completed') {
+            // Final user transcript. Some models (e.g. whisper-1) skip deltas and
+            // only send this, so fall back to its transcript. Skip while the
+            // assistant is already replying so we don't overwrite its transcript;
+            // the server persists this as a USER message and emits
+            // concierge.message.persisted, which clears the interim and reloads.
+            const finalText = payload.transcript || call.userInterimText;
+            if (finalText && !call.interimText) setInterim(finalText, 'user');
+            call.userInterimText = '';
           } else if (evType === 'response.output_audio_transcript.delta' && payload.delta) {
             call.interimText += payload.delta;
-            setInterim(call.interimText);
+            setInterim(call.interimText, 'agent');
           } else if (evType === 'response.output_audio_transcript.done') {
             clearInterim();
           } else if (evType === 'response.output_item.done') {
@@ -2136,6 +2504,171 @@ registerProcessor('pcm16-processor', PCM16Processor);
           }
         }
       }
+
+      // -------- Camera capture (realtime image input) --------
+      // The viewfinder reuses the open realtime call: a captured frame is
+      // downscaled, shown locally, and sent over the same WebSocket as a
+      // ``concierge.image.input`` control message. The server injects it into
+      // the Foundry session as an ``input_image`` conversation item so the model
+      // can ground its next (voice) turn in what the user is showing.
+      const camera = {
+        stream: null,
+        facingMode: 'environment',
+        capturedDataUrl: '',
+        opening: false,
+      };
+
+      function showCameraLiveMode() {
+        els.cameraPreview.hidden = true;
+        els.cameraPreview.removeAttribute('src');
+        els.cameraVideo.hidden = false;
+        els.cameraLiveControls.hidden = false;
+        els.cameraConfirmControls.hidden = true;
+        els.cameraHint.style.display = '';
+        camera.capturedDataUrl = '';
+      }
+
+      function showCameraConfirmMode(dataUrl) {
+        els.cameraPreview.src = dataUrl;
+        els.cameraPreview.hidden = false;
+        els.cameraVideo.hidden = true;
+        els.cameraLiveControls.hidden = true;
+        els.cameraConfirmControls.hidden = false;
+        els.cameraHint.style.display = 'none';
+        camera.capturedDataUrl = dataUrl;
+      }
+
+      async function startCameraStream() {
+        stopCameraStream();
+        const constraints = { video: { facingMode: { ideal: camera.facingMode } }, audio: false };
+        camera.stream = await navigator.mediaDevices.getUserMedia(constraints);
+        els.cameraVideo.srcObject = camera.stream;
+        // ``autoplay`` covers most browsers; call play() for the strict ones.
+        try { await els.cameraVideo.play(); } catch (_) { /* noop */ }
+      }
+
+      function stopCameraStream() {
+        if (camera.stream) {
+          camera.stream.getTracks().forEach((t) => t.stop());
+          camera.stream = null;
+        }
+        els.cameraVideo.srcObject = null;
+      }
+
+      async function openCamera() {
+        if (!state.selectedConversationId) {
+          toast('会話を選択してください', 'warning');
+          return;
+        }
+        if (camera.opening || !els.cameraOverlay.hidden) return;
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          toast('このブラウザはカメラに対応していません', 'error');
+          return;
+        }
+        camera.opening = true;
+        try {
+          await startCameraStream();
+          showCameraLiveMode();
+          els.cameraOverlay.hidden = false;
+        } catch (e) {
+          toast(`カメラを開けませんでした: ${e.message}`, 'error');
+          stopCameraStream();
+        } finally {
+          camera.opening = false;
+        }
+      }
+
+      function closeCamera() {
+        // Safe to call unconditionally (setCallState calls it on every
+        // non-active transition, even when the viewfinder was never opened).
+        if (!els.cameraOverlay) return;
+        els.cameraOverlay.hidden = true;
+        stopCameraStream();
+        els.cameraPreview.hidden = true;
+        els.cameraPreview.removeAttribute('src');
+        camera.capturedDataUrl = '';
+      }
+
+      async function flipCamera() {
+        camera.facingMode = camera.facingMode === 'environment' ? 'user' : 'environment';
+        try {
+          await startCameraStream();
+          showCameraLiveMode();
+        } catch (e) {
+          toast(`カメラの切り替えに失敗: ${e.message}`, 'error');
+        }
+      }
+
+      function captureToDataUrl(video, maxDim = 1024, quality = 0.7) {
+        // Downscale to keep the base64 payload small on mobile networks while
+        // preserving enough detail for the model to read text / recognise items.
+        const vw = video.videoWidth || 1280;
+        const vh = video.videoHeight || 720;
+        const scale = Math.min(1, maxDim / Math.max(vw, vh));
+        const cw = Math.max(1, Math.round(vw * scale));
+        const ch = Math.max(1, Math.round(vh * scale));
+        const canvas = els.cameraCanvas;
+        canvas.width = cw;
+        canvas.height = ch;
+        const ctx = canvas.getContext('2d');
+        // Mirror front-camera frames so the saved image matches the preview.
+        if (camera.facingMode === 'user') {
+          ctx.translate(cw, 0);
+          ctx.scale(-1, 1);
+        }
+        ctx.drawImage(video, 0, 0, cw, ch);
+        return canvas.toDataURL('image/jpeg', quality);
+      }
+
+      function captureFrame() {
+        if (!camera.stream) return;
+        // Keep the stream running (hidden) so "撮り直し" is instant.
+        showCameraConfirmMode(captureToDataUrl(els.cameraVideo));
+      }
+
+      function recordLocalImage(dataUrl) {
+        const im = {
+          conversationId: state.selectedConversationId,
+          dataUrl,
+          createdAt: new Date().toISOString(),
+        };
+        state.localImages.push(im);
+        // Bound memory: keep only the most recent captures across the session.
+        if (state.localImages.length > 30) state.localImages.shift();
+        return im;
+      }
+
+      function sendCapturedImage() {
+        const dataUrl = camera.capturedDataUrl;
+        if (!dataUrl) return;
+        // Live call → inject straight into the realtime session (the model
+        // grounds its next spoken turn in the image). Text chat → attach the
+        // image to the composer so it rides the next agent reply.
+        if (state.callState === 'active' && call.ws && call.ws.readyState === WebSocket.OPEN) {
+          call.ws.send(JSON.stringify({ type: 'concierge.image.input', image_url: dataUrl }));
+          const im = recordLocalImage(dataUrl);
+          appendImageMessage(im);
+          scrollMessagesToBottom();
+          closeCamera();
+          toast('画像を送信しました。話しかけて質問してください 🗣️', 'info', 2600);
+          return;
+        }
+        setPendingImage(dataUrl);
+        closeCamera();
+        els.messageContent.focus();
+        toast('画像を添付しました。質問を入力して送信してください 📷', 'info', 2600);
+      }
+
+      els.cameraToggle.addEventListener('click', () => { openCamera(); });
+      els.cameraShutter.addEventListener('click', captureFrame);
+      els.cameraFlip.addEventListener('click', () => { flipCamera(); });
+      els.cameraCancel.addEventListener('click', closeCamera);
+      els.cameraRetake.addEventListener('click', showCameraLiveMode);
+      els.cameraSend.addEventListener('click', sendCapturedImage);
+      els.pendingImageRemove.addEventListener('click', clearPendingImage);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !els.cameraOverlay.hidden) closeCamera();
+      });
 
       els.callToggle.addEventListener('click', () => {
         if (state.callState === 'idle') {

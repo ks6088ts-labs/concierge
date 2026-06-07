@@ -198,3 +198,47 @@ def test_client_oai_event_forwarded_to_session() -> None:
 
     assert responder.last_session is not None
     assert any(e.get("type") == "input_audio_buffer.commit" for e in responder.last_session.sent_events)
+
+
+def test_image_input_forwarded_as_conversation_item() -> None:
+    """A valid concierge.image.input is injected as an input_image conversation item."""
+    responder = FakeRealtimeResponder(server_events=[])
+    app, _, _ = _make_app(responder)
+    user_id = str(uuid.uuid4())
+    client = TestClient(app)
+    conv_id = _create_conv(client, user_id)
+
+    data_url = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQ=="
+    with client.websocket_connect(f"/conversations/{conv_id}/realtime?user_id={user_id}") as ws:
+        ready = ws.receive_json()
+        assert ready["type"] == "concierge.session.ready"
+        ws.send_json({"type": "concierge.image.input", "image_url": data_url})
+        import time  # noqa: PLC0415
+
+        time.sleep(0.1)
+
+    assert responder.last_session is not None
+    items = [e for e in responder.last_session.sent_events if e.get("type") == "conversation.item.create"]
+    assert len(items) == 1
+    content = items[0]["item"]["content"]
+    assert content[0]["type"] == "input_image"
+    assert content[0]["image_url"] == data_url
+
+
+def test_image_input_rejects_non_data_url() -> None:
+    """A non-data:image URL is rejected with concierge.error and not forwarded."""
+    responder = FakeRealtimeResponder(server_events=[])
+    app, _, _ = _make_app(responder)
+    user_id = str(uuid.uuid4())
+    client = TestClient(app)
+    conv_id = _create_conv(client, user_id)
+
+    with client.websocket_connect(f"/conversations/{conv_id}/realtime?user_id={user_id}") as ws:
+        ready = ws.receive_json()
+        assert ready["type"] == "concierge.session.ready"
+        ws.send_json({"type": "concierge.image.input", "image_url": "https://example.com/x.png"})
+        err = ws.receive_json()
+        assert err["type"] == "concierge.error"
+
+    assert responder.last_session is not None
+    assert not any(e.get("type") == "conversation.item.create" for e in responder.last_session.sent_events)

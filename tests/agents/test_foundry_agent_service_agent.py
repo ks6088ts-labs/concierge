@@ -165,6 +165,107 @@ async def test_handle_openai_exception_returns_failed() -> None:
     assert "openai error" in output.error
 
 
+# ---------------------------------------------------------------------------
+# Tests: image input
+# ---------------------------------------------------------------------------
+
+
+def test_extract_image_url_returns_string() -> None:
+    assert (
+        FoundryAgentServiceAgent._extract_image_url({"image_url": "data:image/png;base64,AAA"})
+        == "data:image/png;base64,AAA"
+    )
+
+
+def test_extract_image_url_strips_whitespace() -> None:
+    assert FoundryAgentServiceAgent._extract_image_url({"image_url": "   "}) == ""
+
+
+def test_extract_image_url_missing_key() -> None:
+    assert FoundryAgentServiceAgent._extract_image_url({}) == ""
+
+
+def test_extract_image_url_non_string_value() -> None:
+    assert FoundryAgentServiceAgent._extract_image_url({"image_url": 42}) == ""  # type: ignore[arg-type]
+
+
+def _make_openai_mocks(reply: str, conversation_id: str) -> MagicMock:
+    """Build a mock project client whose OpenAI client returns ``reply``."""
+    mock_response = MagicMock()
+    mock_response.output_text = reply
+
+    mock_conversation = MagicMock()
+    mock_conversation.id = conversation_id
+
+    mock_openai = MagicMock()
+    mock_openai.conversations.create.return_value = mock_conversation
+    mock_openai.responses.create.return_value = mock_response
+
+    mock_project = MagicMock()
+    mock_project.get_openai_client.return_value = mock_openai
+    return mock_project
+
+
+@pytest.mark.anyio
+async def test_handle_with_image_builds_multimodal_input() -> None:
+    """payload.image_url produces a multimodal Responses API ``input`` list."""
+    agent = _make_agent()
+    mock_project = _make_openai_mocks("It's a cat.", "conv-img")
+    data_url = "data:image/jpeg;base64,/9j/4AAQSkZJRg=="
+
+    with patch.object(agent, "_build_project_client", return_value=mock_project):
+        output: AgentResponse = await agent.handle(_make_request({"message": "What is this?", "image_url": data_url}))
+
+    assert output.status == "succeeded"
+    sent_input = mock_project.get_openai_client.return_value.responses.create.call_args.kwargs["input"]
+    assert sent_input == [
+        {
+            "role": "user",
+            "content": [
+                {"type": "input_text", "text": "What is this?"},
+                {"type": "input_image", "image_url": data_url},
+            ],
+        }
+    ]
+    # The persisted echo of the user's text excludes the image payload.
+    assert output.result is not None
+    assert output.result["message"] == "What is this?"
+
+
+@pytest.mark.anyio
+async def test_handle_image_only_uses_default_prompt() -> None:
+    """An image with no text still runs, using a neutral default prompt."""
+    agent = _make_agent()
+    mock_project = _make_openai_mocks("A landscape.", "conv-img2")
+    data_url = "data:image/png;base64,iVBORw0KGgo="
+
+    with patch.object(agent, "_build_project_client", return_value=mock_project):
+        output: AgentResponse = await agent.handle(_make_request({"image_url": data_url}))
+
+    assert output.status == "succeeded"
+    sent_input = mock_project.get_openai_client.return_value.responses.create.call_args.kwargs["input"]
+    assert isinstance(sent_input, list)
+    content = sent_input[0]["content"]
+    assert content[0] == {"type": "input_text", "text": "Please describe this image."}
+    assert content[1] == {"type": "input_image", "image_url": data_url}
+    assert output.result is not None
+    assert output.result["message"] == ""
+
+
+@pytest.mark.anyio
+async def test_handle_text_only_sends_plain_string_input() -> None:
+    """Without an image, the Responses API ``input`` stays a bare string (unchanged)."""
+    agent = _make_agent()
+    mock_project = _make_openai_mocks("ok", "conv-text")
+
+    with patch.object(agent, "_build_project_client", return_value=mock_project):
+        output: AgentResponse = await agent.handle(_make_request({"message": "hello"}))
+
+    assert output.status == "succeeded"
+    sent_input = mock_project.get_openai_client.return_value.responses.create.call_args.kwargs["input"]
+    assert sent_input == "hello"
+
+
 def test_registry_includes_foundry_agent_service() -> None:
     from concierge.agents.infrastructure.registry_factory import get_agent_registry
 

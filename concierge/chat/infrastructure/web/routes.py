@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Response, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import StreamingResponse
 
 from concierge.chat.application.repositories import ConversationRepository, MessageRepository
@@ -39,6 +39,7 @@ from concierge.chat.infrastructure.web.dependencies import (
     get_realtime_responder_optional,
 )
 from concierge.chat.infrastructure.web.schemas import (
+    AgentReplyRequest,
     AgentTypesResponse,
     ConversationResponse,
     CreateConversationRequest,
@@ -206,6 +207,7 @@ def stream_agent_reply(
     message_repository: Annotated[MessageRepository, Depends(get_message_repository)],
     chatbot_responder: Annotated[ChatbotResponder, Depends(get_chatbot_responder)],
     chat_settings: Annotated[ChatSettings, Depends(get_chat_settings_dep)],
+    payload: Annotated[AgentReplyRequest | None, Body()] = None,
 ) -> StreamingResponse:
     """Stream an AI agent reply over Server-Sent Events.
 
@@ -215,6 +217,14 @@ def stream_agent_reply(
       ``CHAT_BOT_AGENT_TYPE`` for this request only. Must be one of the values
       returned by ``GET /agents``. When omitted, the configured default is
       used.
+
+    Optional JSON body:
+
+    - ``image_url`` — an inline ``data:image/*;base64,…`` URL captured by the
+      client (e.g. the camera) to ground this turn. It is request-scoped and
+      never persisted. Vision-capable agents (``langgraph``) interpret it;
+      others ignore it. ``http(s)`` URLs are rejected so the model never
+      fetches attacker-controlled URLs server-side.
 
     Connection protocol:
 
@@ -226,6 +236,12 @@ def stream_agent_reply(
     Synchronous validation (e.g. unknown ``conversation_id``) is reported via
     a normal JSON error response (404 / 422 / 503) before the stream starts.
     """
+    image_url = payload.image_url if payload else None
+    if image_url is not None:
+        error = _validate_image_data_url(image_url)
+        if error is not None:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=error)
+
     use_case = GenerateBotReplyUseCase(
         conversation_repository,
         message_repository,
@@ -233,7 +249,7 @@ def stream_agent_reply(
         _bot_participant(chat_settings),
         chat_settings.bot_history_limit,
     )
-    events = use_case.execute(conversation_id)
+    events = use_case.execute(conversation_id, image_url=image_url)
 
     def event_stream():
         try:
@@ -262,6 +278,31 @@ def stream_agent_reply(
 _WS_CLOSE_BAD_REQUEST = 4400
 _WS_CLOSE_NOT_FOUND = 4404
 _WS_CLOSE_SERVICE_UNAVAILABLE = 4503
+
+# Upper bound on the base64 ``data:`` URL accepted for realtime image input.
+# The browser downscales captures before sending, so this is a safety ceiling
+# against abuse rather than the expected size (~0.1-0.5 MB for a 1024px JPEG).
+_MAX_IMAGE_DATA_URL_CHARS = 12 * 1024 * 1024  # ~12 MB of base64 text
+
+
+def _validate_image_data_url(image_url: object) -> str | None:
+    """Validate a client-supplied realtime image payload.
+
+    Returns an error string when ``image_url`` is not an acceptable inline image
+    ``data:`` URL, otherwise ``None``. Restricting to ``data:image/*;base64,``
+    payloads (rather than allowing arbitrary ``http(s)`` URLs) keeps the model
+    from fetching attacker-controlled URLs server-side, and the size ceiling
+    guards against oversized frames.
+    """
+    if not isinstance(image_url, str) or not image_url:
+        return "image_url must be a non-empty string"
+    if not image_url.startswith("data:image/"):
+        return "image_url must be a data:image/* URL"
+    if ";base64," not in image_url:
+        return "image_url must be base64-encoded"
+    if len(image_url) > _MAX_IMAGE_DATA_URL_CHARS:
+        return "image is too large"
+    return None
 
 
 @router.websocket("/conversations/{conversation_id}/realtime")
@@ -369,10 +410,23 @@ async def realtime_voice(
         while True:
             try:
                 data = await websocket.receive_json()
-                if isinstance(data, dict) and data.get("type") == "oai-event":
+                if not isinstance(data, dict):
+                    continue
+                msg_type = data.get("type")
+                if msg_type == "oai-event":
                     payload = data.get("payload")
                     if isinstance(payload, dict):
                         use_case.send_client_event(payload)
+                elif msg_type == "concierge.image.input":
+                    # Inject a camera-captured image into the live conversation
+                    # as context for the model's next turn.
+                    image_url = data.get("image_url")
+                    error = _validate_image_data_url(image_url)
+                    if error is not None:
+                        await websocket.send_json({"type": "concierge.error", "detail": error})
+                    elif isinstance(image_url, str):
+                        prompt = data.get("prompt")
+                        use_case.send_image(image_url, prompt if isinstance(prompt, str) else None)
             except WebSocketDisconnect:
                 break
     except Exception:  # noqa: BLE001

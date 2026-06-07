@@ -61,18 +61,37 @@ class LangGraphAgent:
 
     async def handle(self, request: AgentRequest) -> AgentResponse:
         message = self._extract_message(request.payload)
-        if not message:
+        image_url = self._extract_image_url(request.payload)
+        if not message and not image_url:
             return AgentResponse(
                 status="failed",
                 error="payload.message is required (non-empty string)",
             )
+
+        # Build the user turn. When an image is supplied, send a multimodal
+        # content list (text + image) so a vision-capable model can ground its
+        # reply in what the user captured. ``image_url`` is an inline
+        # ``data:image/*;base64,…`` URL (request-scoped, never persisted). A
+        # neutral default prompt is used for image-only turns.
+        user_turn: tuple[str, str | list[dict[str, Any]]]
+        if image_url:
+            text = message or "Please describe this image."
+            user_turn = (
+                "user",
+                [
+                    {"type": "text", "text": text},
+                    {"type": "image_url", "image_url": {"url": image_url}},
+                ],
+            )
+        else:
+            user_turn = ("user", message)
 
         side_outputs: dict[str, Any] = {}
         try:
             agent = self._build_agent(side_outputs)
             config = self._run_config_factory(request)
             result = await agent.ainvoke(
-                {"messages": [("user", message)]},
+                {"messages": [user_turn]},
                 config=config,
             )
         except Exception as exc:  # noqa: BLE001
@@ -95,6 +114,11 @@ class LangGraphAgent:
     @staticmethod
     def _extract_message(payload: dict[str, Any]) -> str:
         value = payload.get("message")
+        return value if isinstance(value, str) and value.strip() else ""
+
+    @staticmethod
+    def _extract_image_url(payload: dict[str, Any]) -> str:
+        value = payload.get("image_url")
         return value if isinstance(value, str) and value.strip() else ""
 
     def _build_agent(self, side_outputs: dict[str, Any]):

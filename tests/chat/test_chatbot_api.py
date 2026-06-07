@@ -21,13 +21,19 @@ from concierge.chat.infrastructure.web.dependencies import (
 class FakeStreamingResponder:
     def __init__(self, chunks: list[str]) -> None:
         self._chunks = chunks
+        self.received_image_url: str | None = None
 
-    def stream_reply(self, conversation: Conversation, history: list[Message]) -> Iterator[str]:
+    def stream_reply(
+        self, conversation: Conversation, history: list[Message], image_url: str | None = None
+    ) -> Iterator[str]:
+        self.received_image_url = image_url
         yield from self._chunks
 
 
 class FailingResponder:
-    def stream_reply(self, conversation: Conversation, history: list[Message]) -> Iterator[str]:
+    def stream_reply(
+        self, conversation: Conversation, history: list[Message], image_url: str | None = None
+    ) -> Iterator[str]:
         raise RuntimeError("model unavailable")
         yield  # pragma: no cover — make this a generator
 
@@ -137,6 +143,69 @@ async def test_agent_replies_streams_sse_events() -> None:
         assert "AGENT" in roles
         agent = next(m for m in messages.json() if m["role"] == "AGENT")
         assert agent["content"] == "".join(chunks)
+
+
+@pytest.mark.anyio
+async def test_agent_replies_forwards_image_url_to_responder() -> None:
+    """A valid data:image URL in the body is validated and threaded to the responder."""
+    responder = FakeStreamingResponder(["見", "えます"])
+    _app = _make_app(responder=responder)
+    user_id = str(uuid.uuid4())
+    headers = {"X-User-Id": user_id}
+    data_url = "data:image/jpeg;base64,/9j/4AAQSkZJRg=="
+
+    async with AsyncClient(transport=ASGITransport(app=_app), base_url="http://test") as client:
+        created = await client.post(
+            "/conversations",
+            headers=headers,
+            json={"title": "test", "display_name": "alice"},
+        )
+        conversation_id = created.json()["id"]
+        await client.post(
+            f"/conversations/{conversation_id}/messages",
+            headers=headers,
+            json={"content": "これは何?"},
+        )
+
+        reply = await client.post(
+            f"/conversations/{conversation_id}/agent-replies",
+            headers=headers,
+            json={"image_url": data_url},
+        )
+        assert reply.status_code == 200
+
+    assert responder.received_image_url == data_url
+
+
+@pytest.mark.anyio
+async def test_agent_replies_rejects_non_data_image_url() -> None:
+    """A remote http(s) URL is rejected with 422 and never reaches the responder."""
+    responder = FakeStreamingResponder(["unused"])
+    _app = _make_app(responder=responder)
+    user_id = str(uuid.uuid4())
+    headers = {"X-User-Id": user_id}
+
+    async with AsyncClient(transport=ASGITransport(app=_app), base_url="http://test") as client:
+        created = await client.post(
+            "/conversations",
+            headers=headers,
+            json={"title": "test", "display_name": "alice"},
+        )
+        conversation_id = created.json()["id"]
+        await client.post(
+            f"/conversations/{conversation_id}/messages",
+            headers=headers,
+            json={"content": "hi"},
+        )
+
+        reply = await client.post(
+            f"/conversations/{conversation_id}/agent-replies",
+            headers=headers,
+            json={"image_url": "https://example.com/x.png"},
+        )
+        assert reply.status_code == 422
+
+    assert responder.received_image_url is None
 
 
 @pytest.mark.anyio

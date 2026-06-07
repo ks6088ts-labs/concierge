@@ -28,15 +28,24 @@ class AgentChatbotResponder:
         self,
         conversation: Conversation,
         history: list[Message],
+        image_url: str | None = None,
     ) -> Iterator[str]:
         # history is newest-first (GenerateBotReplyUseCase.execute specification)
         latest_user_text = next(
             (m.content for m in history if m.role == MessageRole.USER),
             "",
         )
+        # Carry an optional camera image to the agent as part of the request
+        # payload. The payload is a free-form ``dict[str, Any]`` so this needs no
+        # contract change; vision-capable agents (e.g. LangGraph) read
+        # ``payload['image_url']`` while others ignore it. The image is
+        # request-scoped and never persisted (ephemeral, like realtime voice).
+        payload: dict[str, str] = {"message": latest_user_text}
+        if image_url:
+            payload["image_url"] = image_url
         request = AgentRequest(
             agent_type=self._agent.agent_type,
-            payload={"message": latest_user_text},
+            payload=payload,
             context={"conversation_id": str(conversation.id)},
         )
         response = asyncio.run(self._agent.handle(request))

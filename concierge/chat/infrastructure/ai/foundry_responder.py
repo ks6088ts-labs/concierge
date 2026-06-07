@@ -44,7 +44,16 @@ class FoundryChatbotResponder:
         self._model = model
         self._system_prompt = system_prompt
 
-    def stream_reply(self, conversation: Conversation, history: list[Message]) -> Iterator[str]:
+    def stream_reply(
+        self,
+        conversation: Conversation,
+        history: list[Message],
+        image_url: str | None = None,
+    ) -> Iterator[str]:
+        # ``image_url`` is accepted for ``ChatbotResponder`` protocol parity but
+        # not yet consumed here: image input currently targets the LangGraph
+        # agent path (see AgentChatbotResponder). Wiring Azure OpenAI vision into
+        # this default Foundry responder is a follow-up — the seam is ready.
         # ``langchain_azure_ai`` resolves ``project_endpoint`` from the
         # ``AZURE_AI_PROJECT_ENDPOINT`` / ``FOUNDRY_PROJECT_ENDPOINT`` environment
         # variables. The web and CLI entry points call ``load_dotenv()`` so that

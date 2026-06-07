@@ -367,7 +367,10 @@
       }
       button.call-btn[hidden] { display: none; }
 
-      /* Camera button in the chat header (visible only during an active call). */
+      /* Camera button: lives in the composer input row as a media-input
+         affordance (alongside the textarea and 🎤). The accent keeps it
+         visibly active even while the rest of the composer is locked during a
+         realtime call. */
       button.camera-btn {
         border-color: var(--agent);
         color: var(--agent);
@@ -486,6 +489,43 @@
         border-radius: 10px;
         cursor: zoom-in;
       }
+
+      /* Pending camera image attached to the text composer (before send). */
+      .pending-image {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.4rem 0.5rem;
+        margin-bottom: 0.5rem;
+        background: var(--agent-soft);
+        border: 1px solid #ddd6fe;
+        border-radius: 10px;
+      }
+      .pending-image[hidden] { display: none; }
+      .pending-image-thumb {
+        width: 44px;
+        height: 44px;
+        object-fit: cover;
+        border-radius: 6px;
+        flex-shrink: 0;
+      }
+      .pending-image-label {
+        font-size: 0.78rem;
+        color: var(--agent);
+        flex: 1;
+        min-width: 0;
+      }
+      .pending-image-remove {
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        cursor: pointer;
+        padding: 0.2rem 0.4rem;
+        border-radius: 6px;
+        flex-shrink: 0;
+      }
+      .pending-image-remove:hover { background: rgba(0, 0, 0, 0.06); color: var(--text); }
 
       /* Tap-to-enlarge lightbox for shared images. */
       .image-viewer {
@@ -883,7 +923,6 @@
               <span class="dot"></span><span class="label"></span>
             </span>
             <button id="call-toggle" class="call-btn" type="button" title="リアルタイム音声通話を開始" aria-label="通話を開始" disabled hidden>🎙 通話開始</button>
-            <button id="camera-toggle" class="icon-btn camera-btn" type="button" title="カメラで画像を共有 (通話中のみ)" aria-label="カメラを開いて画像を共有" hidden>📷</button>
             <button id="reload-messages" class="icon-btn ghost" type="button" title="再読込" aria-label="メッセージを再読込" disabled>⟳</button>
             <button id="delete-conversation" class="ghost-danger" type="button" title="この会話を削除" aria-label="会話を削除" disabled>🗑</button>
           </div>
@@ -905,7 +944,20 @@
             <span id="ai-banner-text">AI 自動応答は無効です(Microsoft Foundry が未設定)。</span>
           </div>
           <form id="post-message-form" class="composer">
+            <div id="pending-image" class="pending-image" hidden>
+              <img id="pending-image-preview" class="pending-image-thumb" alt="添付した画像のプレビュー" />
+              <span class="pending-image-label">📷 画像を添付中 — 質問を入力して送信</span>
+              <button id="pending-image-remove" class="pending-image-remove" type="button" aria-label="添付画像を取り消す" title="取り消す">✕</button>
+            </div>
             <div class="composer-input-row">
+              <button
+                id="camera-toggle"
+                class="icon-btn camera-btn"
+                type="button"
+                title="カメラで画像を共有"
+                aria-label="カメラを開いて画像を共有"
+                hidden
+              >📷</button>
               <textarea
                 id="message-content"
                 placeholder="メッセージを入力 (Shift+Enter で送信 / Enter で改行)"
@@ -1042,6 +1094,10 @@
         callToggle: document.getElementById('call-toggle'),
         callStatus: document.getElementById('call-status'),
         cameraToggle: document.getElementById('camera-toggle'),
+        // Pending camera image attached to the text composer
+        pendingImage: document.getElementById('pending-image'),
+        pendingImagePreview: document.getElementById('pending-image-preview'),
+        pendingImageRemove: document.getElementById('pending-image-remove'),
         // Camera overlay (realtime image input)
         cameraOverlay: document.getElementById('camera-overlay'),
         cameraVideo: document.getElementById('camera-video'),
@@ -1105,6 +1161,10 @@
         // so they stay visible across in-session message re-renders. Each entry:
         // { conversationId, dataUrl, createdAt }.
         localImages: [],
+        // Camera image attached to the text composer, awaiting send. Ephemeral
+        // (never persisted); passed to the agent as ``image_url`` on the next
+        // agent reply. ``null`` when nothing is attached.
+        pendingImage: null,
       };
 
       const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -1522,9 +1582,13 @@
         els.deleteConversation.disabled = false;
         els.messageContent.disabled = false;
         els.sendButton.disabled = false;
+        // A pending camera image belongs to the conversation it was captured
+        // in; drop it when switching so it can't leak into another thread.
+        clearPendingImage();
         updateVoiceInputAvailability();
         updateManualAgentButton();
         updateCallButton();
+        updateCameraButton();
         await loadMessages();
         renderParticipants();
         els.messageContent.focus();
@@ -1816,7 +1880,15 @@
 
       els.manualAgentReply.addEventListener('click', async () => {
         if (!state.selectedConversationId) return;
-        await runAgentReply(state.selectedConversationId);
+        // Consume a pending image if one is attached (e.g. the user captured an
+        // image but auto-reply is off), then detach it.
+        const imageToSend = state.pendingImage;
+        if (imageToSend) {
+          recordLocalImage(imageToSend);
+          clearPendingImage();
+          await loadMessages();
+        }
+        await runAgentReply(state.selectedConversationId, imageToSend);
       });
 
       // -------- Composer --------
@@ -1853,9 +1925,20 @@
         e.preventDefault();
         if (!state.selectedConversationId) return;
         const content = els.messageContent.value.trim();
-        if (!content) return;
+        // An attached image still needs an accompanying question so the agent
+        // has a user turn to answer. Nudge instead of silently dropping it.
+        if (!content) {
+          if (state.pendingImage) {
+            toast('画像について質問を入力してください', 'warning');
+          }
+          return;
+        }
         const conversationId = state.selectedConversationId;
         const displayName = els.displayName.value.trim() || null;
+        // Capture and detach the pending image up-front so a slow request can't
+        // race a second send. The image is ephemeral (never persisted): it is
+        // shown locally and passed to this one agent reply only.
+        const imageToSend = state.pendingImage;
         els.sendButton.disabled = true;
         try {
           if (!state.joinedConversations.has(conversationId)) {
@@ -1876,10 +1959,19 @@
           });
           els.messageContent.value = '';
           autoResize();
+          if (imageToSend) {
+            // Record the capture so it renders inline (merged by timestamp) and
+            // survives in-session re-renders, then detach it from the composer.
+            recordLocalImage(imageToSend);
+            clearPendingImage();
+          }
           await Promise.all([loadConversations(), loadMessages()]);
-          // Auto-reply only when the toggle is on and AI is known to be available.
-          if (els.aiAutoReply.checked && state.aiAvailability !== 'unavailable') {
-            runAgentReply(conversationId).catch((err) => {
+          // Trigger a reply when auto-reply is on, OR whenever an image was
+          // attached (sharing an image is an explicit request for a response).
+          const shouldReply =
+            (els.aiAutoReply.checked || !!imageToSend) && state.aiAvailability !== 'unavailable';
+          if (shouldReply) {
+            runAgentReply(conversationId, imageToSend).catch((err) => {
               console.warn('agent reply error', err);
             });
           }
@@ -1909,7 +2001,7 @@
         return div;
       }
 
-      async function runAgentReply(conversationId) {
+      async function runAgentReply(conversationId, imageUrl = null) {
         if (state.agentReplyInFlight) return;
         state.agentReplyInFlight = true;
         updateManualAgentButton();
@@ -1927,13 +2019,17 @@
           const url = state.agentType
             ? `/conversations/${conversationId}/agent-replies?agent_type=${encodeURIComponent(state.agentType)}`
             : `/conversations/${conversationId}/agent-replies`;
-          const response = await fetch(
-            url,
-            {
-              method: 'POST',
-              headers: { 'X-User-Id': userId, 'Accept': 'text/event-stream' },
-            },
-          );
+          // Attach the optional camera image as a JSON body. Sent only when
+          // present so existing no-body requests are unchanged.
+          const fetchOptions = {
+            method: 'POST',
+            headers: { 'X-User-Id': userId, 'Accept': 'text/event-stream' },
+          };
+          if (imageUrl) {
+            fetchOptions.headers['Content-Type'] = 'application/json';
+            fetchOptions.body = JSON.stringify({ image_url: imageUrl });
+          }
+          const response = await fetch(url, fetchOptions);
           if (!response.ok) {
             const body = await response.text().catch(() => '');
             if (response.status === 503) {
@@ -2055,10 +2151,11 @@ registerProcessor('pcm16-processor', PCM16Processor);
         els.callToggle.title = isActive ? 'リアルタイム音声通話を終了' : 'リアルタイム音声通話を開始';
         els.callToggle.setAttribute('aria-label', isActive ? '通話を終了' : '通話を開始');
         updateCallButton();
-        // The camera (realtime image input) only makes sense while a live
-        // session is open, so it is revealed once the call is fully active and
-        // torn down (closing any open viewfinder) as soon as the call ends.
-        els.cameraToggle.hidden = next !== 'active';
+        // The camera is available both in a live call (image is injected into
+        // the realtime session) and in text chat (image is attached to the next
+        // agent reply). Keep the button in sync and close any open viewfinder
+        // when a call ends so a call-scoped capture doesn't linger.
+        updateCameraButton();
         if (next !== 'active') closeCamera();
         // While the call is active, text-only controls would race with the
         // realtime pipeline. Disable them to keep one input mode at a time.
@@ -2083,6 +2180,32 @@ registerProcessor('pcm16-processor', PCM16Processor);
         } else {
           els.callToggle.disabled = !state.selectedConversationId;
         }
+      }
+
+      // The camera works in both modes (call → inject into the live session;
+      // text chat → attach to the next agent reply), so it is shown whenever a
+      // conversation is selected — independent of realtime availability.
+      function updateCameraButton() {
+        els.cameraToggle.hidden = !state.selectedConversationId;
+        // The button stays in one place (the composer) for both modes; only the
+        // hint changes so users know what a capture will do right now.
+        const inCall = state.callState === 'active';
+        const title = inCall ? 'カメラで撮影して通話に画像を送る' : 'カメラで撮影してメッセージに画像を添付';
+        els.cameraToggle.title = title;
+        els.cameraToggle.setAttribute('aria-label', title);
+      }
+
+      // -------- Pending composer image (text-chat image input) --------
+      function setPendingImage(dataUrl) {
+        state.pendingImage = dataUrl;
+        els.pendingImagePreview.src = dataUrl;
+        els.pendingImage.hidden = false;
+      }
+
+      function clearPendingImage() {
+        state.pendingImage = null;
+        els.pendingImagePreview.removeAttribute('src');
+        els.pendingImage.hidden = true;
       }
 
       function setInterim(text) {
@@ -2413,8 +2536,8 @@ registerProcessor('pcm16-processor', PCM16Processor);
       }
 
       async function openCamera() {
-        if (state.callState !== 'active') {
-          toast('画像の共有は通話中のみ利用できます', 'warning');
+        if (!state.selectedConversationId) {
+          toast('会話を選択してください', 'warning');
           return;
         }
         if (camera.opening || !els.cameraOverlay.hidden) return;
@@ -2498,17 +2621,22 @@ registerProcessor('pcm16-processor', PCM16Processor);
       function sendCapturedImage() {
         const dataUrl = camera.capturedDataUrl;
         if (!dataUrl) return;
-        if (!call.ws || call.ws.readyState !== WebSocket.OPEN) {
-          toast('通話が接続されていません', 'error');
+        // Live call → inject straight into the realtime session (the model
+        // grounds its next spoken turn in the image). Text chat → attach the
+        // image to the composer so it rides the next agent reply.
+        if (state.callState === 'active' && call.ws && call.ws.readyState === WebSocket.OPEN) {
+          call.ws.send(JSON.stringify({ type: 'concierge.image.input', image_url: dataUrl }));
+          const im = recordLocalImage(dataUrl);
+          appendImageMessage(im);
+          scrollMessagesToBottom();
           closeCamera();
+          toast('画像を送信しました。話しかけて質問してください 🗣️', 'info', 2600);
           return;
         }
-        call.ws.send(JSON.stringify({ type: 'concierge.image.input', image_url: dataUrl }));
-        const im = recordLocalImage(dataUrl);
-        appendImageMessage(im);
-        scrollMessagesToBottom();
+        setPendingImage(dataUrl);
         closeCamera();
-        toast('画像を送信しました。話しかけて質問してください 🗣️', 'info', 2600);
+        els.messageContent.focus();
+        toast('画像を添付しました。質問を入力して送信してください 📷', 'info', 2600);
       }
 
       els.cameraToggle.addEventListener('click', () => { openCamera(); });
@@ -2517,6 +2645,7 @@ registerProcessor('pcm16-processor', PCM16Processor);
       els.cameraCancel.addEventListener('click', closeCamera);
       els.cameraRetake.addEventListener('click', showCameraLiveMode);
       els.cameraSend.addEventListener('click', sendCapturedImage);
+      els.pendingImageRemove.addEventListener('click', clearPendingImage);
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && !els.cameraOverlay.hidden) closeCamera();
       });

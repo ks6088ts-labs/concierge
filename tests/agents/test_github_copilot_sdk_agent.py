@@ -60,6 +60,7 @@ class _FakeSession:
         self._events = events
         self._handler = None
         self.sent: list[str] = []
+        self.sent_attachments: list[Any] = []
 
     async def __aenter__(self) -> _FakeSession:
         return self
@@ -71,8 +72,9 @@ class _FakeSession:
         self._handler = handler
         return lambda: None
 
-    async def send(self, prompt: str, **_kwargs) -> str:
+    async def send(self, prompt: str, **kwargs) -> str:
         self.sent.append(prompt)
+        self.sent_attachments.append(kwargs.get("attachments"))
         assert self._handler is not None, "session.on must be called before send"
         for data in self._events:
             self._handler(_make_event(data))
@@ -120,6 +122,53 @@ def test_extract_message_missing_key() -> None:
 def test_extract_message_non_string_value() -> None:
     agent = GitHubCopilotSdkAgent.__new__(GitHubCopilotSdkAgent)
     assert agent._extract_message({"message": 42}) == ""  # type: ignore[arg-type]
+
+
+# ---------------------------------------------------------------------------
+# Tests: image input helpers
+# ---------------------------------------------------------------------------
+
+
+def test_extract_image_url_returns_string() -> None:
+    agent = GitHubCopilotSdkAgent.__new__(GitHubCopilotSdkAgent)
+    assert agent._extract_image_url({"image_url": "data:image/png;base64,AAA"}) == "data:image/png;base64,AAA"
+
+
+def test_extract_image_url_returns_empty_for_whitespace_only() -> None:
+    agent = GitHubCopilotSdkAgent.__new__(GitHubCopilotSdkAgent)
+    assert agent._extract_image_url({"image_url": "   "}) == ""
+
+
+def test_extract_image_url_missing_key() -> None:
+    agent = GitHubCopilotSdkAgent.__new__(GitHubCopilotSdkAgent)
+    assert agent._extract_image_url({}) == ""
+
+
+def test_extract_image_url_non_string_value() -> None:
+    agent = GitHubCopilotSdkAgent.__new__(GitHubCopilotSdkAgent)
+    assert agent._extract_image_url({"image_url": 42}) == ""  # type: ignore[arg-type]
+
+
+def test_parse_data_url_splits_mime_and_data() -> None:
+    assert GitHubCopilotSdkAgent._parse_data_url("data:image/png;base64,AAA") == ("image/png", "AAA")
+
+
+def test_parse_data_url_rejects_non_data_url() -> None:
+    assert GitHubCopilotSdkAgent._parse_data_url("https://example.com/x.png") is None
+
+
+def test_parse_data_url_rejects_non_base64_data_url() -> None:
+    assert GitHubCopilotSdkAgent._parse_data_url("data:image/png,AAA") is None
+
+
+def test_build_attachments_returns_none_when_no_image() -> None:
+    assert GitHubCopilotSdkAgent._build_attachments("") is None
+
+
+def test_build_attachments_builds_blob() -> None:
+    assert GitHubCopilotSdkAgent._build_attachments("data:image/png;base64,AAA") == [
+        {"type": "blob", "data": "AAA", "mimeType": "image/png"}
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -385,3 +434,65 @@ def test_build_client_with_telemetry_passes_subprocess_config(monkeypatch) -> No
     assert built is sentinel
     assert captured["args"] == ()
     assert captured["kwargs"] == {"telemetry": telemetry}
+
+
+# ---------------------------------------------------------------------------
+# Tests: image input (session.send attachments)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_handle_with_image_forwards_blob_attachment() -> None:
+    """payload.image_url is forwarded to session.send as a Copilot blob attachment."""
+    agent = GitHubCopilotSdkAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT)
+    session = _FakeSession(
+        events=[AssistantMessageData(content="It's a cat", message_id="m1"), SessionIdleData()],
+    )
+    client = _FakeClient(session)
+    data_url = "data:image/jpeg;base64,/9j/4AAQSkZJRg=="
+
+    with patch.object(agent, "_build_client", return_value=client):
+        output: AgentResponse = await agent.handle(_make_request({"message": "What is this?", "image_url": data_url}))
+
+    assert output.status == "succeeded"
+    assert session.sent == ["What is this?"]
+    assert session.sent_attachments == [[{"type": "blob", "data": "/9j/4AAQSkZJRg==", "mimeType": "image/jpeg"}]]
+    # The persisted echo of the user's text excludes the image payload.
+    assert output.result is not None
+    assert output.result["message"] == "What is this?"
+    assert output.result["reply"] == "It's a cat"
+
+
+@pytest.mark.anyio
+async def test_handle_image_only_uses_default_prompt() -> None:
+    """An image with no text still runs, using a neutral default prompt."""
+    agent = GitHubCopilotSdkAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT)
+    session = _FakeSession(
+        events=[AssistantMessageData(content="A landscape", message_id="m1"), SessionIdleData()],
+    )
+    client = _FakeClient(session)
+    data_url = "data:image/png;base64,iVBORw0KGgo="
+
+    with patch.object(agent, "_build_client", return_value=client):
+        output: AgentResponse = await agent.handle(_make_request({"image_url": data_url}))
+
+    assert output.status == "succeeded"
+    assert session.sent == ["Please describe this image."]
+    assert session.sent_attachments == [[{"type": "blob", "data": "iVBORw0KGgo=", "mimeType": "image/png"}]]
+    assert output.result is not None
+    assert output.result["message"] == ""
+
+
+@pytest.mark.anyio
+async def test_handle_text_only_sends_no_attachments() -> None:
+    """Without an image, session.send receives no attachments (unchanged behaviour)."""
+    agent = GitHubCopilotSdkAgent(model=_MODEL, system_prompt=_SYSTEM_PROMPT)
+    session = _FakeSession(events=[AssistantMessageData(content="ok", message_id="m1"), SessionIdleData()])
+    client = _FakeClient(session)
+
+    with patch.object(agent, "_build_client", return_value=client):
+        output: AgentResponse = await agent.handle(_make_request({"message": "hello"}))
+
+    assert output.status == "succeeded"
+    assert session.sent == ["hello"]
+    assert session.sent_attachments == [None]

@@ -11,7 +11,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from agent_framework import Agent
+from agent_framework import Agent, Content, Message
 from agent_framework.foundry import FoundryChatClient
 from azure.identity import DefaultAzureCredential
 
@@ -40,7 +40,8 @@ class MicrosoftAgentFrameworkAgent:
 
     async def handle(self, request: AgentRequest) -> AgentResponse:
         message = self._extract_message(request.payload)
-        if not message:
+        image_url = self._extract_image_url(request.payload)
+        if not message and not image_url:
             return AgentResponse(
                 status="failed",
                 error="payload.message is required (non-empty string)",
@@ -49,7 +50,7 @@ class MicrosoftAgentFrameworkAgent:
         side_outputs: dict[str, Any] = {}
         try:
             agent = self._build_agent(side_outputs)
-            response = await agent.run(message)
+            response = await agent.run(self._build_run_input(message, image_url))
         except Exception as exc:  # noqa: BLE001
             return AgentResponse(status="failed", error=f"{type(exc).__name__}: {exc}")
 
@@ -70,6 +71,30 @@ class MicrosoftAgentFrameworkAgent:
     def _extract_message(payload: dict[str, Any]) -> str:
         value = payload.get("message")
         return value if isinstance(value, str) and value.strip() else ""
+
+    @staticmethod
+    def _extract_image_url(payload: dict[str, Any]) -> str:
+        value = payload.get("image_url")
+        return value if isinstance(value, str) and value.strip() else ""
+
+    @staticmethod
+    def _build_run_input(message: str, image_url: str) -> str | Message:
+        """Build the ``agent.run`` input for a single user turn.
+
+        Text-only turns pass the bare ``message`` string (unchanged behaviour).
+        When an inline ``data:image/*;base64,…`` URL is supplied, a multimodal
+        :class:`~agent_framework.Message` (text + image) is built so a
+        vision-capable model can ground its reply in what the user captured.
+        ``image_url`` is request-scoped and never persisted. A neutral default
+        prompt is used for image-only turns.
+        """
+        if not image_url:
+            return message
+        text = message or "Please describe this image."
+        return Message(
+            "user",
+            contents=[Content.from_text(text), Content.from_uri(uri=image_url)],
+        )
 
     def _build_agent(self, side_outputs: dict[str, Any]) -> Any:
         client = FoundryChatClient(

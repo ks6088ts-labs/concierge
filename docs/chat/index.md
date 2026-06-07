@@ -346,6 +346,37 @@ uv run chat-web
 See [Shared Agent Runtime](../agents/index.md) for more details on available agents
 and configuration.
 
+### Sharing an image with a text-chat agent { #text-chat-image-input }
+
+The same camera capture overlay used by the realtime voice call is also
+available in **text chat**. When a conversation is selected, the **📷 camera
+button** appears at the left of the composer input row (next to the textarea and
+the 🎤 voice-input button); capturing a frame attaches it to the composer
+(a thumbnail chip appears). Type your question and send — the image rides the
+next agent reply as an inline `data:image/*;base64,…` URL.
+
+The image is delivered on the optional JSON body of
+`POST /conversations/{id}/agent-replies` (see
+[Optional image input](api.md#agent-reply-image-input)) and threaded to the
+selected agent as `payload.image_url`:
+
+- **`langgraph`** builds a multimodal user turn (text + image) so a vision
+  capable Azure OpenAI model grounds its reply in the image. Select it from the
+  **🧠 エージェント** dropdown (or `CHAT_BOT_AGENT_TYPE=langgraph`).
+- **`echo`** acknowledges receipt (`🖼️（画像を受信しました）`) — a quick way to
+  verify the end-to-end contract without a vision model.
+- The default **`foundry`** responder and the other SDK agents accept the
+  contract but ignore the image for now; wiring their vision support is an
+  incremental follow-up.
+
+!!! note "Images are session-scoped (not persisted)"
+    As with the realtime voice call, a shared image is **never written to the
+    message repository**. It is rendered locally for the rest of the session and
+    passed to a single agent reply, then discarded. Sharing an image is treated
+    as an explicit request for a response, so a reply is generated on send even
+    when 🤖 auto-reply is off. Attaching an image still requires a typed
+    question so the agent has a user turn to answer.
+
 ### API design
 
 - `POST /conversations/{id}/messages` — **persists the user message only**.
@@ -545,8 +576,9 @@ load.
 
 ### Sharing a photo during a call { #realtime-image-input }
 
-While a call is active a **📷 camera button** appears in the conversation
-header. It is designed for phones: tapping it opens an in-app live
+While a call is active the **📷 camera button** in the composer input row stays
+active (the rest of the composer is locked during a call). It is designed for
+phones: tapping it opens an in-app live
 viewfinder (no context switch to the OS camera app) with a shutter, a
 front/back toggle, and cancel. After capturing, you confirm or retake; on
 send the frame is downscaled to a 1024 px JPEG and delivered over the same

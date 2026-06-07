@@ -21,17 +21,29 @@ class EchoAgent:
 
     async def handle(self, request: AgentRequest) -> AgentResponse:
         message = self._extract_message(request.payload)
-        if not message:
+        image_url = self._extract_image_url(request.payload)
+        if not message and not image_url:
             return AgentResponse(
                 status="failed",
                 error="payload.message is required (non-empty string)",
             )
+        # Echo is text-only, so it cannot interpret the image — but it
+        # acknowledges receipt so the shared image-input contract is observable
+        # end-to-end even for agents that don't (yet) support vision.
+        reply = message
+        if image_url:
+            reply = f"{message} 🖼️（画像を受信しました）".strip()
         return AgentResponse(
             status="succeeded",
-            result={"message": message, "reply": message},
+            result={"message": message, "reply": reply},
         )
 
     @staticmethod
     def _extract_message(payload: dict[str, Any]) -> str:
         value = payload.get("message")
+        return value if isinstance(value, str) and value.strip() else ""
+
+    @staticmethod
+    def _extract_image_url(payload: dict[str, Any]) -> str:
+        value = payload.get("image_url")
         return value if isinstance(value, str) and value.strip() else ""

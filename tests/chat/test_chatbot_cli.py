@@ -57,7 +57,9 @@ def test_message_reply_streams_and_persists() -> None:
     conversation_repo, message_repo, conversation_id = _setup_conversation()
 
     class FakeResponder:
-        def stream_reply(self, conversation: Conversation, history: list[Message]) -> Iterator[str]:
+        def stream_reply(
+            self, conversation: Conversation, history: list[Message], image_url: str | None = None
+        ) -> Iterator[str]:
             yield from ["こん", "にちは", "！"]
 
     with (

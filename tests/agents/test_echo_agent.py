@@ -56,3 +56,27 @@ async def test_echo_agent_fails_when_message_not_string() -> None:
 
     assert output.status == "failed"
     assert output.error == "payload.message is required (non-empty string)"
+
+
+@pytest.mark.anyio
+async def test_echo_agent_acknowledges_image_with_message() -> None:
+    agent = EchoAgent()
+    output = await agent.handle(
+        _make_request({"message": "これは何?", "image_url": "data:image/png;base64,iVBORw0KGgo="})
+    )
+
+    assert output.status == "succeeded"
+    assert output.result is not None
+    assert "画像を受信しました" in output.result["reply"]
+    assert output.result["reply"].startswith("これは何?")
+
+
+@pytest.mark.anyio
+async def test_echo_agent_succeeds_on_image_only() -> None:
+    """An image with no text still succeeds (acknowledged), exercising the shared contract."""
+    agent = EchoAgent()
+    output = await agent.handle(_make_request({"image_url": "data:image/png;base64,iVBORw0KGgo="}))
+
+    assert output.status == "succeeded"
+    assert output.result is not None
+    assert "画像を受信しました" in output.result["reply"]

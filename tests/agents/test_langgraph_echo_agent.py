@@ -154,6 +154,52 @@ async def test_handle_success() -> None:
 
 
 @pytest.mark.anyio
+async def test_handle_with_image_builds_multimodal_user_turn() -> None:
+    """payload.image_url produces a multimodal (text + image_url) user message."""
+    agent = _make_agent()
+    fake_result = _make_agent_result(reply="It's a cat", tool_call_args={"text": "It's a cat"})
+    mock_compiled = AsyncMock()
+    mock_compiled.ainvoke = AsyncMock(return_value=fake_result)
+    data_url = "data:image/jpeg;base64,/9j/4AAQSkZJRg=="
+
+    with patch.object(agent, "_build_agent", return_value=mock_compiled):
+        output: AgentResponse = await agent.handle(_make_request({"message": "What is this?", "image_url": data_url}))
+
+    assert output.status == "succeeded"
+    # Inspect the messages passed to the compiled graph.
+    invoke_arg = mock_compiled.ainvoke.call_args.args[0]
+    role, content = invoke_arg["messages"][0]
+    assert role == "user"
+    assert content == [
+        {"type": "text", "text": "What is this?"},
+        {"type": "image_url", "image_url": {"url": data_url}},
+    ]
+    # The persisted echo of the user's text excludes the image payload.
+    assert output.result is not None
+    assert output.result["message"] == "What is this?"
+
+
+@pytest.mark.anyio
+async def test_handle_image_only_uses_default_prompt() -> None:
+    """An image with no text still runs, using a neutral default prompt."""
+    agent = _make_agent()
+    fake_result = _make_agent_result(reply="A landscape", tool_call_args={"text": "A landscape"})
+    mock_compiled = AsyncMock()
+    mock_compiled.ainvoke = AsyncMock(return_value=fake_result)
+    data_url = "data:image/jpeg;base64,/9j/4AAQSkZJRg=="
+
+    with patch.object(agent, "_build_agent", return_value=mock_compiled):
+        output: AgentResponse = await agent.handle(_make_request({"image_url": data_url}))
+
+    assert output.status == "succeeded"
+    invoke_arg = mock_compiled.ainvoke.call_args.args[0]
+    _role, content = invoke_arg["messages"][0]
+    assert content[0]["type"] == "text"
+    assert content[0]["text"]  # non-empty default prompt
+    assert content[1] == {"type": "image_url", "image_url": {"url": data_url}}
+
+
+@pytest.mark.anyio
 async def test_handle_llm_exception_returns_failed() -> None:
     agent = _make_agent()
     mock_compiled = AsyncMock()

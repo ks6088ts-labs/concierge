@@ -191,7 +191,31 @@ JSON error response.
 |---|---|---|
 | `200 OK` | Stream opened — events follow | `text/event-stream` |
 | `404 Not Found` | `conversation_id` does not exist | `{"detail": "..."}` |
+| `422 Unprocessable Entity` | `image_url` is not an inline `data:image/*;base64,…` URL (or exceeds the size cap) | `{"detail": "..."}` |
 | `503 Service Unavailable` | `AZURE_AI_PROJECT_ENDPOINT` is not configured | `{"detail": "..."}` |
+
+#### Optional image input (request body) { #agent-reply-image-input }
+
+The endpoint accepts an **optional JSON body** to attach a camera-captured
+image to the turn. The body is omitted by most callers; when present it carries
+a single field:
+
+| Field | Type | Notes |
+|---|---|---|
+| `image_url` | string | Inline `data:image/*;base64,…` URL. Request-scoped and **never persisted** (ephemeral). Remote `http(s)` URLs are rejected (422) so the model never fetches attacker-controlled URLs server-side; capped at ~12 MB. |
+
+The image is threaded to the selected agent as `payload.image_url`. Vision
+capable agents (`langgraph`) ground the reply in the image; `echo` acknowledges
+receipt; the default `foundry` responder and the other agents currently ignore
+it (the contract is in place for incremental rollout). The web UI reuses the
+same camera capture overlay as the realtime voice call.
+
+```bash
+curl -N -s -X POST "http://localhost:8080/conversations/${CONV_ID}/agent-replies?agent_type=langgraph" \
+  -H "X-User-Id: ${USER_ID}" \
+  -H "Content-Type: application/json" \
+  -d '{"image_url": "data:image/jpeg;base64,/9j/4AAQSk..."}'
+```
 
 ```bash
 curl -N -s -X POST "http://localhost:8080/conversations/${CONV_ID}/agent-replies" \

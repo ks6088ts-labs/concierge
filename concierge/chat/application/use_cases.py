@@ -132,23 +132,24 @@ class GenerateBotReplyUseCase:
         self.bot_participant = bot_participant
         self.history_limit = history_limit
 
-    def execute(self, conversation_id: uuid.UUID) -> Iterator[BotReplyEvent]:
+    def execute(self, conversation_id: uuid.UUID, image_url: str | None = None) -> Iterator[BotReplyEvent]:
         conversation = self.conversation_repository.find_by_id(conversation_id)
         if conversation is None:
             raise ConversationNotFoundError(conversation_id)
         history = self.message_repository.find_by_conversation(conversation_id, limit=self.history_limit)
         conversation.add_participant(self.bot_participant)
         self.conversation_repository.save(conversation)
-        return self._stream(conversation, history, conversation_id)
+        return self._stream(conversation, history, conversation_id, image_url)
 
     def _stream(
         self,
         conversation: Conversation,
         history: list[Message],
         conversation_id: uuid.UUID,
+        image_url: str | None = None,
     ) -> Iterator[BotReplyEvent]:
         chunks: list[str] = []
-        for chunk in self.responder.stream_reply(conversation, history):
+        for chunk in self.responder.stream_reply(conversation, history, image_url=image_url):
             if not chunk:
                 continue
             chunks.append(chunk)

@@ -51,6 +51,17 @@ class PostMessageRequest(BaseModel):
     display_name: str | None = Field(default=None, min_length=1, max_length=100)
 
 
+class AgentReplyRequest(BaseModel):
+    """Optional body for ``POST /conversations/{id}/agent-replies``.
+
+    ``image_url`` carries a camera-captured image for this turn as an inline
+    ``data:image/*;base64,…`` URL. It is request-scoped and never persisted
+    (ephemeral). The body is optional so existing no-body callers keep working.
+    """
+
+    image_url: str | None = Field(default=None)
+
+
 class AgentTypesResponse(BaseModel):
     """List of agent types selectable from the chat-web UI.
 

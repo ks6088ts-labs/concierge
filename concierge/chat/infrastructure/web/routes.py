@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Response, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Response, WebSocket, WebSocketDisconnect, status
 from fastapi.responses import StreamingResponse
 
 from concierge.chat.application.repositories import ConversationRepository, MessageRepository
@@ -39,6 +39,7 @@ from concierge.chat.infrastructure.web.dependencies import (
     get_realtime_responder_optional,
 )
 from concierge.chat.infrastructure.web.schemas import (
+    AgentReplyRequest,
     AgentTypesResponse,
     ConversationResponse,
     CreateConversationRequest,
@@ -206,6 +207,7 @@ def stream_agent_reply(
     message_repository: Annotated[MessageRepository, Depends(get_message_repository)],
     chatbot_responder: Annotated[ChatbotResponder, Depends(get_chatbot_responder)],
     chat_settings: Annotated[ChatSettings, Depends(get_chat_settings_dep)],
+    payload: Annotated[AgentReplyRequest | None, Body()] = None,
 ) -> StreamingResponse:
     """Stream an AI agent reply over Server-Sent Events.
 
@@ -215,6 +217,14 @@ def stream_agent_reply(
       ``CHAT_BOT_AGENT_TYPE`` for this request only. Must be one of the values
       returned by ``GET /agents``. When omitted, the configured default is
       used.
+
+    Optional JSON body:
+
+    - ``image_url`` — an inline ``data:image/*;base64,…`` URL captured by the
+      client (e.g. the camera) to ground this turn. It is request-scoped and
+      never persisted. Vision-capable agents (``langgraph``) interpret it;
+      others ignore it. ``http(s)`` URLs are rejected so the model never
+      fetches attacker-controlled URLs server-side.
 
     Connection protocol:
 
@@ -226,6 +236,12 @@ def stream_agent_reply(
     Synchronous validation (e.g. unknown ``conversation_id``) is reported via
     a normal JSON error response (404 / 422 / 503) before the stream starts.
     """
+    image_url = payload.image_url if payload else None
+    if image_url is not None:
+        error = _validate_image_data_url(image_url)
+        if error is not None:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=error)
+
     use_case = GenerateBotReplyUseCase(
         conversation_repository,
         message_repository,
@@ -233,7 +249,7 @@ def stream_agent_reply(
         _bot_participant(chat_settings),
         chat_settings.bot_history_limit,
     )
-    events = use_case.execute(conversation_id)
+    events = use_case.execute(conversation_id, image_url=image_url)
 
     def event_stream():
         try:

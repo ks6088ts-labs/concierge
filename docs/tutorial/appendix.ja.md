@@ -33,6 +33,9 @@
 
 - [MLflow LangGraph 連携](https://mlflow.org/docs/latest/genai/tracing/integrations/listing/langgraph/)
 - [MLflow tracking サーバ](https://mlflow.org/docs/latest/tracking.html)
+- [MLflow GenAI 評価](https://mlflow.org/docs/latest/genai/)
+- [MLflow 組み込み Scorer 一覧](https://mlflow.org/docs/latest/genai/evaluation/builtin-judges/)
+- [`@scorer` デコレータ](https://mlflow.org/docs/latest/genai/evaluation/custom-scorers/)
 
 ## IaC
 
@@ -63,6 +66,7 @@
 - [`compose.yml`](https://github.com/ks6088ts-labs/concierge/blob/main/compose.yml)
 - [`.env.template`](https://github.com/ks6088ts-labs/concierge/blob/main/.env.template)
 - [`scripts/microsoft_foundry/vanilla.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/microsoft_foundry/vanilla.py)
+- [`scripts/mlflow/vanilla.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/mlflow/vanilla.py)
 - [`scripts/postgresql/vanilla.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/postgresql/vanilla.py)
 - [`concierge/settings/microsoft_foundry.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/microsoft_foundry.py)
 - [`concierge/settings/observability.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/observability.py)

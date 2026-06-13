@@ -12,6 +12,7 @@ nav:
       - 2. Observability (Tracing & MLflow): tutorial/02-observability.md
       - 3. PostgreSQL (pgvector) CRUD: tutorial/03-postgres-vector-store.md
       - 4. LangGraph Todo Agent CLI: tutorial/04-langgraph-todo-agent.md
+      - 5. MLflow GenAI Evaluation: tutorial/05-mlflow-genai-evaluation.md
       - Appendix - References: tutorial/appendix.md
       - Appendix - Monitor VS Code Copilot (App Insights): tutorial/appendix-monitor-vscode-copilot.md
       - Appendix - Deploy to Azure Container Apps (Terraform): tutorial/appendix-deploy-azure-container-apps.md

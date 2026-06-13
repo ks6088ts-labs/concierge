@@ -31,23 +31,23 @@ from concierge.settings import get_observability_settings
 _DATASET: list[dict[str, Any]] = [
     {
         "inputs": {"question": "What is the capital of France?"},
-        "expected_response": "Paris",
+        "expectations": {"expected_response": "Paris"},
     },
     {
         "inputs": {"question": "What is 2 + 2?"},
-        "expected_response": "4",
+        "expectations": {"expected_response": "4"},
     },
     {
         "inputs": {"question": "Who wrote Romeo and Juliet?"},
-        "expected_response": "William Shakespeare",
+        "expectations": {"expected_response": "William Shakespeare"},
     },
     {
         "inputs": {"question": "What is the boiling point of water in Celsius?"},
-        "expected_response": "100",
+        "expectations": {"expected_response": "100"},
     },
     {
         "inputs": {"question": "What planet is closest to the Sun?"},
-        "expected_response": "Mercury",
+        "expectations": {"expected_response": "Mercury"},
     },
 ]
 
@@ -234,13 +234,15 @@ def evaluate(
     # ------------------------------------------------------------------
 
     @scorer
-    def exact_match(outputs: str, expected_response: str) -> float:
+    def exact_match(outputs: str, expectations: dict[str, Any]) -> float:
         """Return 1.0 when the output exactly matches the expected response."""
+        expected_response = expectations["expected_response"]
         return 1.0 if outputs.strip().lower() == expected_response.strip().lower() else 0.0
 
     @scorer
-    def contains(outputs: str, expected_response: str) -> float:
+    def contains(outputs: str, expectations: dict[str, Any]) -> float:
         """Return 1.0 when the output contains the expected response."""
+        expected_response = expectations["expected_response"]
         return 1.0 if expected_response.strip().lower() in outputs.strip().lower() else 0.0
 
     @scorer
@@ -252,8 +254,10 @@ def evaluate(
     # Run evaluation
     # ------------------------------------------------------------------
 
-    def _predict(inputs: dict[str, Any]) -> str:
-        return _simple_qa(inputs["question"])
+    # MLflow unpacks each row's ``inputs`` dict as keyword arguments, so the
+    # parameter name must match the dataset key (``question``).
+    def _predict(question: str) -> str:
+        return _simple_qa(question)
 
     with mlflow.start_run(run_name=run_name):
         results = mlflow.genai.evaluate(
@@ -262,7 +266,7 @@ def evaluate(
             scorers=[exact_match, contains, non_empty],
         )
 
-    print(results.metrics_summary())  # type: ignore
+    print(results.metrics)
     print("\nPer-row results:")
     print(results.tables["eval_results"].to_string(index=False))
     logger.info("Evaluation complete. Open http://127.0.0.1:5000 to view results.")
@@ -299,19 +303,25 @@ def judge(
         ),
     ] = "azure_ai:gpt-5",
 ) -> None:
-    """Evaluate the QA function with MLflow built-in LLM judges.
+    """Evaluate the QA function with LLM-judge scorers.
 
     Judges applied:
 
-    * ``Correctness``       – Is the answer factually correct?
-    * ``RelevanceToQuery``  – Is the answer relevant to the question?
+    * ``correctness``         – Is the answer factually correct (vs. expected_response)?
+    * ``relevance_to_query``  – Is the answer relevant to the question?
+
+    Both judges are custom ``@scorer`` functions backed by the same
+    ``langchain``/Azure AI Foundry model the rest of the project uses
+    (authenticated via ``DefaultAzureCredential``). This avoids the built-in
+    litellm judges, which require API-key auth that this project does not use.
 
     This command requires Azure credentials and a deployed model. When
-    credentials are missing the command exits with a clear error message.
+    credentials are missing the command exits with a clear (skip) message.
     """
     import mlflow
     from langchain.chat_models import init_chat_model
-    from mlflow.genai import judges
+    from mlflow.entities import Feedback
+    from mlflow.genai.scorers import scorer
 
     _setup_mlflow()
     if experiment:
@@ -336,14 +346,47 @@ def judge(
         )
         raise typer.Exit(code=0) from exc
 
-    results = mlflow.genai.evaluate(
-        data=_DATASET,
-        predict_fn=lambda inputs: _simple_qa(cast(dict[str, Any], inputs)["question"]),
-        scorers=[judges.Correctness(), judges.RelevanceToQuery()],  # type: ignore
-        run_name=run_name,  # type: ignore
-    )
+    def _judge(prompt: str, name: str) -> Feedback:
+        """Ask the judge model for a PASS/FAIL verdict and capture its rationale."""
+        response = judge_model.invoke(prompt)
+        text = str(getattr(response, "content", response)).strip()
+        verdict_line = text.splitlines()[0].lower() if text else ""
+        passed = "pass" in verdict_line and "fail" not in verdict_line
+        return Feedback(name=name, value=passed, rationale=text)
 
-    print(results.metrics_summary())  # type: ignore
+    @scorer
+    def correctness(inputs: dict[str, Any], outputs: str, expectations: dict[str, Any]) -> Feedback:
+        """LLM judge: is the answer factually correct vs. the expected response?"""
+        prompt = (
+            "You are a strict grader. Decide whether the ANSWER is factually correct "
+            "for the QUESTION, using EXPECTED as the ground-truth answer.\n"
+            "Respond with 'PASS' or 'FAIL' on the first line, then a one-sentence reason.\n\n"
+            f"QUESTION: {inputs['question']}\n"
+            f"EXPECTED: {expectations['expected_response']}\n"
+            f"ANSWER: {outputs}\n"
+        )
+        return _judge(prompt, "correctness")
+
+    @scorer
+    def relevance_to_query(inputs: dict[str, Any], outputs: str) -> Feedback:
+        """LLM judge: is the answer relevant to the question (ignoring accuracy)?"""
+        prompt = (
+            "You are a strict grader. Decide whether the ANSWER is relevant to the "
+            "QUESTION, regardless of factual accuracy.\n"
+            "Respond with 'PASS' or 'FAIL' on the first line, then a one-sentence reason.\n\n"
+            f"QUESTION: {inputs['question']}\n"
+            f"ANSWER: {outputs}\n"
+        )
+        return _judge(prompt, "relevance_to_query")
+
+    with mlflow.start_run(run_name=run_name):
+        results = mlflow.genai.evaluate(
+            data=_DATASET,
+            predict_fn=_simple_qa,
+            scorers=[correctness, relevance_to_query],
+        )
+
+    print(results.metrics)
     print("\nPer-row results:")
     print(results.tables["eval_results"].to_string(index=False))
     logger.info("LLM-judge evaluation complete. Open http://127.0.0.1:5000 to view results.")
@@ -390,20 +433,23 @@ def custom_scorer(
     # ------------------------------------------------------------------
 
     @scorer
-    def token_overlap(outputs: str, expected_response: str) -> float:
+    def token_overlap(outputs: str, expectations: dict[str, Any]) -> float:
         """Jaccard similarity between output and expected_response token sets.
 
         Tokenises on whitespace (lowercase), then returns
         |A ∩ B| / |A ∪ B|.  Returns 0.0 when both sets are empty.
         """
+        expected_response = expectations["expected_response"]
         a = set(outputs.lower().split())
         b = set(expected_response.lower().split())
         if not a and not b:
             return 0.0
         return len(a & b) / len(a | b)
 
-    def _predict(inputs: dict[str, Any]) -> str:
-        return _simple_qa(inputs["question"])
+    # MLflow unpacks each row's ``inputs`` dict as keyword arguments, so the
+    # parameter name must match the dataset key (``question``).
+    def _predict(question: str) -> str:
+        return _simple_qa(question)
 
     with mlflow.start_run(run_name=run_name):
         results = mlflow.genai.evaluate(
@@ -412,7 +458,7 @@ def custom_scorer(
             scorers=[token_overlap],
         )
 
-    print(results.metrics_summary())  # type: ignore
+    print(results.metrics)
     print("\nPer-row results:")
     print(results.tables["eval_results"].to_string(index=False))
     logger.info("Custom-scorer evaluation complete. Open http://127.0.0.1:5000 to view results.")

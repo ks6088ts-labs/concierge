@@ -26,11 +26,14 @@ only on what comes before it, and each one is independently verifiable.
 | [2](02-observability.md) | Observability (Tracing & MLflow) | Trace LangChain runs to Azure Monitor and to a local MLflow UI | yes / partly[^1] |
 | [3](03-postgres-vector-store.md) | PostgreSQL (pgvector) CRUD | A persistent vector store, locally or on Azure | optional[^2] |
 | [4](04-langgraph-todo-agent.md) | LangGraph Todo Agent CLI | A ReAct agent that operates the Todo Web API through tools | yes |
+| [5](05-mlflow-genai-evaluation.md) | MLflow GenAI Evaluation | Evaluate and compare agent output quality with heuristic, LLM-judge, and custom scorers | partly[^3] |
 
 [^1]: MLflow runs entirely on your laptop; only the Azure Monitor side
       requires Foundry tracing to be enabled.
 [^2]: Step 3 has a `--fake-embeddings` flag that bypasses Foundry entirely,
       and the `--target docker` default uses local Docker Compose pgvector.
+[^3]: Steps 5a–5c and 5e run fully on your laptop; only the `judge` subcommand
+      (Step 5d) requires Azure credentials and a deployed chat model.
 
 !!! tip "Already exploring locally?"
     The [Todo App (Clean Architecture)](../todo/index.md) section runs

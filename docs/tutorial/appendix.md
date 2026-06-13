@@ -33,6 +33,9 @@ grouped by topic, so you have a single place to bookmark.
 
 - [MLflow LangGraph integration](https://mlflow.org/docs/latest/genai/tracing/integrations/listing/langgraph/)
 - [MLflow tracking server](https://mlflow.org/docs/latest/tracking.html)
+- [MLflow GenAI Evaluation](https://mlflow.org/docs/latest/genai/)
+- [MLflow built-in scorers](https://mlflow.org/docs/latest/genai/evaluation/builtin-judges/)
+- [`@scorer` decorator](https://mlflow.org/docs/latest/genai/evaluation/custom-scorers/)
 
 ## Infrastructure as Code
 
@@ -63,6 +66,7 @@ grouped by topic, so you have a single place to bookmark.
 - [`compose.yml`](https://github.com/ks6088ts-labs/concierge/blob/main/compose.yml)
 - [`.env.template`](https://github.com/ks6088ts-labs/concierge/blob/main/.env.template)
 - [`scripts/microsoft_foundry/vanilla.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/microsoft_foundry/vanilla.py)
+- [`scripts/mlflow/vanilla.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/mlflow/vanilla.py)
 - [`scripts/postgresql/vanilla.py`](https://github.com/ks6088ts-labs/concierge/blob/main/scripts/postgresql/vanilla.py)
 - [`concierge/settings/microsoft_foundry.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/microsoft_foundry.py)
 - [`concierge/settings/observability.py`](https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/observability.py)

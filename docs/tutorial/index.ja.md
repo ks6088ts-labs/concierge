@@ -23,11 +23,14 @@
 | [2](02-observability.md) | 観測性 (トレース & MLflow) | LangChain 実行を Azure Monitor とローカル MLflow UI に流す | 必要 / 一部のみ[^1] |
 | [3](03-postgres-vector-store.md) | PostgreSQL (pgvector) CRUD | 永続ベクトルストア（ローカル / Azure 両対応） | 任意[^2] |
 | [4](04-langgraph-todo-agent.md) | LangGraph Todo Agent CLI | Todo Web API をツール経由で操作する ReAct エージェント | 必要 |
+| [5](05-mlflow-genai-evaluation.md) | MLflow GenAI 評価 | ヒューリスティック / LLM-judge / カスタム Scorer でエージェント出力品質を評価・比較する | 一部のみ[^3] |
 
 [^1]: MLflow はローカル完結で、Azure Monitor 側のみ Foundry のトレーシング
       機能を有効化する必要があります。
 [^2]: ステップ 3 には Foundry を呼ばない `--fake-embeddings` フラグがあり、
       既定の `--target docker` はローカル Docker Compose pgvector を使います。
+[^3]: ステップ 5a〜5c と 5e はローカル完結です。Azure 資格情報とデプロイ済み
+      モデルが必要なのは `judge` サブコマンド（ステップ 5d）のみです。
 
 !!! tip "まずローカルで動かしてみたい場合"
     [Todo アプリ (クリーンアーキテクチャ)](../todo/index.md) のセクション

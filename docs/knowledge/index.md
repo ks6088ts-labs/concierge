@@ -75,6 +75,13 @@ in `pyproject.toml`).
 
 The fastest end-to-end smoke test. **No Azure credentials required.**
 
+!!! warning "`fake` embeddings are for plumbing tests only"
+    `KNOWLEDGE_EMBEDDING_PROVIDER=fake` produces deterministic but
+    **semantically meaningless** vectors, so search rankings are effectively
+    random. Use it only to verify the ingest/search wiring without Azure. For
+    real semantic retrieval (RAG agents, realtime voice) use `foundry` and
+    re-ingest — see [Troubleshooting](#troubleshooting).
+
 ```bash
 # 1. Boot local pgvector
 docker compose up -d postgres
@@ -157,6 +164,60 @@ from `PostgresSettings` (`POSTGRES_*`) for `--target docker` and
 `AZURE_DBPASSWORD`. See
 [Step 3 – PostgreSQL (pgvector) CRUD](../tutorial/03-postgres-vector-store.md)
 for the full description and provisioning steps.
+
+## Troubleshooting
+
+### Search returns irrelevant chunks (or an agent says "no results" despite hits)
+
+`KNOWLEDGE_EMBEDDING_PROVIDER=fake` uses `DeterministicFakeEmbedding`, which
+hashes text into vectors that carry **no semantic meaning**. It only exists to
+smoke-test the ingest/search plumbing without calling Azure. With `fake`,
+`similarity_search` returns essentially arbitrary chunks — every cosine distance
+clusters around the same value (~0.9) — so callers that ground their answers on
+the results (RAG agents, the realtime voice tool) report that nothing relevant
+was found even though hits came back.
+
+Switch to Foundry embeddings for any real retrieval:
+
+```dotenv
+KNOWLEDGE_EMBEDDING_PROVIDER=foundry
+KNOWLEDGE_EMBEDDING_MODEL=text-embedding-3-small
+AZURE_AI_PROJECT_ENDPOINT=https://<resource>.services.ai.azure.com/api/projects/<project>
+```
+
+Confirm the fix with a query whose answer you know is in the corpus — the
+obviously-relevant document should now rank first:
+
+```bash
+uv run knowledge-cli search run --collection knowledge_default "MLflow" --k 4
+```
+
+### Switched the provider or model but results did not change
+
+Embeddings are computed **at ingest time** and stored in the table. Changing
+`KNOWLEDGE_EMBEDDING_PROVIDER`, `KNOWLEDGE_EMBEDDING_MODEL`, or
+`KNOWLEDGE_VECTOR_SIZE` does not retro-fit existing rows, and `ingest run`
+**appends** instead of replacing. Drop and re-ingest so the whole collection
+shares one embedding space:
+
+```bash
+uv run knowledge-cli ingest drop --collection knowledge_default --yes
+uv run knowledge-cli ingest run  --collection knowledge_default docs
+```
+
+!!! warning "Restart long-running servers after editing `.env`"
+    App surfaces such as `chat-web` load `.env` and cache settings at startup,
+    so a provider change in `.env` is not picked up until you stop and restart
+    the process.
+
+### `OperationalError` / `connection refused` on port 5432
+
+pgvector is not running. Start it before ingesting or searching (the
+healthcheck must pass first):
+
+```bash
+docker compose up -d postgres
+```
 
 ## Programmatic use
 

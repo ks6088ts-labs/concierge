@@ -165,6 +165,14 @@ complete table. The most useful ones during smoke tests:
 | `KNOWLEDGE_CHUNK_SIZE` / `KNOWLEDGE_CHUNK_OVERLAP` | `1000` / `200` | Defaults are reasonable for English / Japanese prose. |
 | `AZURE_AI_PROJECT_ENDPOINT` | – | Required when `KNOWLEDGE_EMBEDDING_PROVIDER=foundry`. |
 
+!!! warning "`fake` is plumbing-only — switch to `foundry` for real search"
+    `fake` embeddings (`DeterministicFakeEmbedding`) are semantically
+    meaningless, so a collection built with `fake` returns irrelevant search
+    results (and RAG/realtime callers report "no relevant results"). For real
+    retrieval set `KNOWLEDGE_EMBEDDING_PROVIDER=foundry` and **re-ingest**
+    (`ingest drop` then `ingest run`) — see
+    [Troubleshooting](index.md#troubleshooting).
+
 ## Minimum end-to-end procedure
 
 The shortest path from a fresh checkout to a populated and verifiable

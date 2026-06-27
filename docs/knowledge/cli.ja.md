@@ -163,6 +163,13 @@ no results for collection=demo_md query='nothing matches'
 | `KNOWLEDGE_CHUNK_SIZE` / `KNOWLEDGE_CHUNK_OVERLAP` | `1000` / `200` | 日本語/英語の散文には妥当 |
 | `AZURE_AI_PROJECT_ENDPOINT` | – | `KNOWLEDGE_EMBEDDING_PROVIDER=foundry` のときに必須 |
 
+!!! warning "`fake` は配線確認専用 — 実検索は `foundry` に切替"
+    `fake`（`DeterministicFakeEmbedding`）は意味を持たないため、`fake` で
+    構築したコレクションは無関係な検索結果を返します（RAG/realtime 側は
+    「関連情報なし」と報告）。実検索では `KNOWLEDGE_EMBEDDING_PROVIDER=foundry`
+    にして**入れ直して**ください（`ingest drop` → `ingest run`）。詳細は
+    [トラブルシューティング](index.ja.md#トラブルシューティング)を参照。
+
 ## エンドツーエンドの最小手順
 
 クローン直後からコレクションが投入され、件数まで確認できる最短手順:

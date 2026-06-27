@@ -75,6 +75,13 @@ concierge/knowledge/
 
 Azure 認証不要で動かせる最短のスモークテストです。
 
+!!! warning "`fake` embeddings は配線確認専用"
+    `KNOWLEDGE_EMBEDDING_PROVIDER=fake` は決定論的でも**意味を持たない**
+    ベクターを生成するため、検索の順位は実質ランダムです。Azure を呼ばずに
+    インジェスト/検索の配線を確認する用途にのみ使用してください。実際の
+    意味検索（RAG エージェント、realtime 音声）では `foundry` を使い、
+    入れ直してください。詳細は[トラブルシューティング](#トラブルシューティング)を参照。
+
 ```bash
 # 1. ローカル pgvector を起動
 docker compose up -d postgres
@@ -156,6 +163,59 @@ uv run knowledge-cli ingest drop  --collection demo_md --target azure --yes
 `AZURE_DBPASSWORD` が必要です。詳細やプロビジョニング手順は
 [ステップ 3 – PostgreSQL (pgvector) CRUD](../tutorial/03-postgres-vector-store.ja.md)
 を参照してください。
+
+## トラブルシューティング
+
+### 検索結果が無関係なチャンクばかり（ヒットはあるのにエージェントが「該当なし」と回答する）
+
+`KNOWLEDGE_EMBEDDING_PROVIDER=fake` は `DeterministicFakeEmbedding` を使い、
+テキストをハッシュして**意味を持たない**ベクターに変換します。これは Azure を
+呼ばずにインジェスト/検索の配線を確認するためだけのものです。`fake` では
+`similarity_search` がほぼランダムなチャンクを返し（コサイン距離がどれも同じ
+~0.9 付近に張り付く）、結果を根拠に回答する側（RAG エージェントや realtime
+音声ツール）は、ヒットが返っていても「関連情報が見つからない」と報告します。
+
+実運用の検索では Foundry embeddings に切り替えてください:
+
+```dotenv
+KNOWLEDGE_EMBEDDING_PROVIDER=foundry
+KNOWLEDGE_EMBEDDING_MODEL=text-embedding-3-small
+AZURE_AI_PROJECT_ENDPOINT=https://<resource>.services.ai.azure.com/api/projects/<project>
+```
+
+コーパスに答えがあると分かっているクエリで確認します。明らかに関連する
+ドキュメントが先頭に来るはずです:
+
+```bash
+uv run knowledge-cli search run --collection knowledge_default "MLflow" --k 4
+```
+
+### プロバイダやモデルを変えたのに結果が変わらない
+
+埋め込みは**インジェスト時**に計算されテーブルへ保存されます。
+`KNOWLEDGE_EMBEDDING_PROVIDER` / `KNOWLEDGE_EMBEDDING_MODEL` /
+`KNOWLEDGE_VECTOR_SIZE` を変更しても既存行には反映されず、`ingest run` は
+置き換えではなく**追記**します。コレクション全体を 1 つの埋め込み空間に
+そろえるため、drop してから入れ直してください:
+
+```bash
+uv run knowledge-cli ingest drop --collection knowledge_default --yes
+uv run knowledge-cli ingest run  --collection knowledge_default docs
+```
+
+!!! warning "`.env` 変更後は常駐サーバを再起動する"
+    `chat-web` などのアプリは起動時に `.env` を読み込み設定をキャッシュする
+    ため、`.env` のプロバイダ変更はプロセスを停止・再起動するまで反映され
+    ません。
+
+### ポート 5432 で `OperationalError` / `connection refused`
+
+pgvector が起動していません。インジェスト/検索の前に起動してください
+（ヘルスチェックの完了を待ちます）:
+
+```bash
+docker compose up -d postgres
+```
 
 ## プログラムからの利用
 

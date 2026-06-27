@@ -249,6 +249,11 @@ flowchart LR
 
 `create_chatbot_responder()` は `CHAT_BOT_AGENT_TYPE`（既定 `foundry`）でレスポンダを選択します。`foundry` の場合は `AZURE_AI_PROJECT_ENDPOINT` の設定が必須で、未設定だと `ChatbotNotConfiguredError` を送出します（FastAPI ルートは HTTP 503、`chat-cli message reply` は終了コード 1）。`foundry` 以外の値（`echo` / `langgraph` / `github-copilot-sdk` / `microsoft-agent-framework` など）は共有 `AgentRegistry` から解決されます。
 
+テキストチャット（`/agent-replies`）で外部ナレッジ検索を使う場合は、
+`CHAT_BOT_AGENT_TYPE=langgraph` など AgentRegistry 経由のレスポンダを利用してください。
+こちらの経路で knowledge tool が実行されます。既定の `foundry` レスポンダは
+通常の chat completion 経路（tool call ループなし）のままです。
+
 ### 設定一覧
 
 | 変数 | デフォルト | 説明 |
@@ -603,6 +608,17 @@ uv run chat-web
 | ツール | 説明 |
 |---|---|
 | `get_current_time` | 現在の日時を返します。IANA タイムゾーン（例：`Asia/Tokyo`）を任意で指定できます。 |
+| `echo` | 入力テキストをそのまま返します（tool calling の疎通確認向け）。 |
+| `read_file` / `list_directory` / `file_search` | `concierge.agents` と共通の read-only ファイルツールです。 |
+| `<AGENTS_KNOWLEDGE__TOOLS の各名>`（任意） | `AGENTS_KNOWLEDGE__...` 設定で読み込まれる PostgreSQL/pgvector 検索ツールです。 |
+
+knowledge tool の有効化例（`.env`）:
+
+```bash
+AGENTS_KNOWLEDGE__TOOLS=search_docs
+AGENTS_KNOWLEDGE__SEARCH_DOCS__COLLECTION=knowledge_default
+AGENTS_KNOWLEDGE__SEARCH_DOCS__DESCRIPTION="Search the docs knowledge base"
+```
 
 #### 新しいツールの追加方法
 

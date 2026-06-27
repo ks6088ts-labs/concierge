@@ -294,6 +294,11 @@ otherwise `ChatbotNotConfiguredError` is raised (HTTP 503 / exit 1). Any other
 value (e.g. `echo`, `langgraph`, `github-copilot-sdk`, `microsoft-agent-framework`) is resolved from
 the shared `AgentRegistry`.
 
+For external-knowledge retrieval in text chat (`/agent-replies`), use an
+AgentRegistry-backed responder (for example `CHAT_BOT_AGENT_TYPE=langgraph`):
+that path can execute knowledge tools. The default `foundry` responder remains
+a plain chat-completion path without tool-calling.
+
 ### Settings reference
 
 All chatbot settings are part of `ChatSettings` (prefix `CHAT_`).
@@ -726,6 +731,17 @@ browser only hears the spoken answer (no front-end changes are required).
 | Tool | Description |
 |---|---|
 | `get_current_time` | Returns the current date/time, optionally for a given IANA timezone (e.g. `Asia/Tokyo`). |
+| `echo` | Echoes text back (useful for smoke-testing tool calling). |
+| `read_file` / `list_directory` / `file_search` | Read-only sandbox file tools shared with `concierge.agents`. |
+| `<AGENTS_KNOWLEDGE__TOOLS names>` (optional) | Knowledge-retrieval tools backed by PostgreSQL/pgvector, loaded from `AGENTS_KNOWLEDGE__...` settings. |
+
+Enable a knowledge tool in `.env`:
+
+```bash
+AGENTS_KNOWLEDGE__TOOLS=search_docs
+AGENTS_KNOWLEDGE__SEARCH_DOCS__COLLECTION=knowledge_default
+AGENTS_KNOWLEDGE__SEARCH_DOCS__DESCRIPTION="Search the docs knowledge base"
+```
 
 #### Adding a new tool
 

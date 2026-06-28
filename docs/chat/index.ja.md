@@ -620,6 +620,19 @@ AGENTS_KNOWLEDGE__SEARCH_DOCS__COLLECTION=knowledge_default
 AGENTS_KNOWLEDGE__SEARCH_DOCS__DESCRIPTION="Search the docs knowledge base"
 ```
 
+検索先の PostgreSQL は `AGENTS_KNOWLEDGE__TARGET` で選択します（既定
+`docker` = ローカル pgvector、`azure` = Azure Database for PostgreSQL）。
+realtime 音声から Azure 上のコレクションを参照するには次を追加します。
+
+```bash
+AGENTS_KNOWLEDGE__TARGET=azure
+```
+
+pgvector 拡張の許可・Entra 管理者登録・`--target azure` での事前インジェスト
+など Azure 側の準備手順は
+[Shared Agent Runtime（Azure Database for PostgreSQL に向ける）](../agents/index.ja.md)
+を参照してください。
+
 #### 新しいツールの追加方法
 
 ツールは単一のレジストリ

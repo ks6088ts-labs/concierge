@@ -213,6 +213,28 @@ def test_agents_knowledge_settings_reads_env(monkeypatch):
     assert configured[0].max_chars == 999
 
 
+def test_agents_knowledge_settings_target_defaults_to_docker(monkeypatch):
+    monkeypatch.setenv("AGENTS_KNOWLEDGE__TOOLS", "search_docs")
+    monkeypatch.setenv("AGENTS_KNOWLEDGE__SEARCH_DOCS__COLLECTION", "docs")
+    monkeypatch.delenv("AGENTS_KNOWLEDGE__TARGET", raising=False)
+
+    settings = AgentsKnowledgeSettings(_env_file=None)  # ty: ignore[unknown-argument]
+    configured = settings.configured_tools()
+
+    assert configured[0].target == "docker"
+
+
+def test_agents_knowledge_settings_target_reads_env(monkeypatch):
+    monkeypatch.setenv("AGENTS_KNOWLEDGE__TOOLS", "search_docs")
+    monkeypatch.setenv("AGENTS_KNOWLEDGE__SEARCH_DOCS__COLLECTION", "docs")
+    monkeypatch.setenv("AGENTS_KNOWLEDGE__TARGET", "azure")
+
+    settings = AgentsKnowledgeSettings(_env_file=None)  # ty: ignore[unknown-argument]
+    configured = settings.configured_tools()
+
+    assert configured[0].target == "azure"
+
+
 def test_knowledge_settings_defaults(monkeypatch):
     monkeypatch.delenv("KNOWLEDGE_EMBEDDING_PROVIDER", raising=False)
     monkeypatch.delenv("KNOWLEDGE_EMBEDDING_MODEL", raising=False)

@@ -107,7 +107,7 @@ def test_knowledge_tools_register_multiple_named_builders(monkeypatch: pytest.Mo
     monkeypatch.setenv("AGENTS_SHELL_TOOLS_ENABLED", "")
     monkeypatch.setattr(
         "concierge.agents.infrastructure.tools.knowledge.get_search_knowledge_use_case",
-        lambda _collection: _FakeUseCase([]),
+        lambda _collection, _target=None: _FakeUseCase([]),
     )
 
     registry = get_agent_registry()
@@ -124,7 +124,7 @@ def test_knowledge_langchain_tool_returns_no_hits_envelope(monkeypatch: pytest.M
     settings = _configure_single_tool(monkeypatch)
     monkeypatch.setattr(
         "concierge.agents.infrastructure.tools.knowledge.get_search_knowledge_use_case",
-        lambda _collection: _FakeUseCase([]),
+        lambda _collection, _target=None: _FakeUseCase([]),
     )
 
     tool = build_knowledge_langchain_tool_builders(settings)[0]({})
@@ -139,7 +139,7 @@ def test_knowledge_langchain_tool_returns_error_payload(monkeypatch: pytest.Monk
     settings = _configure_single_tool(monkeypatch)
     monkeypatch.setattr(
         "concierge.agents.infrastructure.tools.knowledge.get_search_knowledge_use_case",
-        lambda _collection: _FakeUseCase(RuntimeError("dsn error")),
+        lambda _collection, _target=None: _FakeUseCase(RuntimeError("dsn error")),
     )
 
     tool = build_knowledge_langchain_tool_builders(settings)[0]({})
@@ -156,7 +156,9 @@ def test_knowledge_langchain_tool_normalizes_score_and_truncates_utf8(monkeypatc
     settings = AgentsKnowledgeSettings(_env_file=None)  # ty: ignore[unknown-argument]
     monkeypatch.setattr(
         "concierge.agents.infrastructure.tools.knowledge.get_search_knowledge_use_case",
-        lambda _collection: _FakeUseCase([_FakeResult("docs/a.md", 0, "あいうえおかきくけこさ", distance=0.5)]),
+        lambda _collection, _target=None: _FakeUseCase(
+            [_FakeResult("docs/a.md", 0, "あいうえおかきくけこさ", distance=0.5)]
+        ),
     )
 
     tool = build_knowledge_langchain_tool_builders(settings)[0]({})
@@ -176,7 +178,7 @@ async def test_knowledge_builder_parity_across_sdks(monkeypatch: pytest.MonkeyPa
     ]
     monkeypatch.setattr(
         "concierge.agents.infrastructure.tools.knowledge.get_search_knowledge_use_case",
-        lambda _collection: _FakeUseCase(results),
+        lambda _collection, _target=None: _FakeUseCase(results),
     )
 
     langchain_tool = build_knowledge_langchain_tool_builders(settings)[0]({})

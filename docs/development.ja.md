@@ -25,6 +25,10 @@ Foundry へ接続する前に Azure CLI でサインインします。
 az login
 ```
 
+!!! tip "Azure 上で通しで動かす"
+
+    Foundry エンドポイント、Azure Database for PostgreSQL、スキーマ初期化までを含む Azure 構成の通し手順は [付録 - Azure 環境セットアップ](tutorial/appendix-azure-environment-setup.md) を参照してください。
+
 ## サンプル CLI
 
 利用できる Typer コマンドは help で確認できます。

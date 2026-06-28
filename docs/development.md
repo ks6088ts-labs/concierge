@@ -25,6 +25,10 @@ Sign in with Azure CLI before connecting to Foundry.
 az login
 ```
 
+!!! tip "Running against Azure end to end"
+
+    For a full Azure setup (Foundry endpoints, Azure Database for PostgreSQL, and schema initialization), follow [Appendix - Azure Environment Setup](tutorial/appendix-azure-environment-setup.md).
+
 ## Sample CLI
 
 List available Typer commands.

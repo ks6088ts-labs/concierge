@@ -14,6 +14,7 @@ nav:
       - 4. LangGraph Todo Agent CLI: tutorial/04-langgraph-todo-agent.md
       - 5. MLflow GenAI Evaluation: tutorial/05-mlflow-genai-evaluation.md
       - Appendix - References: tutorial/appendix.md
+      - Appendix - Azure Environment Setup: tutorial/appendix-azure-environment-setup.md
       - Appendix - Monitor VS Code Copilot (App Insights): tutorial/appendix-monitor-vscode-copilot.md
       - Appendix - Deploy to Azure Container Apps (Terraform): tutorial/appendix-deploy-azure-container-apps.md
   - Todo App (Clean Architecture):

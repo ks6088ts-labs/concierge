@@ -304,6 +304,25 @@ az role assignment create \
 
 in-memory バックエンドを使う場合はこのステップを飛ばします。
 
+!!! warning "ローカルの `.env` の `AZURE_DBUSER` をそのまま流用しない"
+    `az login` で動くローカルの `.env` では、`AZURE_DBUSER` に Entra 管理者
+    (例: `admin@<tenant>.onmicrosoft.com`) を設定していることが多いです。
+    この値がローカルで通るのは、`DefaultAzureCredential` がサインイン中の
+    ユーザー (= その管理者) に解決されるからにすぎません。Container Apps では
+    `DefaultAzureCredential` はアプリのマネージド ID に解決されるため、接続
+    するロール名は管理者ではなく、ID を登録した Postgres ロール (下記で作る
+    `concierge-chat` principal) である必要があります。管理者の値をそのまま
+    コピーすると、PostgreSQL はログインを次のように拒否します:
+
+    ```text
+    FATAL: Microsoft Entra user token for role "admin@<tenant>.onmicrosoft.com"
+    is neither an AAD_AUTH_TOKENTYPE_APP_USER or an AAD_AUTH_TOKENTYPE_APP_OBO token.
+    ```
+
+    提示されるトークンはマネージド ID (app / サービスプリンシパル) のもの
+    ですが、ロール名はユーザープリンシパルを指しており、両者が一致しない
+    ためです。
+
 1. Flexible Server で **Microsoft Entra 認証** を有効化し、自分を Entra
    管理者に設定します
    ([手順](https://learn.microsoft.com/ja-jp/azure/postgresql/flexible-server/how-to-configure-sign-in-azure-ad-authentication))。
@@ -339,6 +358,24 @@ in-memory バックエンドを使う場合はこのステップを飛ばしま�
 
 5. 新しい `env_vars` を反映するため `terraform apply` を再実行します。
 
+!!! note "`postgres` 以外のアプリ用データベースに GRANT する場合"
+    上の例は `AZURE_DBNAME=postgres` を前提にしており、`GRANT ALL ON DATABASE
+    postgres` で十分です。`pgaadauth_*` 補助関数は `postgres` メンテナンス
+    データベースにのみ存在しますが、Postgres のロールはクラスタ全体で共有
+    されます。専用のアプリ用データベース (例: `appdb`) を使う場合は、
+    `postgres` に接続して principal を作成し、その後対象データベースに接続して
+    オブジェクト単位の権限を付与します:
+
+    ```sql
+    -- AZURE_DBNAME (例: appdb) に接続した状態で
+    GRANT CONNECT ON DATABASE appdb TO "concierge-chat";
+    GRANT USAGE, CREATE ON SCHEMA public TO "concierge-chat";
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO "concierge-chat";
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO "concierge-chat";
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO "concierge-chat";
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO "concierge-chat";
+    ```
+
 !!! note "ネットワーク到達性"
     Container App から Flexible Server へ到達できる必要があります。手早く
     試すならサーバーファイアウォールでパブリックアクセスを許可します。本番では
@@ -372,6 +409,23 @@ Log Analytics ワークスペースで Container App のログを確認します
     principal 名が `pgaadauth_create_principal_with_oid` で作成したロールと
     一致していないか、登録した object id がステップ 3 のシステム割り当て
     principal id でないことを意味します。
+
+    `FATAL: ... is neither an AAD_AUTH_TOKENTYPE_APP_USER or an
+    AAD_AUTH_TOKENTYPE_APP_OBO token` というエラーは、`AZURE_DBUSER` を
+    人間の管理者 (ユーザープリンシパル) に向けているのに、実行時のトークンが
+    マネージド ID (サービスプリンシパル) から来ている場合に特有の症状です。
+    ステップ 5 のとおり object type `service` でマネージド ID を登録し、
+    `AZURE_DBUSER` をそのロールに設定します。マッピングは Entra 管理者で次の
+    クエリにより確認できます:
+
+    ```sql
+    SELECT r.rolname, s.label
+    FROM pg_roles r JOIN pg_shseclabel s ON s.objoid = r.oid
+    WHERE s.provider = 'pgaadauth';
+    ```
+
+    label が `type=service,oid=<マネージド ID の principal id>` になっていれば
+    正しく登録されています。
 
 ## ステップ 7 - (任意) ユーザー割り当て ID を使う
 

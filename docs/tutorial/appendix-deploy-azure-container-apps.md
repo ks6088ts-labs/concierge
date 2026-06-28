@@ -294,6 +294,25 @@ Role assignments can take a few minutes to propagate. Restart the Container App
 
 Skip this step if your service uses the in-memory backend.
 
+!!! warning "Do not reuse `AZURE_DBUSER` from your local `.env`"
+    A local `.env` that works with `az login` usually sets `AZURE_DBUSER` to
+    your Entra administrator (for example `admin@<tenant>.onmicrosoft.com`).
+    That value works locally only because `DefaultAzureCredential` resolves to
+    your signed-in user, which is that administrator. On Container Apps
+    `DefaultAzureCredential` resolves to the app's managed identity instead, so
+    the connecting role must be the identity's registered Postgres role (the
+    `concierge-chat` principal created below), not the human administrator.
+    Copying the admin value verbatim makes PostgreSQL reject the login:
+
+    ```text
+    FATAL: Microsoft Entra user token for role "admin@<tenant>.onmicrosoft.com"
+    is neither an AAD_AUTH_TOKENTYPE_APP_USER or an AAD_AUTH_TOKENTYPE_APP_OBO token.
+    ```
+
+    The presented token belongs to the managed identity (an app / service
+    principal), while the role name points at a user principal, so the server
+    refuses the mismatch.
+
 1. Enable **Microsoft Entra authentication** on the Flexible Server and set
    yourself as an Entra administrator
    ([how-to](https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/how-to-configure-sign-in-azure-ad-authentication)).
@@ -328,6 +347,24 @@ Skip this step if your service uses the in-memory backend.
 
 5. Re-run `terraform apply` to push the new `env_vars`.
 
+!!! note "Granting a non-`postgres` application database"
+    The example above uses `AZURE_DBNAME=postgres`, where `GRANT ALL ON
+    DATABASE postgres` is enough. The `pgaadauth_*` helper functions exist only
+    in the `postgres` maintenance database, but Postgres roles are cluster-wide.
+    For a dedicated application database (for example `appdb`), create the
+    principal while connected to `postgres`, then connect to that database to
+    grant object-level access:
+
+    ```sql
+    -- connected to AZURE_DBNAME (e.g. appdb)
+    GRANT CONNECT ON DATABASE appdb TO "concierge-chat";
+    GRANT USAGE, CREATE ON SCHEMA public TO "concierge-chat";
+    GRANT ALL ON ALL TABLES IN SCHEMA public TO "concierge-chat";
+    GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO "concierge-chat";
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO "concierge-chat";
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO "concierge-chat";
+    ```
+
 !!! note "Network reachability"
     The Container App must reach the Flexible Server. For a quick start, allow
     public access with the server firewall. For production, give the Container
@@ -361,6 +398,21 @@ show up here first.
     name in `AZURE_DBUSER` does not match the role created by
     `pgaadauth_create_principal_with_oid`, or the registered object id is not
     the system-assigned principal id from Step 3.
+
+    A `FATAL: ... is neither an AAD_AUTH_TOKENTYPE_APP_USER or an
+    AAD_AUTH_TOKENTYPE_APP_OBO token` error is the specific symptom of pointing
+    `AZURE_DBUSER` at a human administrator (a user principal) while the runtime
+    token comes from the managed identity (a service principal). Register the
+    managed identity with object type `service` as shown in Step 5 and set
+    `AZURE_DBUSER` to that role. Confirm the mapping as the Entra admin with:
+
+    ```sql
+    SELECT r.rolname, s.label
+    FROM pg_roles r JOIN pg_shseclabel s ON s.objoid = r.oid
+    WHERE s.provider = 'pgaadauth';
+    ```
+
+    The label should read `type=service,oid=<managed-identity-principal-id>`.
 
 ## Step 7 - (Optional) Use a user-assigned identity
 

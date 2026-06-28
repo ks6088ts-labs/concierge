@@ -47,7 +47,7 @@ def search_knowledge_chunks(
     started_at = perf_counter()
     resolved_k = k if k is not None else config.top_k
     try:
-        use_case = get_search_knowledge_use_case(config.collection)
+        use_case = get_search_knowledge_use_case(config.collection, config.target)
         results = use_case.execute(collection=CollectionName(config.collection), query=query, k=resolved_k)
         hits: list[KnowledgeChunkHit] = []
         truncated = False

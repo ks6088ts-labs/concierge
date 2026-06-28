@@ -743,6 +743,18 @@ AGENTS_KNOWLEDGE__SEARCH_DOCS__COLLECTION=knowledge_default
 AGENTS_KNOWLEDGE__SEARCH_DOCS__DESCRIPTION="Search the docs knowledge base"
 ```
 
+The backing PostgreSQL is selected by `AGENTS_KNOWLEDGE__TARGET` (default
+`docker` = local pgvector, `azure` = Azure Database for PostgreSQL). To make
+the realtime voice assistant query a collection on Azure, add:
+
+```bash
+AGENTS_KNOWLEDGE__TARGET=azure
+```
+
+For the Azure-side prerequisites (allowlisting the pgvector extension,
+registering the Entra admin, and pre-ingesting with `--target azure`), see
+[Shared Agent Runtime (Pointing at Azure Database for PostgreSQL)](../agents/index.md).
+
 #### Adding a new tool
 
 Tools live in a single registry,

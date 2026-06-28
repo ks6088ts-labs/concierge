@@ -181,6 +181,7 @@ flowchart LR
 | 変数 | 必須 | 説明 |
 |------|------|------|
 | `AGENTS_KNOWLEDGE__TOOLS` | 有効化時は必須 | ツール名のカンマ区切り（`snake_case`、重複不可）。未設定/空なら no-op（後方互換）。 |
+| `AGENTS_KNOWLEDGE__TARGET` | 任意 | 全 knowledge ツール共通の PostgreSQL バックエンド。`docker`（`POSTGRES_*` / ローカル pgvector、既定）または `azure`（`AZURE_*` / Azure Database for PostgreSQL）。realtime 音声・text・agents の全サーフェスに反映されます。 |
 | `AGENTS_KNOWLEDGE__<NAME>__COLLECTION` | 必須 | そのツールが検索する collection。 |
 | `AGENTS_KNOWLEDGE__<NAME>__DESCRIPTION` | 任意 | LLM に見せる description。 |
 | `AGENTS_KNOWLEDGE__<NAME>__TOP_K` | 任意 | モデルが `k` を省略した場合の既定件数（既定 `4`、上限 `20`）。 |
@@ -219,9 +220,11 @@ AGENTS_KNOWLEDGE__SEARCH_RUNBOOKS__DESCRIPTION=Search operational runbooks.
 
 > エージェント実行時のバックエンド解決は
 > [`get_search_knowledge_use_case`](../../concierge/knowledge/__init__.py)
-> が行い、現状は `KnowledgeTarget.DOCKER`（`POSTGRES_*` 環境変数ブロック）
-> 固定です。エージェントが参照するのと同じ target で取り込む必要があるため、
-> 以下では Docker Compose の postgres を使います。
+> が行い、`AGENTS_KNOWLEDGE__TARGET`（既定 `docker` = `POSTGRES_*` ブロック、
+> または `azure` = `AZURE_*` ブロック）で切り替えます。インジェストと
+> エージェント検索は同じ target を指す必要があるため、以下の最小手順では
+> Docker Compose の postgres（`docker` target）を使います。Azure に向ける
+> 手順は本節末尾の「Azure Database for PostgreSQL に向ける」を参照してください。
 
 ```bash
 # 1. ローカル pgvector を起動（エージェント runtime と同じ target）。
@@ -259,11 +262,54 @@ uv run agents-cli invoke --agent-type langgraph \
   途中で 429 になると collection は 0 件のままになります。60 秒程度待って
   再実行するか、サブディレクトリ単位（例: `docs/agents`, `docs/chat` …）
   に分割して取り込んでください。
-- `knowledge-cli` は `--target azure` で Azure Postgres を扱えますが、
-  エージェント runtime 側は現状 `POSTGRES_*`（docker）固定です。
-  エージェント経由で検証する場合は Docker Compose 上の postgres を使う
-  か、`KnowledgeTarget.AZURE_POSTGRES` を runtime でも選べるよう拡張して
-  ください。
+- インジェスト（`knowledge-cli --target azure`）とエージェント検索
+  （`AGENTS_KNOWLEDGE__TARGET=azure`）は**同じ Azure Postgres**を指す必要が
+  あります。target がずれるとテーブルが存在せず `search_docs` が「該当なし」
+  を返します。具体的な手順は次節を参照してください。
+
+### Azure Database for PostgreSQL に向ける
+
+realtime 音声アシスタントや LangGraph / MAF / Copilot SDK エージェントの
+knowledge 検索先を、ローカル Docker Compose から Azure Database for
+PostgreSQL Flexible Server に切り替える手順です。全サーフェスが
+`search_knowledge_chunks()` を共有するため、`AGENTS_KNOWLEDGE__TARGET=azure`
+を設定すれば realtime / text / agents すべてが Azure を参照します。
+
+```bash
+# 1. Flexible Server で pgvector を許可リストへ追加（未設定だと CREATE
+#    EXTENSION vector が失敗し、ingest/検索が落ちます）。
+az postgres flexible-server parameter set \
+  -g <resource-group> -s <server-name> \
+  --name azure.extensions --value vector
+
+# 2. Entra 認証（AZURE_USE_ENTRA_AUTH=true）の場合、接続するプリンシパルを
+#    サーバーの Microsoft Entra 管理者として登録する。
+az postgres flexible-server microsoft-entra-admin create \
+  -g <resource-group> -s <server-name> \
+  --object-id "$(az ad signed-in-user show --query id -o tsv)" \
+  --display-name "$(az ad signed-in-user show --query userPrincipalName -o tsv)"
+
+# 3. .env を Azure 接続へ向ける（AZURE_* + AGENTS_KNOWLEDGE__TARGET）。
+#    AZURE_DBHOST=<server-name>.postgres.database.azure.com
+#    AZURE_DBNAME=<database>
+#    AZURE_DBUSER=<entra-principal>   # 例: admin@contoso.onmicrosoft.com
+#    AZURE_USE_ENTRA_AUTH=true        # パスワード認証なら false + AZURE_DBPASSWORD
+#    AGENTS_KNOWLEDGE__TARGET=azure
+
+# 4. エージェントが読むのと同じ target（azure）で docs/ を取り込む。
+uv run knowledge-cli ingest run   --collection knowledge_default --target azure docs
+uv run knowledge-cli ingest stats --collection knowledge_default --target azure
+uv run knowledge-cli search run   --collection knowledge_default --target azure "MLflow" -k 4
+
+# 5. 常駐サーバ（chat-web など）は .env をキャッシュするため再起動する。
+```
+
+!!! warning "埋め込みプロバイダは ingest と検索で一致させる"
+    `KNOWLEDGE_EMBEDDING_PROVIDER` は ingest 時にベクターを確定します。意味
+    検索では `foundry` を使い、`fake` で作ったコレクションは drop して入れ
+    直してください。詳細は
+    [Knowledge Indexer のトラブルシューティング](../knowledge/index.ja.md#トラブルシューティング)
+    を参照。
 
 ### search_docs ツールの動作確認とよくある失敗の見分け方
 

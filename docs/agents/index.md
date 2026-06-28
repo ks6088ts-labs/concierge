@@ -192,6 +192,7 @@ flowchart LR
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `AGENTS_KNOWLEDGE__TOOLS` | Yes (to enable) | Comma-separated tool names (`snake_case`, no duplicates). Empty/unset = no-op (backward compatible). |
+| `AGENTS_KNOWLEDGE__TARGET` | No | PostgreSQL backend shared by every knowledge tool: `docker` (`POSTGRES_*` / local pgvector, default) or `azure` (`AZURE_*` / Azure Database for PostgreSQL). Applies to all surfaces (realtime voice, text, agents). |
 | `AGENTS_KNOWLEDGE__<NAME>__COLLECTION` | Yes | Logical knowledge collection for that tool. |
 | `AGENTS_KNOWLEDGE__<NAME>__DESCRIPTION` | No | Tool description shown to the LLM. |
 | `AGENTS_KNOWLEDGE__<NAME>__TOP_K` | No | Default result count when the model omits `k` (default `4`, max `20`). |
@@ -230,9 +231,11 @@ collection and lets the `langgraph` agent retrieve it.
 
 > The agent runtime resolves the knowledge backend via
 > [`get_search_knowledge_use_case`](../../concierge/knowledge/__init__.py),
-> which currently defaults to `KnowledgeTarget.DOCKER` (i.e. the `POSTGRES_*`
-> env block). Ingest with the same target the agent will read from. The steps
-> below use the local Docker Compose postgres so the agent can reach the data.
+> switched by `AGENTS_KNOWLEDGE__TARGET` (default `docker` = the `POSTGRES_*`
+> block, or `azure` = the `AZURE_*` block). Ingest with the same target the
+> agent will read from. The steps below use the local Docker Compose postgres
+> (`docker` target); see "Pointing at Azure Database for PostgreSQL" at the end
+> of this section to target the cloud instead.
 
 ```bash
 # 1. Start the local pgvector instance (same target as the agent runtime).
@@ -269,11 +272,53 @@ Caveats observed during smoke-testing:
   during a full `docs/` ingest. `IngestMarkdown` is all-or-nothing, so a 429
   mid-run leaves the collection at 0 records. Retry after ~60 s, or split
   the ingest path-by-path (e.g. `docs/agents`, `docs/chat`, ...).
-- The agent CLI keeps Azure Postgres support behind `knowledge-cli`'s
-  `--target azure` flag only; the agent runtime itself currently always uses
-  the `POSTGRES_*` (docker) target. Use Docker Compose for the agent-side
-  smoke test, or extend the runtime to honour `KnowledgeTarget.AZURE_POSTGRES`
-  before pointing the agent at the cloud.
+- Ingest (`knowledge-cli --target azure`) and agent search
+  (`AGENTS_KNOWLEDGE__TARGET=azure`) must point at the **same** Azure Postgres.
+  A target mismatch leaves the table missing, so `search_docs` returns
+  "no matches". See the next section for the full procedure.
+
+### Pointing at Azure Database for PostgreSQL
+
+Switch the knowledge backend for the realtime voice assistant and the
+LangGraph / MAF / Copilot SDK agents from local Docker Compose to an Azure
+Database for PostgreSQL Flexible Server. Every surface shares
+`search_knowledge_chunks()`, so setting `AGENTS_KNOWLEDGE__TARGET=azure` once
+points realtime, text, and agents at Azure.
+
+```bash
+# 1. Allowlist pgvector on the Flexible Server (without it, CREATE EXTENSION
+#    vector fails and ingest/search break).
+az postgres flexible-server parameter set \
+  -g <resource-group> -s <server-name> \
+  --name azure.extensions --value vector
+
+# 2. With Entra auth (AZURE_USE_ENTRA_AUTH=true), register the connecting
+#    principal as the server's Microsoft Entra administrator.
+az postgres flexible-server microsoft-entra-admin create \
+  -g <resource-group> -s <server-name> \
+  --object-id "$(az ad signed-in-user show --query id -o tsv)" \
+  --display-name "$(az ad signed-in-user show --query userPrincipalName -o tsv)"
+
+# 3. Point .env at Azure (AZURE_* block + AGENTS_KNOWLEDGE__TARGET).
+#    AZURE_DBHOST=<server-name>.postgres.database.azure.com
+#    AZURE_DBNAME=<database>
+#    AZURE_DBUSER=<entra-principal>   # e.g. admin@contoso.onmicrosoft.com
+#    AZURE_USE_ENTRA_AUTH=true        # or false + AZURE_DBPASSWORD for password auth
+#    AGENTS_KNOWLEDGE__TARGET=azure
+
+# 4. Ingest docs/ with the same target the agent reads from.
+uv run knowledge-cli ingest run   --collection knowledge_default --target azure docs
+uv run knowledge-cli ingest stats --collection knowledge_default --target azure
+uv run knowledge-cli search run   --collection knowledge_default --target azure "MLflow" -k 4
+
+# 5. Restart long-running servers (chat-web, ...) since they cache .env.
+```
+
+!!! warning "Match the embedding provider across ingest and search"
+    `KNOWLEDGE_EMBEDDING_PROVIDER` fixes the vectors at ingest time. Use
+    `foundry` for semantic search and re-ingest (drop first) any collection
+    built with `fake`. See
+    [Knowledge Indexer troubleshooting](../knowledge/index.md#troubleshooting).
 
 ### Verifying the search_docs tool (and recognising common failures)
 

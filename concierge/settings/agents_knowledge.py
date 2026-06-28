@@ -7,6 +7,8 @@ from functools import lru_cache
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from concierge.settings.knowledge import KnowledgeTarget
+
 KNOWLEDGE_COLLECTION_FIELD = "collection"
 _DEFAULT_TOP_K = 4
 _DEFAULT_MAX_CHARS = 1200
@@ -34,10 +36,15 @@ class AgentsKnowledgeToolConfig(BaseModel):
     description: str
     top_k: int = Field(default=_DEFAULT_TOP_K, ge=1, le=_MAX_TOP_K)
     max_chars: int = Field(default=_DEFAULT_MAX_CHARS, ge=1)
+    target: KnowledgeTarget = KnowledgeTarget.DOCKER
 
 
 class AgentsKnowledgeSettings(BaseSettings):
     tools: str = ""
+    # PostgreSQL target backing every configured knowledge tool: ``docker``
+    # (local pgvector via ``POSTGRES_*``) or ``azure`` (Azure Database for
+    # PostgreSQL via ``AZURE_*``). Override with ``AGENTS_KNOWLEDGE__TARGET``.
+    target: KnowledgeTarget = KnowledgeTarget.DOCKER
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -79,6 +86,7 @@ class AgentsKnowledgeSettings(BaseSettings):
                     description=description,
                     top_k=top_k,
                     max_chars=max_chars,
+                    target=self.target,
                 )
             )
         return configs

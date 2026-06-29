@@ -16,6 +16,7 @@ dependencies = [
     "httpx>=0.28.0",
     "langchain>=1.2.18",
     "langchain-azure-ai[opentelemetry]>=1.2.3",
+    "langchain-mcp-adapters>=0.3.0",
     "langchain-postgres>=0.0.17",
     "langchain-text-splitters>=1.1.2",
     "langgraph>=1.1.10",

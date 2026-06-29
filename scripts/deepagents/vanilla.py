@@ -1,5 +1,7 @@
 import logging
+from datetime import datetime
 from functools import lru_cache
+from pathlib import Path
 from typing import Annotated, Any, Literal
 
 import typer
@@ -17,6 +19,9 @@ from concierge.settings import (
 # forwards it to ``init_chat_model`` internally, matching the rest of the repo.
 DEFAULT_MODEL_STRING = "azure_ai:gpt-5"
 DEFAULT_QUERY = "What is langgraph?"
+
+# Repository root resolved from this file: scripts/deepagents/vanilla.py -> repo root.
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # System prompt to steer the agent to be an expert researcher (from the quickstart).
 RESEARCH_INSTRUCTIONS = """You are an expert researcher. Your job is to conduct thorough \
@@ -115,6 +120,24 @@ def _trace_config(extra: dict[str, Any] | None = None) -> RunnableConfig:
     return RunnableConfig(**config)
 
 
+def _build_filesystem_backend(base_dir: Path | None = None):
+    """Build a ``FilesystemBackend`` rooted at ``artifacts/YYYYMMDDHHMM``.
+
+    By default, files written by the agent are persisted to disk under
+    ``<repo_root>/artifacts/<timestamp>`` so output survives across runs. The
+    directory is created up front and used as the virtual root, so agent paths
+    like ``/report.md`` resolve to ``artifacts/<timestamp>/report.md``.
+    """
+    from deepagents.backends import FilesystemBackend
+
+    root = base_dir or REPO_ROOT
+    timestamp = datetime.now().strftime("%Y%m%d%H%M")
+    artifacts_dir = root / "artifacts" / timestamp
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    logger.info("Saving agent artifacts to %s", artifacts_dir)
+    return FilesystemBackend(root_dir=artifacts_dir, virtual_mode=True)
+
+
 def internet_search(
     query: str,
     max_results: int = 5,
@@ -169,6 +192,7 @@ def run(
         model=model,
         tools=[internet_search],
         system_prompt=RESEARCH_INSTRUCTIONS,
+        backend=_build_filesystem_backend(),
     )
     result = agent.invoke(
         {"messages": [{"role": "user", "content": query}]},

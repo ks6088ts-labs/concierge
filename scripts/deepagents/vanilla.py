@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, cast
 
 import typer
 from azure.identity import DefaultAzureCredential
@@ -209,7 +209,7 @@ def _build_mcp_tools(mcp_config: Path) -> list[Any]:
         logger.warning("No MCP servers found in %s", mcp_config)
         return []
     logger.info("Connecting to MCP servers: %s", ", ".join(connections))
-    tools = asyncio.run(MultiServerMCPClient(connections).get_tools())
+    tools = asyncio.run(MultiServerMCPClient(cast("Any", connections)).get_tools())
     logger.info("Loaded %d MCP tool(s)", len(tools))
     return tools
 

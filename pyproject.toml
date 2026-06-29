@@ -28,7 +28,7 @@ dependencies = [
     "sqlalchemy>=2.0",
     "typer>=0.16.0",
     "uvicorn[standard]>=0.34.0",
-    "websockets>=13",
+    "websockets>=16.0",
 ]
 
 [dependency-groups]

@@ -12,6 +12,21 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # responder. Anything else is resolved against the shared AgentRegistry.
 FOUNDRY_BOT_AGENT_TYPE = "foundry"
 
+# Default system prompt used by the accessibility (deafblind) realtime mode.
+# The realtime API has no speech-rate parameter, so "speak slowly" can only be
+# requested here via instructions. It also biases the model toward short,
+# concrete, one-idea-at-a-time explanations for users who find concept
+# formation difficult, and points it at the ``capture_image`` camera tool.
+_DEFAULT_ACCESSIBLE_SYSTEM_PROMPT = (
+    "あなたは盲ろう者を支援する Concierge の音声アシスタントです。次を必ず守ってください。"
+    "(1) 短い文で、ゆっくり、はっきり、区切って話す。"
+    "(2) 一度に一つのことだけ伝える。"
+    "(3) 専門用語や比喩を避け、身近で具体的な例を使って、概念をかみ砕いて説明する。"
+    "(4) 相手が理解できたかをこまめに確認しながら進める。"
+    "(5) 画像や周囲の状況を説明するときは、色・形・位置・数などを具体的に言葉にする。"
+    "(6) ユーザーが写真撮影や周囲の確認を求めたら capture_image ツールを使い、撮れた画像を丁寧に説明する。"
+)
+
 
 class ChatRepositoryBackend(str, Enum):
     MEMORY = "memory"
@@ -82,6 +97,18 @@ class ChatSettings(BaseSettings):
     realtime_vad_create_response: bool = True
     # Whether new user speech interrupts (barges in on) an in-progress response.
     realtime_vad_interrupt_response: bool = True
+
+    # --- Accessibility (deafblind) mode ---
+    # System prompt applied when the realtime WebSocket is opened with
+    # ``?mode=accessible`` (the ``/accessible`` minimal UI). Overrides
+    # ``realtime_system_prompt`` for that session only. See
+    # ``_DEFAULT_ACCESSIBLE_SYSTEM_PROMPT`` for the rationale.
+    realtime_accessible_system_prompt: str = _DEFAULT_ACCESSIBLE_SYSTEM_PROMPT
+    # Default browser Text-to-Speech playback rate for the accessible UI's
+    # optional read-aloud (``SpeechSynthesisUtterance.rate``; 0.1-10, 1.0 is
+    # normal). Kept below 1.0 so synthesized speech is easier to follow. Only
+    # affects browser TTS — the realtime voice cannot be rate-controlled.
+    accessible_tts_rate: float = 0.85
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

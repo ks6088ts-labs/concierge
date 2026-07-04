@@ -10,7 +10,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Response, WebSocket
 from fastapi.responses import StreamingResponse
 
 from concierge.chat.application.repositories import ConversationRepository, MessageRepository
-from concierge.chat.application.responders import ChatbotResponder, RealtimeVoiceResponder
+from concierge.chat.application.responders import ChatbotResponder
 from concierge.chat.application.use_cases import (
     BotReplyComplete,
     BotReplyDelta,
@@ -22,6 +22,7 @@ from concierge.chat.application.use_cases import (
     ListConversationsUseCase,
     ListMessagesUseCase,
     PostMessageUseCase,
+    RealtimeCameraCaptureRequest,
     RealtimeError,
     RealtimeMessagePersisted,
     RealtimeServerEvent,
@@ -30,13 +31,13 @@ from concierge.chat.application.use_cases import (
 from concierge.chat.domain.exceptions import ConversationNotFoundError
 from concierge.chat.domain.value_objects import Participant, ParticipantKind
 from concierge.chat.infrastructure.ai.factory import list_available_agent_types
-from concierge.chat.infrastructure.ai.realtime_tools import build_default_realtime_tools
 from concierge.chat.infrastructure.web.dependencies import (
+    RealtimeResponderBundle,
     get_chatbot_responder,
     get_conversation_repository,
     get_current_participant,
     get_message_repository,
-    get_realtime_responder_optional,
+    get_realtime_responder_bundle_optional,
 )
 from concierge.chat.infrastructure.web.schemas import (
     AgentReplyRequest,
@@ -311,7 +312,8 @@ async def realtime_voice(
     conversation_id: uuid.UUID,
     user_id: str,
     display_name: str | None = None,
-    realtime_responder: RealtimeVoiceResponder | None = Depends(get_realtime_responder_optional),
+    mode: str | None = None,
+    realtime_bundle: RealtimeResponderBundle | None = Depends(get_realtime_responder_bundle_optional),
     conversation_repo: ConversationRepository = Depends(get_conversation_repository),
     message_repo: MessageRepository = Depends(get_message_repository),
 ) -> None:
@@ -320,6 +322,10 @@ async def realtime_voice(
     Query parameters:
     - ``user_id`` (required): UUID of the calling user.
     - ``display_name`` (optional): display name for the participant.
+    - ``mode`` (optional): ``accessible`` selects the deafblind accessibility
+      session — it applies ``CHAT_REALTIME_ACCESSIBLE_SYSTEM_PROMPT`` (slow,
+      simple-concept instructions) and exposes the hands-free ``capture_image``
+      camera tool. Any other value uses the default realtime session.
 
     Close codes:
     - ``4400`` — ``user_id`` is missing or not a valid UUID.
@@ -330,12 +336,13 @@ async def realtime_voice(
     import threading
 
     # --- validate realtime responder availability ---
-    if realtime_responder is None:
+    if realtime_bundle is None:
         await websocket.close(
             code=_WS_CLOSE_SERVICE_UNAVAILABLE,
             reason="AZURE_AI_PROJECT_ENDPOINT_REALTIME is not configured",
         )
         return
+    realtime_responder, tools = realtime_bundle
 
     # --- validate user_id before accepting ---
     try:
@@ -367,7 +374,7 @@ async def realtime_voice(
         bot_participant=bot_participant,
         current_participant=current_participant,
         history_limit=chat_settings.bot_history_limit,
-        tools=build_default_realtime_tools(),
+        tools=tools,
     )
 
     try:
@@ -392,6 +399,18 @@ async def realtime_voice(
                     payload = MessageResponse.model_validate(event.message).model_dump(mode="json")
                     asyncio.run_coroutine_threadsafe(
                         websocket.send_json({"type": "concierge.message.persisted", "message": payload}),
+                        loop,
+                    )
+                elif isinstance(event, RealtimeCameraCaptureRequest):
+                    # The model called ``capture_image``: ask the browser to take
+                    # a photo. The client replies with ``concierge.image.input``
+                    # (auto_describe=true), which injects the frame and triggers
+                    # the model's description.
+                    capture_msg: dict = {"type": "concierge.camera.capture"}
+                    if event.prompt:
+                        capture_msg["prompt"] = event.prompt
+                    asyncio.run_coroutine_threadsafe(
+                        websocket.send_json(capture_msg),
                         loop,
                     )
                 elif isinstance(event, RealtimeError):
@@ -426,7 +445,15 @@ async def realtime_voice(
                         await websocket.send_json({"type": "concierge.error", "detail": error})
                     elif isinstance(image_url, str):
                         prompt = data.get("prompt")
-                        use_case.send_image(image_url, prompt if isinstance(prompt, str) else None)
+                        # ``auto_describe`` is set by the hands-free capture flow
+                        # so the model describes the photo immediately (a blind
+                        # user cannot ask a follow-up by tapping).
+                        auto_describe = bool(data.get("auto_describe"))
+                        use_case.send_image(
+                            image_url,
+                            prompt if isinstance(prompt, str) else None,
+                            trigger_response=auto_describe,
+                        )
             except WebSocketDisconnect:
                 break
     except Exception:  # noqa: BLE001

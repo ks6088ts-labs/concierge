@@ -702,6 +702,62 @@ uv run pytest tests/chat/test_realtime_use_case.py -o addopts=""
 
 ---
 
+## アクセシビリティモード（盲ろう者向け） { #accessibility-mode }
+
+盲ろう者向けに徹底的に簡素化した音声 UI で、<http://localhost:8080/accessible>
+で配信されます。リアルタイム音声のバックエンドを流用しつつ、余計な UI を排除し、
+点字ディスプレイのウェブリーダーが「＋新しい会話」などのボタンに邪魔されず対話テキストへ
+即座に到達できるようにしています。
+
+- **画面全体が 1 つのボタン。** 画面のどこをタップしても通話開始、再タップで終了。
+  探して押し分けるボタンはなく、画面全体が 1 つの巨大なトグルです。
+- **点字向けのテキストのみ表示。** 表示内容は対話テキスト（あなたの発話＋アシスタントの
+  応答）を保持する単一の ARIA ライブリージョンだけなので、ブレイユセンスのウェブリーダーが
+  そのまま読み取れます。
+- **ゆっくり・平易な発話。** リアルタイム API に速度指定は無いため、
+  `CHAT_REALTIME_ACCESSIBLE_SYSTEM_PROMPT` で「短い文でゆっくり、概念を具体的に」話すよう
+  モデルに指示します（概念形成が難しい人向け）。
+- **ハンズフリーのカメラ。** 「写真を撮って」「周りを教えて」などと頼むとモデルが
+  `capture_image` ツールを呼び、ブラウザが自動で撮影（シャッター不要）して内容を説明します。
+  結果は音声読み上げ＋点字用の対話テキストに反映されます。
+- **検索。** 「〇〇を調べて」はリアルタイムセッションと同じ knowledge/file ツールを使います
+  （`AGENTS_KNOWLEDGE__…` の設定でナレッジ検索が有効）。
+
+### 接続の仕組み
+
+ページはロード時に会話を自動作成し、`?mode=accessible` を付けてリアルタイム WebSocket に
+接続します。これによりサーバ側でアクセシビリティ用システムプロンプトが選択され、
+`capture_image` ツールが追加されます（[リアルタイム音声 WebSocket](api.ja.md#realtime-voice-websocket)
+参照）。`chat_user_id` / `chat_display_name` の localStorage プロフィールはメイン UI と
+共有します。
+
+### 設定
+
+| 変数名 | デフォルト | 説明 |
+|---|---|---|
+| `CHAT_REALTIME_ACCESSIBLE_SYSTEM_PROMPT` | ゆっくり・平易な日本語プロンプト | `?mode=accessible` セッションに適用する指示（`CHAT_REALTIME_SYSTEM_PROMPT` を上書き）。 |
+| `CHAT_ACCESSIBLE_TTS_RATE` | `0.85` | 任意の読み上げ（`?tts=1`）で使うブラウザ TTS の速度。 |
+
+推奨の併用設定: `CHAT_REALTIME_TURN_DETECTION_TYPE=semantic_vad` ＋
+`CHAT_REALTIME_VAD_EAGERNESS=low`（ゆっくり話す人向けに割り込みを低減）、
+`CHAT_REALTIME_TRANSCRIPTION_MODEL=<デプロイ名>`（自分の発話も点字に反映）—
+[自分の発話を画面で確認する](#realtime-input-transcription) を参照。
+
+### クエリパラメータ
+
+- `?tts=1` — アシスタントのテキストをブラウザ音声（`CHAT_ACCESSIBLE_TTS_RATE`）で
+  読み上げ、リアルタイム音声はミュート（真の速度制御・二重音声の回避）。既定はオフで、
+  リアルタイム音声が再生され、遅くするのはプロンプトのみです。
+- `?rate=0.7` — この端末での TTS 速度をサーバ変更なしで上書き。
+
+!!! note "カメラ・マイクの許可"
+    音声にはマイク許可（最初のタップ時に要求）、ハンズフリーのカメラにはカメラ許可
+    （最初の撮影要求時に要求）が必要です。盲目のユーザーはブラウザの許可ダイアログを
+    視認できないため、セットアップ時に晴眼者の補助か永続的なサイト許可で一度付与して
+    ください。
+
+---
+
 ## トラブルシューティング
 
 ### `relation "chat_conversations" does not exist`

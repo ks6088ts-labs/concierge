@@ -15,7 +15,7 @@ from concierge.chat.infrastructure.web.app import create_app
 from concierge.chat.infrastructure.web.dependencies import (
     get_conversation_repository,
     get_message_repository,
-    get_realtime_responder_optional,
+    get_realtime_responder_bundle_optional,
 )
 
 # ---------------------------------------------------------------------------
@@ -61,7 +61,7 @@ def _make_app(responder: FakeRealtimeResponder | None = None):
     app.dependency_overrides[get_conversation_repository] = lambda: conv_repo
     app.dependency_overrides[get_message_repository] = lambda: msg_repo
     if responder is not None:
-        app.dependency_overrides[get_realtime_responder_optional] = lambda: responder
+        app.dependency_overrides[get_realtime_responder_bundle_optional] = lambda: (responder, [])
     return app, conv_repo, msg_repo
 
 
@@ -82,14 +82,14 @@ def _create_conv(client: TestClient, user_id: str, title: str = "test") -> str:
 
 def test_close_4503_when_realtime_not_configured() -> None:
     """Without AZURE_AI_PROJECT_ENDPOINT_REALTIME the endpoint closes with 4503."""
-    # Override get_realtime_responder_optional to return None (simulating not configured)
+    # Override get_realtime_responder_bundle_optional to return None (simulating not configured)
     app = create_app()
     user_id = str(uuid.uuid4())
     conv_repo = InMemoryConversationRepository()
     msg_repo = InMemoryMessageRepository()
     app.dependency_overrides[get_conversation_repository] = lambda: conv_repo
     app.dependency_overrides[get_message_repository] = lambda: msg_repo
-    app.dependency_overrides[get_realtime_responder_optional] = lambda: None
+    app.dependency_overrides[get_realtime_responder_bundle_optional] = lambda: None
 
     client = TestClient(app)
     # Create a conversation first
@@ -242,3 +242,60 @@ def test_image_input_rejects_non_data_url() -> None:
 
     assert responder.last_session is not None
     assert not any(e.get("type") == "conversation.item.create" for e in responder.last_session.sent_events)
+
+
+def test_accessible_mode_uses_accessible_prompt_and_capture_tool(monkeypatch) -> None:
+    """``mode=accessible`` builds the responder with the accessible prompt + camera tool."""
+    from concierge.chat.infrastructure.web import dependencies as deps_module  # noqa: PLC0415
+    from concierge.settings import get_chat_settings  # noqa: PLC0415
+
+    captured: dict = {}
+    accessible_responder = FakeRealtimeResponder(server_events=[])
+
+    def _fake_create(system_prompt=None, extra_tools=None):
+        captured["system_prompt"] = system_prompt
+        captured["extra_tools"] = extra_tools
+        return accessible_responder, list(extra_tools or [])
+
+    monkeypatch.setattr(deps_module, "create_realtime_responder_with_tools", _fake_create)
+
+    app, _, _ = _make_app()
+    user_id = str(uuid.uuid4())
+    client = TestClient(app)
+    conv_id = _create_conv(client, user_id)
+
+    with client.websocket_connect(f"/conversations/{conv_id}/realtime?user_id={user_id}&mode=accessible") as ws:
+        ready = ws.receive_json()
+        assert ready["type"] == "concierge.session.ready"
+
+    assert captured["system_prompt"] == get_chat_settings().realtime_accessible_system_prompt
+    assert any(t.name == "capture_image" for t in captured["extra_tools"])
+    assert accessible_responder.last_session is not None
+
+
+def test_default_mode_does_not_use_accessible_prompt(monkeypatch) -> None:
+    """Without ``mode=accessible`` the default prompt/tool set is requested."""
+    from concierge.chat.infrastructure.web import dependencies as deps_module  # noqa: PLC0415
+
+    captured: dict = {}
+    responder = FakeRealtimeResponder(server_events=[])
+
+    def _fake_create(system_prompt=None, extra_tools=None):
+        captured["system_prompt"] = system_prompt
+        captured["extra_tools"] = extra_tools
+        return responder, []
+
+    monkeypatch.setattr(deps_module, "create_realtime_responder_with_tools", _fake_create)
+
+    app, _, _ = _make_app()
+    user_id = str(uuid.uuid4())
+    client = TestClient(app)
+    conv_id = _create_conv(client, user_id)
+
+    with client.websocket_connect(f"/conversations/{conv_id}/realtime?user_id={user_id}") as ws:
+        ready = ws.receive_json()
+        assert ready["type"] == "concierge.session.ready"
+
+    assert captured["system_prompt"] is None
+    assert captured["extra_tools"] is None
+    assert responder.last_session is not None

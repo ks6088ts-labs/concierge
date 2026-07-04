@@ -294,3 +294,29 @@ def test_chat_settings_defaults(monkeypatch):
     assert settings.bot_agent_type == "foundry"
     # ChatResponderBackend has been removed; no such attribute should exist.
     assert not hasattr(settings, "responder_backend")
+
+
+def test_chat_settings_accessibility_defaults(monkeypatch):
+    """Accessibility mode ships a slow / simple-concept prompt and a slow TTS rate."""
+    monkeypatch.delenv("CHAT_REALTIME_ACCESSIBLE_SYSTEM_PROMPT", raising=False)
+    monkeypatch.delenv("CHAT_ACCESSIBLE_TTS_RATE", raising=False)
+
+    settings = ChatSettings(_env_file=None)  # ty: ignore[unknown-argument]
+
+    # The default prompt must differ from the standard realtime prompt so the
+    # accessible session actually gets slower / simpler instructions.
+    assert settings.realtime_accessible_system_prompt != settings.realtime_system_prompt
+    assert settings.realtime_accessible_system_prompt.strip()
+    # Slower than normal so synthesized speech is easier to follow.
+    assert 0.0 < settings.accessible_tts_rate <= 1.0
+
+
+def test_chat_settings_accessibility_reads_env(monkeypatch):
+    """Accessibility settings honour their environment variables."""
+    monkeypatch.setenv("CHAT_REALTIME_ACCESSIBLE_SYSTEM_PROMPT", "ゆっくり話してください")
+    monkeypatch.setenv("CHAT_ACCESSIBLE_TTS_RATE", "0.6")
+
+    settings = ChatSettings(_env_file=None)  # ty: ignore[unknown-argument]
+
+    assert settings.realtime_accessible_system_prompt == "ゆっくり話してください"
+    assert settings.accessible_tts_rate == pytest.approx(0.6)

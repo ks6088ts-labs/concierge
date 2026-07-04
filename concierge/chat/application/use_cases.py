@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from concierge.chat.application.realtime_tools import RealtimeTool
+from concierge.chat.application.realtime_tools import CAPTURE_IMAGE_TOOL_NAME, RealtimeTool
 from concierge.chat.application.repositories import ConversationRepository, MessageRepository
 from concierge.chat.application.responders import ChatbotResponder, RealtimeVoiceResponder
 from concierge.chat.domain.entities import Conversation, Message
@@ -229,7 +229,7 @@ class StreamRealtimeVoiceUseCase:
         if hasattr(self, "_session") and self._session is not None:
             self._session.send_client_event(event)
 
-    def send_image(self, image_url: str, prompt: str | None = None) -> None:
+    def send_image(self, image_url: str, prompt: str | None = None, *, trigger_response: bool = False) -> None:
         """Inject a user-provided image into the live realtime conversation.
 
         Builds a ``conversation.item.create`` event carrying an ``input_image``
@@ -238,9 +238,12 @@ class StreamRealtimeVoiceUseCase:
         user is showing. See the Foundry image-input reference:
         https://learn.microsoft.com/azure/ai-foundry/openai/how-to/realtime-audio#image-input
 
-        No response is triggered here: the user's next spoken turn drives the
-        reply. That keeps turn-taking natural and avoids the model talking over a
-        user who is about to ask a question about the image.
+        When ``trigger_response`` is ``False`` (default) no response is triggered:
+        the user's next spoken turn drives the reply. That keeps turn-taking
+        natural and avoids the model talking over a user who is about to ask a
+        question about the image. When ``True`` (hands-free ``capture_image``
+        flow) a ``response.create`` is sent so the model immediately describes
+        the captured image — the blind user cannot ask a follow-up by tapping.
 
         This method is the single seam for image input, so future enhancements
         (persisting the image as a :class:`Message`, moderation, server-side
@@ -257,6 +260,8 @@ class StreamRealtimeVoiceUseCase:
                 "item": {"type": "message", "role": "user", "content": content},
             }
         )
+        if trigger_response:
+            self._session.send_client_event({"type": "response.create"})
 
     def _relay(self, session, conversation_id: uuid.UUID) -> Iterator[RealtimeEvent]:  # type: ignore[type-arg]
         try:
@@ -300,7 +305,7 @@ class StreamRealtimeVoiceUseCase:
                 elif event_type == "response.output_item.done":
                     item = server_event.get("item") or {}
                     if self._tools and item.get("type") == "function_call":
-                        self._handle_function_call(session, item)
+                        yield from self._handle_function_call(session, item)
 
                 # Always relay the raw server event to the browser
                 yield RealtimeServerEvent(payload=server_event)
@@ -310,8 +315,14 @@ class StreamRealtimeVoiceUseCase:
         finally:
             session.close()
 
-    def _handle_function_call(self, session, item: dict) -> None:  # type: ignore[type-arg]
-        """Run a model-requested tool and feed the result back to the session."""
+    def _handle_function_call(self, session, item: dict) -> Iterator[RealtimeEvent]:  # type: ignore[type-arg]
+        """Run a model-requested tool and feed the result back to the session.
+
+        Yields :class:`RealtimeCameraCaptureRequest` for the hands-free
+        ``capture_image`` tool so the transport layer can ask the browser to
+        take a photo. All other tools run their handler synchronously and yield
+        nothing.
+        """
         name = item.get("name", "")
         call_id = item.get("call_id", "")
         raw_args = item.get("arguments") or "{}"
@@ -328,6 +339,29 @@ class StreamRealtimeVoiceUseCase:
         )
 
         tool = self._tools.get(name)
+
+        # Hands-free camera: the capture happens in the browser, so acknowledge
+        # the tool call and ask the client to take a photo. The captured image is
+        # injected via ``send_image(..., trigger_response=True)`` which triggers
+        # the description, so we deliberately do NOT send ``response.create`` here.
+        if name == CAPTURE_IMAGE_TOOL_NAME and tool is not None:
+            prompt = arguments.get("prompt")
+            session.send_client_event(
+                {
+                    "type": "conversation.item.create",
+                    "item": {
+                        "type": "function_call_output",
+                        "call_id": call_id,
+                        "output": json.dumps(
+                            {"status": "capturing", "message": "カメラで撮影しています。"},
+                            ensure_ascii=False,
+                        ),
+                    },
+                }
+            )
+            yield RealtimeCameraCaptureRequest(prompt=prompt if isinstance(prompt, str) and prompt.strip() else None)
+            return
+
         if tool is None:
             logger.warning("Realtime tool call for unknown tool name=%s call_id=%s", name, call_id)
             output = json.dumps({"error": f"unknown tool: {name!r}"})
@@ -384,4 +418,16 @@ class RealtimeError:
     detail: str
 
 
-RealtimeEvent = RealtimeServerEvent | RealtimeMessagePersisted | RealtimeError
+@dataclass(frozen=True)
+class RealtimeCameraCaptureRequest:
+    """Emitted when the model calls ``capture_image``.
+
+    Asks the transport layer to tell the browser to take a photo. ``prompt`` is
+    an optional focus for the description (e.g. "read the text"), forwarded to
+    the client and used when the captured image is injected back.
+    """
+
+    prompt: str | None = None
+
+
+RealtimeEvent = RealtimeServerEvent | RealtimeMessagePersisted | RealtimeError | RealtimeCameraCaptureRequest

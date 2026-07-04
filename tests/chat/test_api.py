@@ -104,6 +104,43 @@ async def test_realtime_path_redirects_to_root(app) -> None:
 
 
 @pytest.mark.anyio
+async def test_accessible_page_served(app) -> None:
+    """The ``/accessible`` route serves the minimal deafblind UI, not the full chat."""
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/accessible")
+        assert resp.status_code == 200
+        assert "text/html" in resp.headers["content-type"]
+        body = resp.text
+        # It is the stripped-down accessible page with a single dialogue region…
+        assert 'id="dialogue"' in body
+        assert "アクセシブル" in body
+        # …and none of the conversation-list / new-conversation chrome a web
+        # reader would otherwise have to wade through.
+        assert "新しい会話" not in body
+
+
+@pytest.mark.anyio
+async def test_accessible_config_reports_rate_and_realtime(app, monkeypatch) -> None:
+    """``/accessible/config`` reports realtime availability and the TTS rate."""
+    monkeypatch.setenv("AZURE_AI_PROJECT_ENDPOINT_REALTIME", "")
+    from concierge.settings import get_microsoft_foundry_settings  # noqa: PLC0415
+
+    get_microsoft_foundry_settings.cache_clear()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/accessible/config")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["realtime"] is False
+        assert isinstance(body["tts_rate"], int | float)
+        assert body["tts_rate"] > 0
+
+    get_microsoft_foundry_settings.cache_clear()
+
+
+@pytest.mark.anyio
 async def test_capabilities_reports_realtime_disabled(app, monkeypatch) -> None:
     """When ``AZURE_AI_PROJECT_ENDPOINT_REALTIME`` is empty, ``realtime`` is False."""
     # Explicit empty string overrides the developer's local ``.env`` (which

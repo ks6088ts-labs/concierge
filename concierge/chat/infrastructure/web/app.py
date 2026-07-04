@@ -13,6 +13,7 @@ from concierge.chat.infrastructure.web.exception_handlers import register_except
 from concierge.chat.infrastructure.web.routes import router
 from concierge.loggers import get_logger
 from concierge.observability import bootstrap_from_env
+from concierge.settings import get_chat_settings
 
 logger = get_logger("concierge.chat")
 
@@ -54,6 +55,31 @@ def create_app() -> FastAPI:
     @app.get("/", include_in_schema=False)
     def index() -> FileResponse:
         return FileResponse(static_dir / "index.html")
+
+    @app.get("/accessible", include_in_schema=False)
+    def accessible_index() -> FileResponse:
+        """Serve the minimal deafblind accessibility UI.
+
+        A stripped-down, single-button voice page whose only visible content is
+        the dialogue text (in an ARIA live region) so a BrailleSense web reader
+        reaches the conversation immediately without wading through chrome.
+        """
+        return FileResponse(static_dir / "accessible.html")
+
+    @app.get("/accessible/config", tags=["health"])
+    def accessible_config() -> dict[str, object]:
+        """Return runtime config the accessible UI needs on load.
+
+        ``realtime`` mirrors ``/capabilities`` (voice requires the realtime
+        endpoint). ``tts_rate`` is the configured browser Text-to-Speech rate
+        (the realtime voice itself cannot be rate-controlled).
+        """
+        try:
+            create_realtime_responder()
+            realtime_enabled = True
+        except ChatbotNotConfiguredError:
+            realtime_enabled = False
+        return {"realtime": realtime_enabled, "tts_rate": get_chat_settings().accessible_tts_rate}
 
     @app.get("/realtime", include_in_schema=False)
     def realtime_index() -> RedirectResponse:

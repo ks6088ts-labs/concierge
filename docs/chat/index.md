@@ -825,6 +825,68 @@ uv run pytest tests/chat/test_realtime_use_case.py -o addopts=""
 
 ---
 
+## Accessibility mode (deafblind) { #accessibility-mode }
+
+A stripped-down voice UI for deafblind users, served at
+<http://localhost:8080/accessible>. It reuses the realtime voice backend but
+removes all chrome so a braille display's web reader reaches the dialogue text
+immediately instead of wading through buttons like "+ New conversation".
+
+- **Whole-screen single button.** Tap anywhere on the screen to start the call;
+  tap again to end it. There are no separate buttons to locate — the entire
+  screen is one giant toggle.
+- **Text-only dialogue for braille.** The only content is one ARIA live region
+  holding the running transcript (your speech + the assistant's replies), so a
+  BrailleSense web reader can read it directly.
+- **Slow, simple speech.** The realtime API has no speech-rate control, so the
+  session uses `CHAT_REALTIME_ACCESSIBLE_SYSTEM_PROMPT` to ask the model to
+  speak slowly in short sentences and explain concepts concretely (aimed at
+  users who find concept formation difficult).
+- **Hands-free camera.** Ask the assistant to take a photo (e.g. "写真を撮って",
+  "周りを教えて") and it calls the `capture_image` tool; the browser captures a
+  frame automatically (no shutter to press) and the model describes what it
+  sees, spoken aloud and written to the braille dialogue region.
+- **Search.** "調べて …" uses the same knowledge/file tools as any realtime
+  session (configure `AGENTS_KNOWLEDGE__…` to enable knowledge retrieval).
+
+### How it connects
+
+The page auto-creates a conversation on load and opens the realtime WebSocket
+with `?mode=accessible`. That flag selects the accessible system prompt and adds
+the `capture_image` tool server-side (see
+[Realtime voice WebSocket](api.md#realtime-voice-websocket)). The
+`chat_user_id` / `chat_display_name` localStorage profile is shared with the
+main UI.
+
+### Settings
+
+| Variable | Default | Description |
+|---|---|---|
+| `CHAT_REALTIME_ACCESSIBLE_SYSTEM_PROMPT` | slow / simple-concept JA prompt | Instructions applied to `?mode=accessible` sessions (overrides `CHAT_REALTIME_SYSTEM_PROMPT`). |
+| `CHAT_ACCESSIBLE_TTS_RATE` | `0.85` | Default browser Text-to-Speech rate for the optional read-aloud (`?tts=1`). |
+
+Recommended companion settings:
+`CHAT_REALTIME_TURN_DETECTION_TYPE=semantic_vad` +
+`CHAT_REALTIME_VAD_EAGERNESS=low` (fewer interruptions for slow speakers), and
+`CHAT_REALTIME_TRANSCRIPTION_MODEL=<deployment>` so your own speech is echoed as
+text (braille) too — see [Seeing your own recognized speech](#realtime-input-transcription).
+
+### Query parameters
+
+- `?tts=1` — read the assistant's text with the browser voice at
+  `CHAT_ACCESSIBLE_TTS_RATE` and mute the realtime audio (true rate control that
+  avoids doubled speech). Off by default, so the realtime voice plays and is
+  slowed only via the prompt.
+- `?rate=0.7` — override the TTS rate for this device without a server change.
+
+!!! note "Camera / microphone permissions"
+    Voice needs microphone permission (requested on the first tap) and the
+    hands-free camera needs camera permission (requested on the first photo
+    request). A blind user cannot see the browser prompt, so grant these once
+    with sighted assistance or persistent site permissions during setup.
+
+---
+
 ## Troubleshooting
 
 ### `relation "chat_conversations" does not exist`

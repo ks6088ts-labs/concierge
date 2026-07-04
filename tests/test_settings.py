@@ -117,6 +117,15 @@ def test_agents_settings_defaults(monkeypatch):
     monkeypatch.delenv("AGENTS_SHELL_ROOT_DIR", raising=False)
     monkeypatch.delenv("AGENTS_SHELL_TIMEOUT_SECONDS", raising=False)
     monkeypatch.delenv("AGENTS_SHELL_MAX_OUTPUT_BYTES", raising=False)
+    monkeypatch.delenv("AGENTS_WEB_TOOLS_ENABLED", raising=False)
+    monkeypatch.delenv("AGENTS_WEB_FETCH_TIMEOUT_SECONDS", raising=False)
+    monkeypatch.delenv("AGENTS_WEB_FETCH_MAX_BYTES", raising=False)
+    monkeypatch.delenv("AGENTS_WEB_FETCH_MAX_CONTENT_CHARS", raising=False)
+    monkeypatch.delenv("AGENTS_WEB_FETCH_USER_AGENT", raising=False)
+    monkeypatch.delenv("AGENTS_WEB_FETCH_ALLOW_DOMAINS", raising=False)
+    monkeypatch.delenv("AGENTS_WEB_FETCH_DENY_DOMAINS", raising=False)
+    monkeypatch.delenv("AGENTS_WEB_FETCH_MAX_REDIRECTS", raising=False)
+    monkeypatch.delenv("AGENTS_WEB_FETCH_ALLOW_PRIVATE_IPS", raising=False)
 
     settings = AgentsSettings(_env_file=None)  # ty: ignore[unknown-argument]
 
@@ -125,16 +134,19 @@ def test_agents_settings_defaults(monkeypatch):
     assert "generate_image_tool" in settings.langgraph_system_prompt
     assert "read_file" in settings.langgraph_system_prompt
     assert "shell_exec" in settings.langgraph_system_prompt
+    assert "fetch_webpage" in settings.langgraph_system_prompt
     assert settings.github_copilot_sdk_model == "gpt-5-mini"
     assert "echo" in settings.github_copilot_sdk_system_prompt.lower()
     assert "generate_image_tool" in settings.github_copilot_sdk_system_prompt
     assert "read_file" in settings.github_copilot_sdk_system_prompt
     assert "shell_exec" in settings.github_copilot_sdk_system_prompt
+    assert "fetch_webpage" in settings.github_copilot_sdk_system_prompt
     assert settings.microsoft_agent_framework_model == "gpt-5"
     assert "echo" in settings.microsoft_agent_framework_system_prompt.lower()
     assert "generate_image_tool" in settings.microsoft_agent_framework_system_prompt
     assert "read_file" in settings.microsoft_agent_framework_system_prompt
     assert "shell_exec" in settings.microsoft_agent_framework_system_prompt
+    assert "fetch_webpage" in settings.microsoft_agent_framework_system_prompt
     assert settings.file_root_dir == ""
     assert settings.file_tools_enabled == "read_file,list_directory,file_search"
     assert settings.shell_tools_enabled == ""
@@ -142,6 +154,15 @@ def test_agents_settings_defaults(monkeypatch):
     assert settings.shell_root_dir == ""
     assert settings.shell_timeout_seconds == 30
     assert settings.shell_max_output_bytes == 65536
+    assert settings.web_tools_enabled == "fetch_webpage"
+    assert settings.web_fetch_timeout_seconds == 10
+    assert settings.web_fetch_max_bytes == 3_000_000
+    assert settings.web_fetch_max_content_chars == 8000
+    assert settings.web_fetch_user_agent == "conciergebot/1.0 (+https://github.com/ks6088ts-labs/concierge)"
+    assert settings.web_fetch_allow_domains == ""
+    assert settings.web_fetch_deny_domains == ""
+    assert settings.web_fetch_max_redirects == 5
+    assert settings.web_fetch_allow_private_ips is False
     assert settings.image_model == "gpt-image-2"
     assert settings.image_size == "1024x1024"
     assert settings.image_n == 1
@@ -167,6 +188,15 @@ def test_agents_settings_reads_env(monkeypatch):
     monkeypatch.setenv("AGENTS_SHELL_ROOT_DIR", "sandbox-shell")
     monkeypatch.setenv("AGENTS_SHELL_TIMEOUT_SECONDS", "45")
     monkeypatch.setenv("AGENTS_SHELL_MAX_OUTPUT_BYTES", "8192")
+    monkeypatch.setenv("AGENTS_WEB_TOOLS_ENABLED", "")
+    monkeypatch.setenv("AGENTS_WEB_FETCH_TIMEOUT_SECONDS", "7")
+    monkeypatch.setenv("AGENTS_WEB_FETCH_MAX_BYTES", "12345")
+    monkeypatch.setenv("AGENTS_WEB_FETCH_MAX_CONTENT_CHARS", "321")
+    monkeypatch.setenv("AGENTS_WEB_FETCH_USER_AGENT", "test-agent/1.0")
+    monkeypatch.setenv("AGENTS_WEB_FETCH_ALLOW_DOMAINS", "example.com,docs.python.org")
+    monkeypatch.setenv("AGENTS_WEB_FETCH_DENY_DOMAINS", "blocked.example")
+    monkeypatch.setenv("AGENTS_WEB_FETCH_MAX_REDIRECTS", "2")
+    monkeypatch.setenv("AGENTS_WEB_FETCH_ALLOW_PRIVATE_IPS", "true")
 
     settings = AgentsSettings(_env_file=None)  # ty: ignore[unknown-argument]
 
@@ -187,6 +217,15 @@ def test_agents_settings_reads_env(monkeypatch):
     assert settings.shell_root_dir == "sandbox-shell"
     assert settings.shell_timeout_seconds == 45
     assert settings.shell_max_output_bytes == 8192
+    assert settings.web_tools_enabled == ""
+    assert settings.web_fetch_timeout_seconds == 7
+    assert settings.web_fetch_max_bytes == 12345
+    assert settings.web_fetch_max_content_chars == 321
+    assert settings.web_fetch_user_agent == "test-agent/1.0"
+    assert settings.web_fetch_allow_domains == "example.com,docs.python.org"
+    assert settings.web_fetch_deny_domains == "blocked.example"
+    assert settings.web_fetch_max_redirects == 2
+    assert settings.web_fetch_allow_private_ips is True
 
 
 def test_agents_knowledge_settings_defaults(monkeypatch):

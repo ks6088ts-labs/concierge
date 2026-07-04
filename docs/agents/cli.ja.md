@@ -79,14 +79,15 @@ uv run agents-cli invoke \
 ```
 
 組み込みエージェント（`echo` / `langgraph` / `github-copilot-sdk` / `microsoft-agent-framework` / `foundry-agent-service`）は
-`payload.message` を読むので、同じショートカットが使えます。フレームワークベースの
-エージェント (`langgraph` / `microsoft-agent-framework`) には `echo` /
-`generate_image_tool` に加えてサンドボックス化されたファイル操作ツール
-（デフォルト: `read_file` / `list_directory` / `file_search`）と、任意有効化の
-許可リスト方式 shell 実行ツール（`shell_exec`）も載せられます。LLM がユーザーの
-リクエストに応じて適切なツールを選択します。`foundry-agent-service` は
- Azure AI Foundry Prompt Agent の薄いクライアントで、クライアント側ツールは
-読み込まれません（ツール / knowledge は Foundry 側エージェント定義で設定）。
+`payload.message` を読むので、同じショートカットが使えます。クライアント側ツールに
+対応するエージェント (`langgraph` / `github-copilot-sdk` / `microsoft-agent-framework`)
+には `echo` / `generate_image_tool` に加えてサンドボックス化されたファイル操作ツール
+（デフォルト: `read_file` / `list_directory` / `file_search`）、単一ページ取得ツール
+（デフォルト: `fetch_webpage`）、任意有効化の許可リスト方式 shell 実行ツール
+（`shell_exec`）も載せられます。LLM がユーザーのリクエストに応じて適切なツールを
+選択します。`foundry-agent-service` は Azure AI Foundry Prompt Agent の薄い
+クライアントで、クライアント側ツールは読み込まれません（ツール / knowledge は
+Foundry 側エージェント定義で設定）。
 
 ```bash
 uv run agents-cli invoke --agent-type langgraph --message "Hello LangGraph"
@@ -98,6 +99,8 @@ uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Creat
 # ファイル操作（AGENTS_FILE_ROOT_DIR 配下のみ）
 uv run agents-cli invoke --agent-type langgraph --message "ワークスペース直下のファイルを一覧表示して"
 uv run agents-cli invoke --agent-type microsoft-agent-framework --message "ワークスペースの README.md を読んで"
+# web 取得ツール（静的 HTTP(S) ページ 1 件のみ。検索・クロール・JavaScript 実行なし）
+uv run agents-cli invoke --agent-type langgraph --message "https://example.com を要約して"
 # shell ツール（AGENTS_SHELL_TOOLS_ENABLED / AGENTS_SHELL_ALLOWED_COMMANDS が必要）
 uv run agents-cli invoke --agent-type langgraph --message "shell_exec で terraform plan を実行して"
 ```
@@ -161,11 +164,11 @@ agents CLI が読むのは `AGENTS_*` 変数のみです。リポジトリ／キ
 | 環境変数 | デフォルト | 説明 |
 |---------|-----------|------|
 | `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | `langgraph` の `init_chat_model` で使うモデル文字列 |
-| `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(組み込み)_ | `langgraph` のシステムプロンプト。デフォルトでは `echo` と `generate_image_tool` を使い分けるよう LLM に指示します。 |
+| `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(組み込み)_ | `langgraph` のシステムプロンプト。デフォルトでは `echo` / `generate_image_tool` / ファイルツール / shell ツール / `fetch_webpage` などをリクエストに応じて使い分けるよう LLM に指示します。 |
 | `AGENTS_GITHUB_COPILOT_SDK_MODEL` | `gpt-5-mini` | `github-copilot-sdk` の `CopilotClient.create_session(model=...)` に渡すモデル名 |
-| `AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT` | _(組み込み)_ | `github-copilot-sdk` のシステムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルト: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
+| `AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT` | _(組み込み)_ | `github-copilot-sdk` のシステムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルトでは `echo` / `generate_image_tool` / ファイルツール / shell ツール / `fetch_webpage` などをリクエストに応じて使い分けるよう LLM に指示します。 |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | `microsoft-agent-framework` の `FoundryChatClient(model=...)` に渡すモデル文字列 |
-| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(組み込み)_ | `microsoft-agent-framework` のシステムプロンプト（`Agent(instructions=...)` に渡される）。デフォルトでは `echo` と `generate_image_tool` を使い分けるよう LLM に指示します。 |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(組み込み)_ | `microsoft-agent-framework` のシステムプロンプト（`Agent(instructions=...)` に渡される）。デフォルトでは `echo` / `generate_image_tool` / ファイルツール / shell ツール / `fetch_webpage` などをリクエストに応じて使い分けるよう LLM に指示します。 |
 | `AGENTS_FOUNDRY_AGENT_SERVICE_MODEL` | `gpt-5` | `foundry-agent-service` の `PromptAgentDefinition.model` に使う Foundry デプロイ名 |
 | `AGENTS_FOUNDRY_AGENT_SERVICE_SYSTEM_PROMPT` | `You are a helpful assistant.` | `foundry-agent-service` の Foundry 側 `PromptAgentDefinition` に永続化される instructions |
 | `AGENTS_FOUNDRY_AGENT_SERVICE_AGENT_NAME` | `concierge-foundry-agent` | `foundry-agent-service` で使う Foundry 側 Prompt Agent 名 |
@@ -176,6 +179,15 @@ agents CLI が読むのは `AGENTS_*` 変数のみです。リポジトリ／キ
 | `AGENTS_SHELL_ROOT_DIR` | `""`（`AGENTS_FILE_ROOT_DIR` にフォールバック） | shell 実行時の固定作業ディレクトリ |
 | `AGENTS_SHELL_TIMEOUT_SECONDS` | `30` | コマンド実行タイムアウト（秒） |
 | `AGENTS_SHELL_MAX_OUTPUT_BYTES` | `65536` | stdout/stderr 各ストリームの最大出力バイト数（超過時に truncate） |
+| `AGENTS_WEB_TOOLS_ENABLED` | `fetch_webpage` | 有効化する web ツール名のカンマ区切り。`""` で web 取得を無効化 |
+| `AGENTS_WEB_FETCH_TIMEOUT_SECONDS` | `10` | 1 ページ取得のタイムアウト秒数 |
+| `AGENTS_WEB_FETCH_MAX_BYTES` | `3000000` | truncate 前に読み込む最大レスポンスバイト数 |
+| `AGENTS_WEB_FETCH_MAX_CONTENT_CHARS` | `8000` | モデルへ返す抽出 Markdown の既定最大文字数 |
+| `AGENTS_WEB_FETCH_USER_AGENT` | `conciergebot/1.0 (+https://github.com/ks6088ts-labs/concierge)` | `fetch_webpage` が送信する User-Agent |
+| `AGENTS_WEB_FETCH_ALLOW_DOMAINS` | `""` | 任意のカンマ区切りドメイン allowlist |
+| `AGENTS_WEB_FETCH_DENY_DOMAINS` | `""` | 任意のカンマ区切りドメイン denylist |
+| `AGENTS_WEB_FETCH_MAX_REDIRECTS` | `5` | 追跡する最大リダイレクト数。各リダイレクト先も再検証されます |
+| `AGENTS_WEB_FETCH_ALLOW_PRIVATE_IPS` | `false` | 開発・テスト用の回避設定。通常利用では `false` のままにし、private / loopback / link-local / metadata アドレスへの SSRF をブロックします |
 | `AGENTS_IMAGE_MODEL` | `gpt-image-2` | Foundry 画像モデルのデプロイ名 |
 | `AGENTS_IMAGE_SIZE` | `1024x1024` | 既定サイズ（`1024x1024` / `1536x1024` / `1024x1536` / `4K`） |
 | `AGENTS_IMAGE_N` | `1` | 既定の生成枚数 |
@@ -222,6 +234,15 @@ AGENTS_SHELL_ALLOWED_COMMANDS=terraform
 # AGENTS_SHELL_ROOT_DIR=./workspace
 # AGENTS_SHELL_TIMEOUT_SECONDS=30
 # AGENTS_SHELL_MAX_OUTPUT_BYTES=65536
+```
+
+web 取得を公開ドメインの一部に制限する `.env` 設定例:
+
+```bash
+AGENTS_WEB_TOOLS_ENABLED=fetch_webpage
+AGENTS_WEB_FETCH_ALLOW_DOMAINS=example.com,docs.python.org
+# AGENTS_WEB_FETCH_DENY_DOMAINS=tracking.example
+# AGENTS_WEB_FETCH_MAX_CONTENT_CHARS=8000
 ```
 
 ## tracing / MLflow を有効にして実行する例

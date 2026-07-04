@@ -8,3 +8,7 @@ class FileToolError(RuntimeError):
 
 class ShellToolError(RuntimeError):
     """Raised when sandboxed shell command execution fails safely."""
+
+
+class WebFetchError(RuntimeError):
+    """Raised when a web page fetch is rejected or fails safely."""

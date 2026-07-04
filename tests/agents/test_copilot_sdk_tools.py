@@ -183,6 +183,7 @@ def test_registry_includes_copilot_sdk_tools(monkeypatch) -> None:
     # additional file tools) cannot influence this assertion.
     monkeypatch.setenv("AGENTS_FILE_TOOLS_ENABLED", "read_file,list_directory,file_search")
     monkeypatch.setenv("AGENTS_SHELL_TOOLS_ENABLED", "")
+    monkeypatch.setenv("AGENTS_WEB_TOOLS_ENABLED", "")
     monkeypatch.setenv("AGENTS_KNOWLEDGE__TOOLS", "")
     get_agents_settings.cache_clear()
     get_agents_knowledge_settings.cache_clear()

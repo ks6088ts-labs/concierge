@@ -115,8 +115,9 @@ def build_default_realtime_tools(
     LangChain tools from ``concierge.agents.infrastructure.tools``: the ``echo``
     tool, read-only file-management tools (``read_file``, ``list_directory``,
     ``file_search``) sandboxed under ``file_root_dir`` (defaults to the
-    ``workspace`` directory), and optional knowledge-retrieval tools configured
-    via ``AGENTS_KNOWLEDGE__...`` settings.
+    ``workspace`` directory), the ``fetch_webpage`` web page reader configured
+    via ``AGENTS_WEB_...`` settings, and optional knowledge-retrieval tools
+    configured via ``AGENTS_KNOWLEDGE__...`` settings.
 
     To grow the agent's capabilities, append additional LangChain tool builders
     via :func:`realtime_tools_from_builders`, or hand-write a
@@ -127,13 +128,18 @@ def build_default_realtime_tools(
         build_echo_langchain_tool,
         build_file_langchain_tool_builders,
         build_knowledge_langchain_tool_builders,
+        build_web_fetch_config,
+        build_web_langchain_tool_builders,
     )
+    from concierge.settings.agents import get_agents_settings
     from concierge.settings.agents_knowledge import get_agents_knowledge_settings
 
+    agents_settings = get_agents_settings()
     file_tools = enabled_file_tools if enabled_file_tools is not None else READ_ONLY_FILE_TOOLS
     builders: list[ToolBuilder] = [
         build_echo_langchain_tool,
         *build_file_langchain_tool_builders(file_root_dir, file_tools),
+        *build_web_langchain_tool_builders(build_web_fetch_config(agents_settings), agents_settings.web_tools_enabled),
         *build_knowledge_langchain_tool_builders(get_agents_knowledge_settings()),
     ]
 

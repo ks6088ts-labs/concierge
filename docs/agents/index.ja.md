@@ -95,12 +95,12 @@ class MyAgent:
 | agent_type | クラス | 説明 |
 |------------|--------|------|
 | `echo` | `EchoAgent` | `payload.message` をそのまま返す。LLM 不要。 |
-| `langgraph` | `LangGraphAgent` | `echo` / `generate_image_tool` と、共有のサンドボックス化ファイル操作ツール（デフォルト: `read_file` / `list_directory` / `file_search`）、および任意有効化の許可リスト方式 shell ツール（`shell_exec`）を備える LangGraph (`create_agent`) preset。LLM がユーザー入力に応じてツールを選択します。 |
-| `github-copilot-sdk` | `GitHubCopilotSdkAgent` | リクエストごとに GitHub Copilot SDK セッションを開き、ユーザーメッセージを `send` し、アシスタント応答を返します。 |
-| `microsoft-agent-framework` | `MicrosoftAgentFrameworkAgent` | `echo` / `generate_image_tool` と、共有のサンドボックス化ファイル操作ツール（デフォルト: `read_file` / `list_directory` / `file_search`）、および任意有効化の許可リスト方式 shell ツール（`shell_exec`）を備える Microsoft Agent Framework preset。LLM がユーザー入力に応じてツールを選択します。 |
+| `langgraph` | `LangGraphAgent` | `echo` / `generate_image_tool` と、共有のサンドボックス化ファイル操作ツール（デフォルト: `read_file` / `list_directory` / `file_search`）、単一ページ取得ツール（デフォルト: `fetch_webpage`）、および任意有効化の許可リスト方式 shell ツール（`shell_exec`）を備える LangGraph (`create_agent`) preset。LLM がユーザー入力に応じてツールを選択します。 |
+| `github-copilot-sdk` | `GitHubCopilotSdkAgent` | リクエストごとに GitHub Copilot SDK セッションを開き、ユーザーメッセージを `send` し、アシスタント応答を返します。他のツール対応エージェントと同じ共有クライアント側ツールビルダーも配線されます。 |
+| `microsoft-agent-framework` | `MicrosoftAgentFrameworkAgent` | `echo` / `generate_image_tool` と、共有のサンドボックス化ファイル操作ツール（デフォルト: `read_file` / `list_directory` / `file_search`）、単一ページ取得ツール（デフォルト: `fetch_webpage`）、および任意有効化の許可リスト方式 shell ツール（`shell_exec`）を備える Microsoft Agent Framework preset。LLM がユーザー入力に応じてツールを選択します。 |
 | `foundry-agent-service` | `FoundryAgentServiceAgent` | Azure AI Foundry の **Prompt Agent**（サーバーサイドホストされるエージェント）を呼び出します。初回起動時に Foundry プロジェクト上に名前付きの `PromptAgentDefinition` を作成し、`openai.responses.create()` に `agent_reference` を渡して騆動します。クライアント側のツールは読み込まれず、ツールや knowledge は Foundry 側のエージェント定義で設定します。 |
 
-フレームワークベースの 2 つのエージェント (`langgraph` /
+クライアント側ツールに対応するエージェント (`langgraph` / `github-copilot-sdk` /
 `microsoft-agent-framework`) は *汎用* で、それぞれ全ツールビルダーを
 登録した状態で 1 度だけ登録されます。新しいツールを追加するときは
 `registry_factory.py` のリストにビルダーを追加するだけで済み、新しい
@@ -119,11 +119,11 @@ class MyAgent:
 | 変数 | デフォルト | 説明 |
 |------|-----------|------|
 | `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | `init_chat_model` に渡すモデル文字列。 |
-| `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | *(組み込み)* | `langgraph` エージェントのシステムプロンプト。デフォルトでは `echo` と `generate_image_tool` を使い分けるよう指示します。 |
+| `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | *(組み込み)* | `langgraph` エージェントのシステムプロンプト。デフォルトでは `echo` / `generate_image_tool` / ファイルツール / shell ツール / `fetch_webpage` などをリクエストに応じて使い分けるよう指示します。 |
 | `AGENTS_GITHUB_COPILOT_SDK_MODEL` | `gpt-5-mini` | `CopilotClient.create_session(model=...)` に渡すモデル名。 |
-| `AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT` | *(組み込み)* | `github-copilot-sdk` 用システムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルト: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
+| `AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT` | *(組み込み)* | `github-copilot-sdk` 用システムプロンプト（`create_session` に `system_message={"mode": "replace", "content": ...}` として渡される）。デフォルトでは `echo` / `generate_image_tool` / ファイルツール / shell ツール / `fetch_webpage` などをリクエストに応じて使い分けるよう指示します。 |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | `microsoft-agent-framework` の `FoundryChatClient(model=...)` に渡すモデル名。 |
-| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | *(組み込み)* | `microsoft-agent-framework` の `Agent(instructions=...)` に渡すシステムプロンプト。デフォルトでは `echo` と `generate_image_tool` を使い分けるよう指示します。 |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | *(組み込み)* | `microsoft-agent-framework` の `Agent(instructions=...)` に渡すシステムプロンプト。デフォルトでは `echo` / `generate_image_tool` / ファイルツール / shell ツール / `fetch_webpage` などをリクエストに応じて使い分けるよう指示します。 |
 | `AGENTS_FOUNDRY_AGENT_SERVICE_MODEL` | `gpt-5` | `foundry-agent-service` の `PromptAgentDefinition.model` に使う Foundry デプロイ名。 |
 | `AGENTS_FOUNDRY_AGENT_SERVICE_SYSTEM_PROMPT` | `You are a helpful assistant.` | Foundry 側 `PromptAgentDefinition` に永続化される instructions。値を変更すると次回呼び出し時に新しいエージェントバージョンが作成されます。 |
 | `AGENTS_FOUNDRY_AGENT_SERVICE_AGENT_NAME` | `concierge-foundry-agent` | Foundry 側 Prompt Agent の名前。同じ名前を使い回すと既存エージェントレコードが再利用され、環境間で分離したいときは異なる名前を設定します。 |
@@ -134,6 +134,15 @@ class MyAgent:
 | `AGENTS_SHELL_ROOT_DIR` | `""`（`AGENTS_FILE_ROOT_DIR` にフォールバック） | shell 実行時に固定される作業ディレクトリ。 |
 | `AGENTS_SHELL_TIMEOUT_SECONDS` | `30` | 1 コマンドあたりのタイムアウト秒数。 |
 | `AGENTS_SHELL_MAX_OUTPUT_BYTES` | `65536` | `stdout` / `stderr` 各ストリームの最大バイト数（超過時は末尾に truncate マーカー付与）。 |
+| `AGENTS_WEB_TOOLS_ENABLED` | `fetch_webpage` | 有効化する web ツール名のカンマ区切り。`""` で web 取得を無効化。 |
+| `AGENTS_WEB_FETCH_TIMEOUT_SECONDS` | `10` | 1 ページ取得のタイムアウト秒数。 |
+| `AGENTS_WEB_FETCH_MAX_BYTES` | `3000000` | truncate 前に読み込む最大レスポンスバイト数。 |
+| `AGENTS_WEB_FETCH_MAX_CONTENT_CHARS` | `8000` | モデルへ返す抽出 Markdown の既定最大文字数。 |
+| `AGENTS_WEB_FETCH_USER_AGENT` | `conciergebot/1.0 (+https://github.com/ks6088ts-labs/concierge)` | `fetch_webpage` が送信する User-Agent。 |
+| `AGENTS_WEB_FETCH_ALLOW_DOMAINS` | `""` | 任意のカンマ区切りドメイン allowlist。空なら deny されていない公開 http(s) ホストを許可。 |
+| `AGENTS_WEB_FETCH_DENY_DOMAINS` | `""` | 任意のカンマ区切りドメイン denylist。 |
+| `AGENTS_WEB_FETCH_MAX_REDIRECTS` | `5` | 追跡する最大リダイレクト数。各リダイレクト先も再検証されます。 |
+| `AGENTS_WEB_FETCH_ALLOW_PRIVATE_IPS` | `false` | 開発・テスト用の回避設定。通常利用では `false` のままにし、private / loopback / link-local / metadata アドレスへの SSRF をブロックします。 |
 | `AGENTS_IMAGE_MODEL` | `gpt-image-2` | 共有画像生成ツールが使う Foundry デプロイ名。 |
 | `AGENTS_IMAGE_SIZE` | `1024x1024` | 既定サイズ（`1024x1024` / `1536x1024` / `1024x1536` / `4K`）。 |
 | `AGENTS_IMAGE_N` | `1` | 1 回の呼び出しで要求する既定画像枚数。 |
@@ -150,6 +159,9 @@ class MyAgent:
 ファイル操作ツールは `AGENTS_FILE_ROOT_DIR` 配下に厳密にサンドボックス化され、
 絶対パスやパストラバーサルは拒否されます。shell ツールも固定 `cwd` かつ
 `shell=False`、コマンド名許可リスト（`AGENTS_SHELL_ALLOWED_COMMANDS`）で実行されます。
+`fetch_webpage` は静的な HTTP(S) ページを 1 件だけ取得し、本文を Markdown として
+抽出します。リンクのクロール、Web 検索、JavaScript 実行は行いません。既定では
+非公開 IP へ解決されるホストを拒否し、各リダイレクト先も再検証します。
 書き込み系ツールや shell ツールを有効化する場合は
 [LangChain Security Notice](https://python.langchain.com/docs/security) を必ず確認してください。
 

@@ -14,12 +14,14 @@ class AgentsSettings(BaseSettings):
         "You have access to tools such as `echo` (which simply echoes the user's text back) "
         "and `generate_image_tool` (which produces images via gpt-image-2), plus sandboxed file tools "
         "such as `read_file`, `list_directory`, and `file_search` (and optional write tools when enabled), "
-        "and optional shell tool `shell_exec` for allowlisted CLI commands. "
+        "and optional shell tool `shell_exec` for allowlisted CLI commands, "
+        "plus `fetch_webpage` to read a single web page by its http(s) URL. "
         "Pick the appropriate tool based on the user's request: "
         "call `echo` for plain echo / smoke-test requests, "
         "call `generate_image_tool` with a concise English prompt when the user asks for an image, "
         "use file tools for workspace file operations while staying within the sandbox root, "
-        "and use `shell_exec` only when command execution is required. "
+        "use `shell_exec` only when command execution is required, "
+        "and call `fetch_webpage` with an http(s) URL when the user asks to read, open, or summarize a web page. "
         "Return the tool result as your final answer in one sentence."
     )
     github_copilot_sdk_model: str = "gpt-5-mini"
@@ -28,12 +30,14 @@ class AgentsSettings(BaseSettings):
         "You have access to tools such as `echo` (which simply echoes the user's text back) "
         "and `generate_image_tool` (which produces images via gpt-image-2), plus sandboxed file tools "
         "such as `read_file`, `list_directory`, and `file_search` (and optional write tools when enabled), "
-        "and optional shell tool `shell_exec` for allowlisted CLI commands. "
+        "and optional shell tool `shell_exec` for allowlisted CLI commands, "
+        "plus `fetch_webpage` to read a single web page by its http(s) URL. "
         "Pick the appropriate tool based on the user's request: "
         "call `echo` for plain echo / smoke-test requests, "
         "call `generate_image_tool` with a concise English prompt when the user asks for an image, "
         "use file tools for workspace file operations while staying within the sandbox root, "
-        "and use `shell_exec` only when command execution is required. "
+        "use `shell_exec` only when command execution is required, "
+        "and call `fetch_webpage` with an http(s) URL when the user asks to read, open, or summarize a web page. "
         "Return the tool result as your final answer in one sentence."
     )
     microsoft_agent_framework_model: str = "gpt-5"
@@ -42,12 +46,14 @@ class AgentsSettings(BaseSettings):
         "You have access to tools such as `echo` (which simply echoes the user's text back) "
         "and `generate_image_tool` (which produces images via gpt-image-2), plus sandboxed file tools "
         "such as `read_file`, `list_directory`, and `file_search` (and optional write tools when enabled), "
-        "and optional shell tool `shell_exec` for allowlisted CLI commands. "
+        "and optional shell tool `shell_exec` for allowlisted CLI commands, "
+        "plus `fetch_webpage` to read a single web page by its http(s) URL. "
         "Pick the appropriate tool based on the user's request: "
         "call `echo` for plain echo / smoke-test requests, "
         "call `generate_image_tool` with a concise English prompt when the user asks for an image, "
         "use file tools for workspace file operations while staying within the sandbox root, "
-        "and use `shell_exec` only when command execution is required. "
+        "use `shell_exec` only when command execution is required, "
+        "and call `fetch_webpage` with an http(s) URL when the user asks to read, open, or summarize a web page. "
         "Return the tool result as your final answer in one sentence."
     )
     foundry_agent_service_model: str = "gpt-5"
@@ -64,6 +70,15 @@ class AgentsSettings(BaseSettings):
     image_size: str = "1024x1024"
     image_n: int = 1
     image_api_version: str = "2025-04-01-preview"
+    web_tools_enabled: str = "fetch_webpage"
+    web_fetch_timeout_seconds: int = 10
+    web_fetch_max_bytes: int = 3_000_000
+    web_fetch_max_content_chars: int = 8000
+    web_fetch_user_agent: str = "conciergebot/1.0 (+https://github.com/ks6088ts-labs/concierge)"
+    web_fetch_allow_domains: str = ""
+    web_fetch_deny_domains: str = ""
+    web_fetch_max_redirects: int = 5
+    web_fetch_allow_private_ips: bool = False
 
     model_config = SettingsConfigDict(
         env_file=".env",

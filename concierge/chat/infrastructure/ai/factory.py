@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import warnings
 
+from concierge.chat.application.realtime_tools import RealtimeTool
 from concierge.chat.application.responders import ChatbotResponder, RealtimeVoiceResponder
 from concierge.chat.infrastructure.ai.exceptions import ChatbotNotConfiguredError
 from concierge.chat.infrastructure.ai.foundry_realtime import FoundryRealtimeResponder
@@ -16,6 +17,7 @@ __all__ = [
     "ChatbotNotConfiguredError",
     "create_chatbot_responder",
     "create_realtime_responder",
+    "create_realtime_responder_with_tools",
     "list_available_agent_types",
 ]
 
@@ -119,11 +121,40 @@ def list_available_agent_types() -> list[str]:
     return types
 
 
-def create_realtime_responder() -> RealtimeVoiceResponder:
+def create_realtime_responder(
+    system_prompt: str | None = None,
+    extra_tools: list[RealtimeTool] | None = None,
+) -> RealtimeVoiceResponder:
     """Build the realtime voice responder.
+
+    Args:
+        system_prompt: When provided, overrides ``CHAT_REALTIME_SYSTEM_PROMPT``
+            for this session (used by the accessibility mode to inject its
+            slow / simple-concept instructions).
+        extra_tools: Additional :class:`RealtimeTool` instances advertised to
+            the model on top of :func:`build_default_realtime_tools` (used by
+            the accessibility mode to expose ``capture_image``).
 
     Raises :class:`ChatbotNotConfiguredError` when
     ``AZURE_AI_PROJECT_ENDPOINT_REALTIME`` is not set or empty.
+    """
+    responder, _ = create_realtime_responder_with_tools(
+        system_prompt=system_prompt,
+        extra_tools=extra_tools,
+    )
+    return responder
+
+
+def create_realtime_responder_with_tools(
+    system_prompt: str | None = None,
+    extra_tools: list[RealtimeTool] | None = None,
+) -> tuple[RealtimeVoiceResponder, list[RealtimeTool]]:
+    """Build the realtime responder and return the exact advertised tools.
+
+    WebSocket routes need both objects: the responder advertises tool schemas in
+    ``session.update`` and :class:`StreamRealtimeVoiceUseCase` executes the same
+    tool handlers. Returning both from one function avoids duplicate tool
+    construction and keeps the two sides in lock-step.
     """
     foundry_settings = get_microsoft_foundry_settings()
     if not foundry_settings.azure_ai_project_endpoint_realtime:
@@ -131,14 +162,15 @@ def create_realtime_responder() -> RealtimeVoiceResponder:
             "AZURE_AI_PROJECT_ENDPOINT_REALTIME is not configured; cannot build the realtime responder.",
         )
     settings = get_chat_settings()
-    return FoundryRealtimeResponder(
+    tools = [*build_default_realtime_tools(), *(extra_tools or [])]
+    responder = FoundryRealtimeResponder(
         endpoint_realtime=foundry_settings.azure_ai_project_endpoint_realtime,
         deployment=settings.realtime_model,
         voice=settings.realtime_voice,
         locale=settings.realtime_locale,
-        system_prompt=settings.realtime_system_prompt,
+        system_prompt=system_prompt if system_prompt is not None else settings.realtime_system_prompt,
         transcription_model=settings.realtime_transcription_model,
-        tools=build_default_realtime_tools(),
+        tools=tools,
         turn_detection_type=settings.realtime_turn_detection_type,
         vad_threshold=settings.realtime_vad_threshold,
         vad_prefix_padding_ms=settings.realtime_vad_prefix_padding_ms,
@@ -147,3 +179,4 @@ def create_realtime_responder() -> RealtimeVoiceResponder:
         vad_create_response=settings.realtime_vad_create_response,
         vad_interrupt_response=settings.realtime_vad_interrupt_response,
     )
+    return responder, tools

@@ -36,6 +36,8 @@ flowchart LR
 | URL | 内容 |
 |---|---|
 | <http://localhost:8080/> | 統合チャット UI — テキスト + リアルタイム音声（日本語ラベル） |
+| <http://localhost:8080/accessible> | 盲ろう者向けの最小アクセシビリティ UI（画面全体トグル + 対話テキストのみ） |
+| <http://localhost:8080/accessible/config> | `/accessible` 用の実行時設定（`{"realtime": bool, "tts_rate": number}`） |
 | <http://localhost:8080/realtime> | 旧 URL。`/` へ `301` リダイレクト（下位互換用） |
 | <http://localhost:8080/capabilities> | UI が読む機能フラグ JSON（`{"realtime": bool}`、通話ボタンの表示/非表示判定に使用） |
 | <http://localhost:8080/docs> | Swagger UI（対話的 REST ドキュメント） |
@@ -66,6 +68,8 @@ export USER_ID=$(python -c 'import uuid; print(uuid.uuid4())')
 | GET | `/healthz` | ヘルスチェック |
 | GET | `/capabilities` | `{"realtime": bool}` — `AZURE_AI_PROJECT_ENDPOINT_REALTIME` 設定済みなら `true` |
 | GET | `/` | 統合 HTML フロントエンド（テキスト + リアルタイム音声） |
+| GET | `/accessible` | 盲ろう者向けの最小アクセシビリティフロントエンド |
+| GET | `/accessible/config` | `/accessible` 用の実行時設定（`{"realtime": bool, "tts_rate": number}`） |
 | GET | `/realtime` | `/` へ `301` リダイレクト（下位互換用） |
 
 ## curl で一通り叩く
@@ -225,11 +229,17 @@ UI の使い方は概要ページの
 WS /conversations/{conversation_id}/realtime
    ?user_id=<uuid>
    [&display_name=<string>]
+   [&mode=accessible]
 ```
 
 `user_id` クエリパラメータは REST エンドポイントで使う `X-User-Id` ヘッダと同じ UUID です。
 ブラウザは WebSocket ハンドシェイクにカスタムヘッダを追加できないため、ヘッダではなく
 クエリで渡します。
+
+`mode=accessible` を指定すると、盲ろう者向けの `/accessible` UI 用セッションになります。
+`CHAT_REALTIME_ACCESSIBLE_SYSTEM_PROMPT`（ゆっくり・平易な指示）が適用され、ハンズフリーの
+`capture_image` カメラツールが追加されます。詳細は
+[アクセシビリティモード](index.ja.md#accessibility-mode) を参照してください。
 
 ### サーバー → クライアント イベント
 
@@ -238,6 +248,7 @@ WS /conversations/{conversation_id}/realtime
 | `concierge.session.ready` | `{"conversation_id": "..."}` | accept 直後の最初のメッセージ |
 | `oai-event` | `{"payload": <Foundry イベント JSON>}` | Foundry イベントの透過リレー（`response.output_audio.delta`、`response.output_audio_transcript.delta` など） |
 | `concierge.message.persisted` | `{"message": <MessageResponse>}` | USER/AGENT transcript の永続化通知 |
+| `concierge.camera.capture` | `{"prompt": "..."?}` | `mode=accessible` のみ。モデルが `capture_image` を呼んだときに送られ、クライアントは自動で撮影して `concierge.image.input`（`auto_describe: true`）を返す |
 | `concierge.error` | `{"detail": "..."}` | サーバ側の未処理エラー |
 
 ### クライアント → サーバー イベント
@@ -245,6 +256,7 @@ WS /conversations/{conversation_id}/realtime
 | `type` | ペイロード | 備考 |
 |--------|-----------|------|
 | `oai-event` | `{"payload": <Foundry イベント JSON>}` | Foundry への透過転送（通常は `input_audio_buffer.append` ＋ base64 PCM16） |
+| `concierge.image.input` | `{"image_url": "data:image/*;base64,...", "prompt": "..."?, "auto_describe": bool?}` | カメラ画像をライブ会話に注入。`auto_describe: true`（ハンズフリー撮影）のときはモデルに即時説明を促す |
 
 !!! note "ツール呼び出しはサーバ側で処理されます"
     モデルがツールを要求すると、リレーが `response.output_item.done`

@@ -98,3 +98,59 @@ def build_get_current_time_tool() -> RealtimeTool:
         },
         handler=_get_current_time,
     )
+
+
+# ---------------------------------------------------------------------------
+# Camera capture (accessibility / hands-free image input)
+# ---------------------------------------------------------------------------
+
+# Name of the tool the model calls to take a photo with the user's camera. The
+# actual capture happens in the browser, so :class:`StreamRealtimeVoiceUseCase`
+# special-cases this tool (asking the client to capture) instead of running the
+# placeholder handler below. Kept as a shared constant so the use case and the
+# tool definition agree on the name.
+CAPTURE_IMAGE_TOOL_NAME = "capture_image"
+
+
+def _capture_image_placeholder(arguments: dict[str, Any]) -> str:
+    """Fallback handler for ``capture_image``.
+
+    Never invoked in practice: the use case intercepts ``capture_image`` before
+    the generic tool-handler path and asks the browser to take the photo. This
+    exists only to satisfy the :class:`RealtimeTool` contract.
+    """
+    return json.dumps({"status": "capturing"})
+
+
+def build_capture_image_tool() -> RealtimeTool:
+    """Build the ``capture_image`` realtime tool (voice-triggered camera).
+
+    Exposed only to the accessibility mode session so a blind user can take a
+    photo hands-free by asking for it. When the model calls this tool the use
+    case asks the browser to capture a frame; the captured image is injected
+    back into the conversation and the model then describes it.
+    """
+    return RealtimeTool(
+        name=CAPTURE_IMAGE_TOOL_NAME,
+        description=(
+            "Take a photo with the user's camera and analyze it. Use this "
+            "whenever the user asks you to take a picture, look at something, "
+            "or describe what is in front of them (e.g. '写真を撮って', "
+            "'これ何が見える?', 'カメラで見て', '周りを教えて'). After the image "
+            "is captured, describe what you see clearly and concretely."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "prompt": {
+                    "type": "string",
+                    "description": (
+                        "Optional focus for the description, e.g. 'read the "
+                        "text', 'what color is this', 'is it safe to cross'."
+                    ),
+                },
+            },
+            "required": [],
+        },
+        handler=_capture_image_placeholder,
+    )

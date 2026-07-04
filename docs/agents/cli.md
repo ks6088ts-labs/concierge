@@ -80,13 +80,15 @@ uv run agents-cli invoke \
 ```
 
 All built-in agents (`echo`, `langgraph`, `github-copilot-sdk`, `microsoft-agent-framework`, and `foundry-agent-service`) read `payload.message`,
-so the same shortcut works for all of them. The framework-backed agents
-(`langgraph` / `microsoft-agent-framework`) carry `echo`, `generate_image_tool`,
-sandboxed file-management tools (`read_file`, `list_directory`, `file_search`
-by default), and optional allowlisted shell execution (`shell_exec`) — the LLM
-picks the right one based on the user's request. `foundry-agent-service` is a
-thin client over the Azure AI Foundry Prompt Agent and carries no client-side
-tools (tools and knowledge are configured on the Foundry agent itself):
+so the same shortcut works for all of them. The client-side tool-capable agents
+(`langgraph` / `github-copilot-sdk` / `microsoft-agent-framework`) carry `echo`,
+`generate_image_tool`, sandboxed file-management tools (`read_file`,
+`list_directory`, `file_search` by default), the single-page web reader
+(`fetch_webpage` by default), and optional allowlisted shell execution
+(`shell_exec`) — the LLM picks the right one based on the user's request.
+`foundry-agent-service` is a thin client over the Azure AI Foundry Prompt Agent
+and carries no client-side tools (tools and knowledge are configured on the
+Foundry agent itself):
 
 ```bash
 uv run agents-cli invoke --agent-type langgraph --message "Hello LangGraph"
@@ -98,6 +100,8 @@ uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Creat
 # file tools (reads from AGENTS_FILE_ROOT_DIR sandbox)
 uv run agents-cli invoke --agent-type langgraph --message "List files in the workspace root"
 uv run agents-cli invoke --agent-type microsoft-agent-framework --message "Read README.md from the workspace"
+# web fetch tool (single static HTTP(S) page; no search/crawl/JavaScript)
+uv run agents-cli invoke --agent-type langgraph --message "Summarize https://example.com"
 # shell tool (requires AGENTS_SHELL_TOOLS_ENABLED and AGENTS_SHELL_ALLOWED_COMMANDS)
 uv run agents-cli invoke --agent-type langgraph --message "Run terraform plan with shell_exec"
 ```
@@ -161,11 +165,11 @@ belong to the `cloud_agent` and `chat` services and are not relevant here.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | Model string for `init_chat_model` used by `langgraph` |
-| `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `langgraph`. Default tells the LLM to pick between `echo` and `generate_image_tool` based on the user's request. |
+| `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `langgraph`. Default tells the LLM to pick between built-in tools such as `echo`, `generate_image_tool`, file tools, shell tools, and `fetch_webpage` based on the user's request. |
 | `AGENTS_GITHUB_COPILOT_SDK_MODEL` | `gpt-5-mini` | Model name passed to `CopilotClient.create_session(model=...)` for `github-copilot-sdk` |
-| `AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-sdk` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Default: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
+| `AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `github-copilot-sdk` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Default tells the LLM to pick between built-in tools such as `echo`, `generate_image_tool`, file tools, shell tools, and `fetch_webpage` based on the user's request. |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | Model string passed to `FoundryChatClient(model=...)` for `microsoft-agent-framework` |
-| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `microsoft-agent-framework` (passed as `Agent(instructions=...)`). Default tells the LLM to pick between `echo` and `generate_image_tool` based on the user's request. |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | _(built-in)_ | System prompt for `microsoft-agent-framework` (passed as `Agent(instructions=...)`). Default tells the LLM to pick between built-in tools such as `echo`, `generate_image_tool`, file tools, shell tools, and `fetch_webpage` based on the user's request. |
 | `AGENTS_FOUNDRY_AGENT_SERVICE_MODEL` | `gpt-5` | Foundry deployment name used as `PromptAgentDefinition.model` for `foundry-agent-service` |
 | `AGENTS_FOUNDRY_AGENT_SERVICE_SYSTEM_PROMPT` | `You are a helpful assistant.` | Instructions persisted on the Foundry-side `PromptAgentDefinition` for `foundry-agent-service` |
 | `AGENTS_FOUNDRY_AGENT_SERVICE_AGENT_NAME` | `concierge-foundry-agent` | Name of the Foundry-side Prompt Agent for `foundry-agent-service` |
@@ -176,6 +180,15 @@ belong to the `cloud_agent` and `chat` services and are not relevant here.
 | `AGENTS_SHELL_ROOT_DIR` | `""` (`AGENTS_FILE_ROOT_DIR` fallback) | Fixed working directory for shell commands |
 | `AGENTS_SHELL_TIMEOUT_SECONDS` | `30` | Command timeout in seconds |
 | `AGENTS_SHELL_MAX_OUTPUT_BYTES` | `65536` | Per-stream stdout/stderr output cap before truncation marker |
+| `AGENTS_WEB_TOOLS_ENABLED` | `fetch_webpage` | Comma-separated enabled web tools. Set to `""` to disable web fetching |
+| `AGENTS_WEB_FETCH_TIMEOUT_SECONDS` | `10` | Timeout for a single web page request |
+| `AGENTS_WEB_FETCH_MAX_BYTES` | `3000000` | Maximum response bytes read before truncation |
+| `AGENTS_WEB_FETCH_MAX_CONTENT_CHARS` | `8000` | Default maximum extracted Markdown characters returned to the model |
+| `AGENTS_WEB_FETCH_USER_AGENT` | `conciergebot/1.0 (+https://github.com/ks6088ts-labs/concierge)` | User-Agent sent by `fetch_webpage` |
+| `AGENTS_WEB_FETCH_ALLOW_DOMAINS` | `""` | Optional comma-separated domain allowlist |
+| `AGENTS_WEB_FETCH_DENY_DOMAINS` | `""` | Optional comma-separated domain denylist |
+| `AGENTS_WEB_FETCH_MAX_REDIRECTS` | `5` | Maximum redirects followed; every redirect target is re-validated |
+| `AGENTS_WEB_FETCH_ALLOW_PRIVATE_IPS` | `false` | Development/testing escape hatch. Keep `false` in normal use to block SSRF to private, loopback, link-local, and metadata addresses |
 | `AGENTS_IMAGE_MODEL` | `gpt-image-2` | Foundry image model deployment name |
 | `AGENTS_IMAGE_SIZE` | `1024x1024` | Default image size (`1024x1024` / `1536x1024` / `1024x1536` / `4K`) |
 | `AGENTS_IMAGE_N` | `1` | Default number of images per generation |
@@ -222,6 +235,15 @@ AGENTS_SHELL_ALLOWED_COMMANDS=terraform
 # AGENTS_SHELL_ROOT_DIR=./workspace
 # AGENTS_SHELL_TIMEOUT_SECONDS=30
 # AGENTS_SHELL_MAX_OUTPUT_BYTES=65536
+```
+
+Example `.env` snippet for restricting web fetches to selected public domains:
+
+```bash
+AGENTS_WEB_TOOLS_ENABLED=fetch_webpage
+AGENTS_WEB_FETCH_ALLOW_DOMAINS=example.com,docs.python.org
+# AGENTS_WEB_FETCH_DENY_DOMAINS=tracking.example
+# AGENTS_WEB_FETCH_MAX_CONTENT_CHARS=8000
 ```
 
 ## Running with tracing and MLflow

@@ -28,6 +28,7 @@ def test_registry_defaults_include_read_only_file_tools(monkeypatch) -> None:
     # additional file tools) cannot influence this assertion.
     monkeypatch.setenv("AGENTS_FILE_TOOLS_ENABLED", "read_file,list_directory,file_search")
     monkeypatch.setenv("AGENTS_SHELL_TOOLS_ENABLED", "")
+    monkeypatch.setenv("AGENTS_WEB_TOOLS_ENABLED", "")
     monkeypatch.setenv("AGENTS_KNOWLEDGE__TOOLS", "")
     registry = get_agent_registry()
 
@@ -46,6 +47,7 @@ def test_registry_defaults_include_read_only_file_tools(monkeypatch) -> None:
 def test_registry_single_file_tool_enabled(monkeypatch) -> None:
     monkeypatch.setenv("AGENTS_FILE_TOOLS_ENABLED", "read_file")
     monkeypatch.setenv("AGENTS_SHELL_TOOLS_ENABLED", "")
+    monkeypatch.setenv("AGENTS_WEB_TOOLS_ENABLED", "")
     monkeypatch.setenv("AGENTS_KNOWLEDGE__TOOLS", "")
     registry = get_agent_registry()
     langgraph = registry.resolve("langgraph")
@@ -56,6 +58,7 @@ def test_registry_single_file_tool_enabled(monkeypatch) -> None:
 def test_registry_file_tools_disabled(monkeypatch) -> None:
     monkeypatch.setenv("AGENTS_FILE_TOOLS_ENABLED", "")
     monkeypatch.setenv("AGENTS_SHELL_TOOLS_ENABLED", "")
+    monkeypatch.setenv("AGENTS_WEB_TOOLS_ENABLED", "")
     monkeypatch.setenv("AGENTS_KNOWLEDGE__TOOLS", "")
     registry = get_agent_registry()
     langgraph = registry.resolve("langgraph")
@@ -76,6 +79,7 @@ def test_registry_shell_tools_disabled_by_default(monkeypatch) -> None:
     # shell tools) cannot influence this assertion.
     monkeypatch.setenv("AGENTS_FILE_TOOLS_ENABLED", "")
     monkeypatch.setenv("AGENTS_SHELL_TOOLS_ENABLED", "")
+    monkeypatch.setenv("AGENTS_WEB_TOOLS_ENABLED", "")
     monkeypatch.setenv("AGENTS_SHELL_ALLOWED_COMMANDS", "")
     monkeypatch.setenv("AGENTS_KNOWLEDGE__TOOLS", "")
 
@@ -96,6 +100,7 @@ def test_registry_shell_tools_enabled_require_allowed_commands(monkeypatch) -> N
 def test_registry_shell_tool_wired_for_all_framework_agents(monkeypatch) -> None:
     monkeypatch.setenv("AGENTS_FILE_TOOLS_ENABLED", "")
     monkeypatch.setenv("AGENTS_SHELL_TOOLS_ENABLED", "shell_exec")
+    monkeypatch.setenv("AGENTS_WEB_TOOLS_ENABLED", "")
     monkeypatch.setenv("AGENTS_SHELL_ALLOWED_COMMANDS", "echo")
     monkeypatch.setenv("AGENTS_KNOWLEDGE__TOOLS", "")
     registry = get_agent_registry()
@@ -110,3 +115,39 @@ def test_registry_shell_tool_wired_for_all_framework_agents(monkeypatch) -> None
     assert len(langgraph._tool_builders) == 3
     assert len(copilot._tool_builders) == 3
     assert len(maf._tool_builders) == 3
+
+
+def test_registry_web_tool_wired_for_all_framework_agents(monkeypatch) -> None:
+    monkeypatch.setenv("AGENTS_FILE_TOOLS_ENABLED", "")
+    monkeypatch.setenv("AGENTS_SHELL_TOOLS_ENABLED", "")
+    monkeypatch.setenv("AGENTS_WEB_TOOLS_ENABLED", "fetch_webpage")
+    monkeypatch.setenv("AGENTS_KNOWLEDGE__TOOLS", "")
+    registry = get_agent_registry()
+
+    langgraph = registry.resolve("langgraph")
+    copilot = registry.resolve("github-copilot-sdk")
+    maf = registry.resolve("microsoft-agent-framework")
+
+    assert isinstance(langgraph, LangGraphAgent)
+    assert isinstance(copilot, GitHubCopilotSdkAgent)
+    assert isinstance(maf, MicrosoftAgentFrameworkAgent)
+    # echo + image + fetch_webpage
+    assert len(langgraph._tool_builders) == 3
+    assert len(copilot._tool_builders) == 3
+    assert len(maf._tool_builders) == 3
+
+    langgraph_tool_names = [builder({}).name for builder in langgraph._tool_builders]
+    assert "fetch_webpage" in langgraph_tool_names
+
+
+def test_registry_web_tool_disabled_by_env(monkeypatch) -> None:
+    monkeypatch.setenv("AGENTS_FILE_TOOLS_ENABLED", "")
+    monkeypatch.setenv("AGENTS_SHELL_TOOLS_ENABLED", "")
+    monkeypatch.setenv("AGENTS_WEB_TOOLS_ENABLED", "")
+    monkeypatch.setenv("AGENTS_KNOWLEDGE__TOOLS", "")
+    registry = get_agent_registry()
+
+    langgraph = registry.resolve("langgraph")
+    assert isinstance(langgraph, LangGraphAgent)
+    langgraph_tool_names = [builder({}).name for builder in langgraph._tool_builders]
+    assert "fetch_webpage" not in langgraph_tool_names

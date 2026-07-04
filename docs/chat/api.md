@@ -38,6 +38,8 @@ flowchart LR
 | URL | What it is |
 |---|---|
 | <http://localhost:8080/> | Unified chat UI — text chat + realtime voice (Japanese labels) |
+| <http://localhost:8080/accessible> | Minimal deafblind accessibility UI (whole-screen call toggle + text-only dialogue region) |
+| <http://localhost:8080/accessible/config> | Runtime config for `/accessible` (`{"realtime": bool, "tts_rate": number}`) |
 | <http://localhost:8080/realtime> | Legacy path; returns `301` redirect to `/` |
 | <http://localhost:8080/capabilities> | Feature-flag JSON (`{"realtime": bool}`) consumed by the UI to show / hide the call button |
 | <http://localhost:8080/docs> | Swagger UI (interactive REST docs) |
@@ -71,6 +73,8 @@ export USER_ID=$(python -c 'import uuid; print(uuid.uuid4())')
 | GET | `/healthz` | Health check |
 | GET | `/capabilities` | `{"realtime": bool}` — `true` when `AZURE_AI_PROJECT_ENDPOINT_REALTIME` is configured |
 | GET | `/` | Unified HTML front-end (text + realtime voice) |
+| GET | `/accessible` | Minimal deafblind accessibility front-end |
+| GET | `/accessible/config` | Runtime config for `/accessible` (`{"realtime": bool, "tts_rate": number}`) |
 | GET | `/realtime` | `301` redirect to `/` (kept for backward compatibility) |
 
 ## End-to-end curl walkthrough
@@ -263,11 +267,17 @@ This section documents the wire protocol only.
 WS /conversations/{conversation_id}/realtime
    ?user_id=<uuid>
    [&display_name=<string>]
+   [&mode=accessible]
 ```
 
 The `user_id` query parameter is the same UUID as the `X-User-Id` header
 used by the REST endpoints. WebSocket frames must not include the header
 because browsers cannot attach custom headers to a WebSocket handshake.
+
+`mode=accessible` selects the deafblind session used by the `/accessible` UI:
+it applies `CHAT_REALTIME_ACCESSIBLE_SYSTEM_PROMPT` (slow, simple-concept
+instructions) and adds the hands-free `capture_image` camera tool. See
+[Accessibility mode](index.md#accessibility-mode).
 
 ### Server → Client events
 
@@ -276,6 +286,7 @@ because browsers cannot attach custom headers to a WebSocket handshake.
 | `concierge.session.ready` | `{"conversation_id": "..."}` | First message after accept |
 | `oai-event` | `{"payload": <Foundry event JSON>}` | Transparent relay of all Foundry events (`response.output_audio.delta`, `response.output_audio_transcript.delta`, etc.) |
 | `concierge.message.persisted` | `{"message": <MessageResponse>}` | USER or AGENT transcript saved |
+| `concierge.camera.capture` | `{"prompt": "..."?}` | `mode=accessible` only. Sent when the model calls `capture_image`; the client takes a photo automatically and replies with `concierge.image.input` (`auto_describe: true`). |
 | `concierge.error` | `{"detail": "..."}` | Unhandled server error |
 
 ### Client → Server events
@@ -283,7 +294,7 @@ because browsers cannot attach custom headers to a WebSocket handshake.
 | `type` | Payload | Notes |
 |--------|---------|-------|
 | `oai-event` | `{"payload": <Foundry event JSON>}` | Forwarded to Foundry (typically `input_audio_buffer.append` with base64 PCM16) |
-| `concierge.image.input` | `{"image_url": "data:image/jpeg;base64,…", "prompt": "<optional>"}` | Injects a camera image into the live session. The server builds a `conversation.item.create` (`input_image`) item so the model can ground its next turn in the image. No response is triggered — the user's next spoken turn drives the reply. |
+| `concierge.image.input` | `{"image_url": "data:image/jpeg;base64,…", "prompt": "<optional>", "auto_describe": <optional bool>}` | Injects a camera image into the live session. The server builds a `conversation.item.create` (`input_image`) item so the model can ground its next turn in the image. By default no response is triggered — the user's next spoken turn drives the reply. When `auto_describe` is `true` (the hands-free `capture_image` flow) the server also sends `response.create` so the model describes the photo immediately. |
 
 !!! note "Image input is server-mediated"
     The browser sends a `concierge.image.input` control frame rather than the

@@ -105,16 +105,16 @@ agent = registry.resolve("my-agent")
 | agent_type | Class | Description |
 |------------|-------|-------------|
 | `echo` | `EchoAgent` | Returns `payload.message` verbatim. No LLM required. |
-| `langgraph` | `LangGraphAgent` | LangGraph (`create_agent`) preset wired with `echo`, `generate_image_tool`, shared sandboxed file-management tools (`read_file`, `list_directory`, `file_search` by default), and optional allowlisted shell tool (`shell_exec`). The LLM picks the appropriate tool based on user input. |
-| `github-copilot-sdk` | `GitHubCopilotSdkAgent` | Opens a GitHub Copilot SDK session per request, `send`s the user message, and returns the assistant reply. |
-| `microsoft-agent-framework` | `MicrosoftAgentFrameworkAgent` | Microsoft Agent Framework preset wired with `echo`, `generate_image_tool`, shared sandboxed file-management tools (`read_file`, `list_directory`, `file_search` by default), and optional allowlisted shell tool (`shell_exec`). The LLM picks the appropriate tool based on user input. |
+| `langgraph` | `LangGraphAgent` | LangGraph (`create_agent`) preset wired with `echo`, `generate_image_tool`, shared sandboxed file-management tools (`read_file`, `list_directory`, `file_search` by default), the single-page web reader (`fetch_webpage` by default), and optional allowlisted shell tool (`shell_exec`). The LLM picks the appropriate tool based on user input. |
+| `github-copilot-sdk` | `GitHubCopilotSdkAgent` | Opens a GitHub Copilot SDK session per request, `send`s the user message, and returns the assistant reply. It is wired with the same shared client-side tool builders as the other tool-capable agents. |
+| `microsoft-agent-framework` | `MicrosoftAgentFrameworkAgent` | Microsoft Agent Framework preset wired with `echo`, `generate_image_tool`, shared sandboxed file-management tools (`read_file`, `list_directory`, `file_search` by default), the single-page web reader (`fetch_webpage` by default), and optional allowlisted shell tool (`shell_exec`). The LLM picks the appropriate tool based on user input. |
 | `foundry-agent-service` | `FoundryAgentServiceAgent` | Azure AI Foundry **Prompt Agent** (server-side hosted agent). Creates a named `PromptAgentDefinition` on the Foundry project on first invocation, then drives it through `openai.responses.create()` with an `agent_reference`. No client-side tools are wired — tools/knowledge are configured on the Foundry agent itself. |
 
-The two framework-backed agents (`langgraph` /
-`microsoft-agent-framework`) are *generic*: they are each registered once
-with the full set of tool builders, and the LLM picks the right tool for
-each request. Adding a new tool means adding another builder to the
-lists in `registry_factory.py` — no new `agent_type` is required.
+The client-side tool-capable agents (`langgraph` / `github-copilot-sdk` /
+`microsoft-agent-framework`) are *generic*: they are each registered once with
+the full set of tool builders, and the LLM picks the right tool for each
+request. Adding a new tool means adding another builder to the lists in
+`registry_factory.py` — no new `agent_type` is required.
 
 `foundry-agent-service` is **server-side**: the prompt and the tool list
 live inside the Foundry project, not in this codebase. Use this agent
@@ -130,11 +130,11 @@ Agent settings are read from environment variables with the **`AGENTS_`** prefix
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `AGENTS_LANGGRAPH_MODEL` | `azure_ai:gpt-5` | Model string for `init_chat_model` (e.g. `azure_ai:gpt-4o-mini`). |
-| `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | *(built-in)* | System prompt for the `langgraph` agent. Defaults instruct the LLM to pick between the `echo` and `generate_image_tool` tools based on the user request. |
+| `AGENTS_LANGGRAPH_SYSTEM_PROMPT` | *(built-in)* | System prompt for the `langgraph` agent. Defaults instruct the LLM to pick between built-in tools such as `echo`, `generate_image_tool`, file tools, shell tools, and `fetch_webpage` based on the user request. |
 | `AGENTS_GITHUB_COPILOT_SDK_MODEL` | `gpt-5-mini` | Model name passed to `CopilotClient.create_session(model=...)`. |
-| `AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT` | *(built-in)* | System prompt for `github-copilot-sdk` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Default: `You are a helpful coding assistant that provides code suggestions and explanations to users.` |
+| `AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT` | *(built-in)* | System prompt for `github-copilot-sdk` (sent to `create_session` via `system_message={"mode": "replace", "content": ...}`). Defaults instruct the LLM to pick between built-in tools such as `echo`, `generate_image_tool`, file tools, shell tools, and `fetch_webpage` based on the user request. |
 | `AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL` | `gpt-5` | Model string passed to `FoundryChatClient(model=...)` for `microsoft-agent-framework`. |
-| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | *(built-in)* | System prompt passed as `Agent(instructions=...)` for `microsoft-agent-framework`. Defaults instruct the LLM to pick between the `echo` and `generate_image_tool` tools based on the user request. |
+| `AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT` | *(built-in)* | System prompt passed as `Agent(instructions=...)` for `microsoft-agent-framework`. Defaults instruct the LLM to pick between built-in tools such as `echo`, `generate_image_tool`, file tools, shell tools, and `fetch_webpage` based on the user request. |
 | `AGENTS_FOUNDRY_AGENT_SERVICE_MODEL` | `gpt-5` | Foundry deployment name used as `PromptAgentDefinition.model` for the `foundry-agent-service` agent. |
 | `AGENTS_FOUNDRY_AGENT_SERVICE_SYSTEM_PROMPT` | `You are a helpful assistant.` | Instructions persisted on the Foundry-side `PromptAgentDefinition`. Updated on the next call when changed (a new agent version is created). |
 | `AGENTS_FOUNDRY_AGENT_SERVICE_AGENT_NAME` | `concierge-foundry-agent` | Name of the Foundry-side Prompt Agent. Reuse the same name across runs to reuse the existing agent record; use a different name for isolation between environments. |
@@ -145,6 +145,15 @@ Agent settings are read from environment variables with the **`AGENTS_`** prefix
 | `AGENTS_SHELL_ROOT_DIR` | `""` (`AGENTS_FILE_ROOT_DIR` fallback) | Fixed working directory for shell commands. |
 | `AGENTS_SHELL_TIMEOUT_SECONDS` | `30` | Per-command timeout in seconds. |
 | `AGENTS_SHELL_MAX_OUTPUT_BYTES` | `65536` | Per-stream (`stdout`/`stderr`) output cap in bytes before truncation marker is appended. |
+| `AGENTS_WEB_TOOLS_ENABLED` | `fetch_webpage` | Comma-separated enabled web tools. Set `""` to disable web fetching. |
+| `AGENTS_WEB_FETCH_TIMEOUT_SECONDS` | `10` | Timeout for a single web page request. |
+| `AGENTS_WEB_FETCH_MAX_BYTES` | `3000000` | Maximum response bytes read before truncation. |
+| `AGENTS_WEB_FETCH_MAX_CONTENT_CHARS` | `8000` | Default maximum extracted Markdown characters returned to the model. |
+| `AGENTS_WEB_FETCH_USER_AGENT` | `conciergebot/1.0 (+https://github.com/ks6088ts-labs/concierge)` | User-Agent sent by `fetch_webpage`. |
+| `AGENTS_WEB_FETCH_ALLOW_DOMAINS` | `""` | Optional comma-separated domain allowlist. Empty allows any public http(s) host not denied. |
+| `AGENTS_WEB_FETCH_DENY_DOMAINS` | `""` | Optional comma-separated domain denylist. |
+| `AGENTS_WEB_FETCH_MAX_REDIRECTS` | `5` | Maximum redirects followed; every redirect target is re-validated. |
+| `AGENTS_WEB_FETCH_ALLOW_PRIVATE_IPS` | `false` | Development/testing escape hatch. Keep `false` in normal use to block SSRF to private, loopback, link-local, and metadata addresses. |
 | `AGENTS_IMAGE_MODEL` | `gpt-image-2` | Foundry deployment name used by shared image generation tool. |
 | `AGENTS_IMAGE_SIZE` | `1024x1024` | Default image size (`1024x1024` / `1536x1024` / `1024x1536` / `4K`). |
 | `AGENTS_IMAGE_N` | `1` | Default number of images requested per call. |
@@ -161,6 +170,9 @@ The image generation tool also reads two Foundry endpoint variables from
 File-management tools are sandboxed to `AGENTS_FILE_ROOT_DIR` and reject absolute
 paths or traversal attempts. Shell tools are also sandboxed and run with
 `shell=False` plus command-name allowlisting (`AGENTS_SHELL_ALLOWED_COMMANDS`).
+`fetch_webpage` fetches exactly one static HTTP(S) page, extracts the main text
+as Markdown, and does not crawl links, search the web, or execute JavaScript. It
+rejects non-public resolved IPs by default and re-validates each redirect target.
 Keep write tools and shell tools disabled unless required, and follow the
 [LangChain security guidance](https://python.langchain.com/docs/security).
 

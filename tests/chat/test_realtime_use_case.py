@@ -7,9 +7,10 @@ from collections.abc import Iterator
 
 import pytest
 
-from concierge.chat.application.realtime_tools import RealtimeTool
+from concierge.chat.application.realtime_tools import RealtimeTool, build_capture_image_tool
 from concierge.chat.application.responders import RealtimeVoiceSession
 from concierge.chat.application.use_cases import (
+    RealtimeCameraCaptureRequest,
     RealtimeMessagePersisted,
     RealtimeServerEvent,
     StreamRealtimeVoiceUseCase,
@@ -356,3 +357,104 @@ def test_function_call_ignored_when_no_tools_configured() -> None:
     assert responder.last_session is not None
     assert responder.last_session.sent_events == []
     assert any(isinstance(e, RealtimeServerEvent) for e in events)
+
+
+# ---------------------------------------------------------------------------
+# Hands-free camera (capture_image) tool
+# ---------------------------------------------------------------------------
+
+
+def test_capture_image_requests_browser_capture() -> None:
+    """capture_image acknowledges the call and asks the browser to take a photo.
+
+    It must NOT send response.create: the description is triggered later when the
+    captured image is injected via send_image(trigger_response=True). Otherwise
+    the model would speak before it can see the photo.
+    """
+    function_call_event = {
+        "type": "response.output_item.done",
+        "item": {
+            "type": "function_call",
+            "name": "capture_image",
+            "call_id": "call_cam",
+            "arguments": '{"prompt": "\u4f55\u304c\u898b\u3048\u308b?"}',
+        },
+    }
+    uc, responder, conv_repo, _ = _make_use_case([function_call_event], tools=[build_capture_image_tool()])
+    from concierge.chat.application.use_cases import CreateConversationUseCase  # noqa: PLC0415
+
+    conv = CreateConversationUseCase(conv_repo).execute("test", uc.current_participant)
+    events = list(uc.execute(conv.id))
+
+    # The relay surfaces a camera-capture request carrying the optional prompt.
+    capture_reqs = [e for e in events if isinstance(e, RealtimeCameraCaptureRequest)]
+    assert len(capture_reqs) == 1
+    assert capture_reqs[0].prompt == "\u4f55\u304c\u898b\u3048\u308b?"
+
+    assert responder.last_session is not None
+    sent = responder.last_session.sent_events
+    output_event = next(e for e in sent if e.get("type") == "conversation.item.create")
+    assert output_event["item"]["type"] == "function_call_output"
+    assert output_event["item"]["call_id"] == "call_cam"
+    # No response.create yet: the model waits for the image before describing it.
+    assert all(e.get("type") != "response.create" for e in sent)
+
+
+def test_capture_image_without_tool_registration_is_unknown() -> None:
+    """capture_image is only honored when the capture tool was advertised.
+
+    This prevents a default-mode session from opening the browser camera if the
+    model hallucinates a tool name that was not in ``session.tools``.
+    """
+    function_call_event = {
+        "type": "response.output_item.done",
+        "item": {
+            "type": "function_call",
+            "name": "capture_image",
+            "call_id": "call_cam",
+            "arguments": "{}",
+        },
+    }
+    uc, responder, conv_repo, _ = _make_use_case([function_call_event], tools=[_echo_tool()])
+    from concierge.chat.application.use_cases import CreateConversationUseCase  # noqa: PLC0415
+
+    conv = CreateConversationUseCase(conv_repo).execute("test", uc.current_participant)
+    events = list(uc.execute(conv.id))
+
+    assert not any(isinstance(e, RealtimeCameraCaptureRequest) for e in events)
+    assert responder.last_session is not None
+    sent = responder.last_session.sent_events
+    output_event = next(e for e in sent if e.get("type") == "conversation.item.create")
+    assert output_event["item"]["type"] == "function_call_output"
+    assert "unknown tool" in output_event["item"]["output"]
+    assert any(e.get("type") == "response.create" for e in sent)
+
+
+def test_send_image_trigger_response_asks_for_reply() -> None:
+    """send_image(trigger_response=True) injects the image then requests a reply."""
+    uc, responder, conv_repo, _ = _make_use_case([])
+    from concierge.chat.application.use_cases import CreateConversationUseCase  # noqa: PLC0415
+
+    conv = CreateConversationUseCase(conv_repo).execute("test", uc.current_participant)
+    list(uc.execute(conv.id))
+    assert responder.last_session is not None
+
+    uc.send_image("data:image/png;base64,iVBORw0KGgo=", trigger_response=True)
+    sent = responder.last_session.sent_events
+    assert sent[-2]["type"] == "conversation.item.create"
+    assert sent[-2]["item"]["content"][0]["type"] == "input_image"
+    assert sent[-1] == {"type": "response.create"}
+
+
+def test_send_image_without_trigger_does_not_create_response() -> None:
+    """The default send_image path stays silent so turn-taking is user-driven."""
+    uc, responder, conv_repo, _ = _make_use_case([])
+    from concierge.chat.application.use_cases import CreateConversationUseCase  # noqa: PLC0415
+
+    conv = CreateConversationUseCase(conv_repo).execute("test", uc.current_participant)
+    list(uc.execute(conv.id))
+    assert responder.last_session is not None
+
+    uc.send_image("data:image/png;base64,iVBORw0KGgo=")
+    sent = responder.last_session.sent_events
+    assert all(e.get("type") != "response.create" for e in sent)

@@ -731,6 +731,19 @@ uv run pytest tests/chat/test_realtime_use_case.py -o addopts=""
 参照）。`chat_user_id` / `chat_display_name` の localStorage プロフィールはメイン UI と
 共有します。
 
+### 複数人会話の扱い
+
+現在のアクセシブル音声ページは、単一ユーザーのリアルタイムセッションとして設計されています。
+複数人が同じマイクに向かって話した場合、音声として文字起こしされる可能性はありますが、
+リアルタイムの transcription ストリームには話者分離が含まれないため、保存・表示上は現在の
+ユーザーの発話として扱われます。別々のブラウザクライアントから接続すれば WebSocket レベルでは
+別々の `user_id` / `display_name` を渡せますが、アクセシブルページはまだ 1 つのライブセッションを
+複数参加者へブロードキャストしたり、1 本のマイク入力内の複数話者を識別したりしません。
+
+本格的な複数人アクセシブル会話にするには、共有会話への参加リンク、複数 WebSocket への
+ブロードキャスト、アクセシブルページ上の参加者表示、話者属性付け（または共有マイク向けの
+外部 diarization）が追加で必要です。
+
 ### 設定
 
 | 変数名 | デフォルト | 説明 |
@@ -742,6 +755,9 @@ uv run pytest tests/chat/test_realtime_use_case.py -o addopts=""
 `CHAT_REALTIME_VAD_EAGERNESS=low`（ゆっくり話す人向けに割り込みを低減）、
 `CHAT_REALTIME_TRANSCRIPTION_MODEL=<デプロイ名>`（自分の発話も点字に反映）—
 [自分の発話を画面で確認する](#realtime-input-transcription) を参照。
+`CHAT_REALTIME_TRANSCRIPTION_MODEL` が未設定のときは、読み込み時にアクセシブル
+ページが（点字の対話リージョンに）自分の発話が表示されない旨を一度お知らせするため、
+無音で欠落することはありません。
 
 ### クエリパラメータ
 

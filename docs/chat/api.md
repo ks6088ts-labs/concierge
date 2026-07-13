@@ -39,7 +39,7 @@ flowchart LR
 |---|---|
 | <http://localhost:8080/> | Unified chat UI — text chat + realtime voice (Japanese labels) |
 | <http://localhost:8080/accessible> | Minimal deafblind accessibility UI (whole-screen call toggle + text-only dialogue region) |
-| <http://localhost:8080/accessible/config> | Runtime config for `/accessible` (`{"realtime": bool, "tts_rate": number}`) |
+| <http://localhost:8080/accessible/config> | Runtime config for `/accessible` (`{"realtime": bool, "tts_rate": number, "transcription": bool}`) |
 | <http://localhost:8080/realtime> | Legacy path; returns `301` redirect to `/` |
 | <http://localhost:8080/capabilities> | Feature-flag JSON (`{"realtime": bool}`) consumed by the UI to show / hide the call button |
 | <http://localhost:8080/docs> | Swagger UI (interactive REST docs) |

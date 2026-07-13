@@ -858,6 +858,20 @@ the `capture_image` tool server-side (see
 `chat_user_id` / `chat_display_name` localStorage profile is shared with the
 main UI.
 
+### Multi-person conversations
+
+The accessible voice page is currently designed as a single-user realtime
+session. If several people speak into the same microphone, their speech may be
+transcribed, but it is saved and shown as the current user because the realtime
+transcription stream does not include speaker diarization. Separate browser
+clients can provide separate `user_id` / `display_name` values at the WebSocket
+level, but the accessible page does not yet broadcast one live session to
+multiple participants or identify multiple speakers inside one microphone feed.
+
+For a true multi-person accessible conversation, add shared-conversation join
+links, multi-WebSocket broadcast, participant display in the accessible page,
+and speaker attribution (or an external diarization step for a shared mic).
+
 ### Settings
 
 | Variable | Default | Description |
@@ -870,6 +884,9 @@ Recommended companion settings:
 `CHAT_REALTIME_VAD_EAGERNESS=low` (fewer interruptions for slow speakers), and
 `CHAT_REALTIME_TRANSCRIPTION_MODEL=<deployment>` so your own speech is echoed as
 text (braille) too — see [Seeing your own recognized speech](#realtime-input-transcription).
+When `CHAT_REALTIME_TRANSCRIPTION_MODEL` is unset, the accessible page announces
+once on load (in the braille dialogue region) that your own speech will not be
+shown, so the omission is never silent.
 
 ### Query parameters
 

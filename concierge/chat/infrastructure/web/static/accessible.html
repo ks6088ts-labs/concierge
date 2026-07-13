@@ -164,6 +164,10 @@
         conversationId: null,
         callState: 'idle', // 'idle' | 'connecting' | 'active'
         realtimeSupported: false,
+        // Whether the server transcribes the user's own microphone audio
+        // (CHAT_REALTIME_TRANSCRIPTION_MODEL set). When false, only the
+        // assistant's words appear, so the UI announces that on load.
+        transcriptionSupported: false,
         // When TTS mode is on the browser reads AI text at a slow, adjustable
         // rate and the realtime audio is muted (so speech isn't doubled). Off
         // by default: the realtime voice plays and is slowed via the prompt.
@@ -573,6 +577,7 @@ registerProcessor('pcm16-processor', PCM16Processor);
         try {
           const cfg = await (await fetch('/accessible/config', { headers: { Accept: 'application/json' } })).json();
           state.realtimeSupported = !!cfg.realtime;
+          state.transcriptionSupported = !!cfg.transcription;
           if (typeof cfg.tts_rate === 'number' && cfg.tts_rate > 0) state.ttsRate = cfg.tts_rate;
         } catch (_) {
           state.realtimeSupported = false;
@@ -605,6 +610,17 @@ registerProcessor('pcm16-processor', PCM16Processor);
           setStatus('音声機能がサーバで無効です（AZURE_AI_PROJECT_ENDPOINT_REALTIME 未設定）', 'idle');
         } else if (state.conversationId) {
           setStatus('タップして会話を開始', 'idle');
+        }
+        // When voice works but the server does not transcribe the user's own
+        // audio, announce it once (into the ARIA live dialogue region so a
+        // braille reader receives it) with the setting an operator can enable.
+        if (state.realtimeSupported && !state.transcriptionSupported) {
+          appendDialogue(
+            '',
+            'お知らせ',
+            'ご自身の発話の文字起こしはオフです。アシスタントの発話のみ表示されます'
+              + '（サーバ側で CHAT_REALTIME_TRANSCRIPTION_MODEL を設定すると、あなたの発話も表示されます）。',
+          );
         }
       }
 

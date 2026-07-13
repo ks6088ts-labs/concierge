@@ -37,7 +37,7 @@ flowchart LR
 |---|---|
 | <http://localhost:8080/> | 統合チャット UI — テキスト + リアルタイム音声（日本語ラベル） |
 | <http://localhost:8080/accessible> | 盲ろう者向けの最小アクセシビリティ UI（画面全体トグル + 対話テキストのみ） |
-| <http://localhost:8080/accessible/config> | `/accessible` 用の実行時設定（`{"realtime": bool, "tts_rate": number}`） |
+| <http://localhost:8080/accessible/config> | `/accessible` 用の実行時設定（`{"realtime": bool, "tts_rate": number, "transcription": bool}`） |
 | <http://localhost:8080/realtime> | 旧 URL。`/` へ `301` リダイレクト（下位互換用） |
 | <http://localhost:8080/capabilities> | UI が読む機能フラグ JSON（`{"realtime": bool}`、通話ボタンの表示/非表示判定に使用） |
 | <http://localhost:8080/docs> | Swagger UI（対話的 REST ドキュメント） |

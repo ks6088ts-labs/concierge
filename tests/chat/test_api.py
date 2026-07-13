@@ -122,11 +122,13 @@ async def test_accessible_page_served(app) -> None:
 
 @pytest.mark.anyio
 async def test_accessible_config_reports_rate_and_realtime(app, monkeypatch) -> None:
-    """``/accessible/config`` reports realtime availability and the TTS rate."""
+    """``/accessible/config`` reports realtime availability, the TTS rate, and transcription."""
     monkeypatch.setenv("AZURE_AI_PROJECT_ENDPOINT_REALTIME", "")
-    from concierge.settings import get_microsoft_foundry_settings  # noqa: PLC0415
+    monkeypatch.setenv("CHAT_REALTIME_TRANSCRIPTION_MODEL", "")
+    from concierge.settings import get_chat_settings, get_microsoft_foundry_settings  # noqa: PLC0415
 
     get_microsoft_foundry_settings.cache_clear()
+    get_chat_settings.cache_clear()
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -136,8 +138,29 @@ async def test_accessible_config_reports_rate_and_realtime(app, monkeypatch) -> 
         assert body["realtime"] is False
         assert isinstance(body["tts_rate"], int | float)
         assert body["tts_rate"] > 0
+        # No transcription model configured → the accessible UI shows the
+        # "self-transcription is off" notice.
+        assert body["transcription"] is False
 
     get_microsoft_foundry_settings.cache_clear()
+    get_chat_settings.cache_clear()
+
+
+@pytest.mark.anyio
+async def test_accessible_config_reports_transcription_enabled(app, monkeypatch) -> None:
+    """``transcription`` is True when ``CHAT_REALTIME_TRANSCRIPTION_MODEL`` is set."""
+    monkeypatch.setenv("CHAT_REALTIME_TRANSCRIPTION_MODEL", "gpt-4o-mini-transcribe")
+    from concierge.settings import get_chat_settings  # noqa: PLC0415
+
+    get_chat_settings.cache_clear()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/accessible/config")
+        assert resp.status_code == 200
+        assert resp.json()["transcription"] is True
+
+    get_chat_settings.cache_clear()
 
 
 @pytest.mark.anyio

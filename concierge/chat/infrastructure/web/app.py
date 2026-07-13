@@ -72,14 +72,22 @@ def create_app() -> FastAPI:
 
         ``realtime`` mirrors ``/capabilities`` (voice requires the realtime
         endpoint). ``tts_rate`` is the configured browser Text-to-Speech rate
-        (the realtime voice itself cannot be rate-controlled).
+        (the realtime voice itself cannot be rate-controlled). ``transcription``
+        reflects whether ``CHAT_REALTIME_TRANSCRIPTION_MODEL`` is set — the
+        accessible UI uses it to tell the user whether their own speech will be
+        transcribed and shown, or that a server-side model must be configured.
         """
+        chat_settings = get_chat_settings()
         try:
             create_realtime_responder()
             realtime_enabled = True
         except ChatbotNotConfiguredError:
             realtime_enabled = False
-        return {"realtime": realtime_enabled, "tts_rate": get_chat_settings().accessible_tts_rate}
+        return {
+            "realtime": realtime_enabled,
+            "tts_rate": chat_settings.accessible_tts_rate,
+            "transcription": bool(chat_settings.realtime_transcription_model),
+        }
 
     @app.get("/realtime", include_in_schema=False)
     def realtime_index() -> RedirectResponse:

@@ -38,11 +38,15 @@ flowchart LR
 | <http://localhost:8080/> | 統合チャット UI — テキスト + リアルタイム音声（日本語ラベル） |
 | <http://localhost:8080/accessible> | 盲ろう者向けの最小アクセシビリティ UI（画面全体トグル + 対話テキストのみ） |
 | <http://localhost:8080/accessible/config> | `/accessible` 用の実行時設定（`{"realtime": bool, "tts_rate": number, "transcription": bool}`） |
+| <http://localhost:8080/ttsplayground/> | 定型文、自由入力、ブラウザ音声合成を備えた音声ボタン playground |
 | <http://localhost:8080/realtime> | 旧 URL。`/` へ `301` リダイレクト（下位互換用） |
 | <http://localhost:8080/capabilities> | UI が読む機能フラグ JSON（`{"realtime": bool}`、通話ボタンの表示/非表示判定に使用） |
 | <http://localhost:8080/docs> | Swagger UI（対話的 REST ドキュメント） |
 | <http://localhost:8080/openapi.json> | OpenAPI スキーマ |
 | <http://localhost:8080/healthz> | 死活監視（`{"status":"ok"}`） |
+
+TTS playground は URL を直接開いて利用します。チャット UI にはナビゲーションリンクを追加していません。
+`/ttsplayground` は、設定と音声の相対パスを正しく解決できる末尾スラッシュ付きの URL へリダイレクトします。
 
 ## 認証
 
@@ -70,6 +74,9 @@ export USER_ID=$(python -c 'import uuid; print(uuid.uuid4())')
 | GET | `/` | 統合 HTML フロントエンド（テキスト + リアルタイム音声） |
 | GET | `/accessible` | 盲ろう者向けの最小アクセシビリティフロントエンド |
 | GET | `/accessible/config` | `/accessible` 用の実行時設定（`{"realtime": bool, "tts_rate": number}`） |
+| GET | `/ttsplayground` | `/ttsplayground/` へ `307` リダイレクト |
+| GET | `/ttsplayground/` | 音声ボタン TTS playground フロントエンド |
+| GET | `/ttsplayground/config` | playground が使用する組み込み定型文とブラウザ音声設定 |
 | GET | `/realtime` | `/` へ `301` リダイレクト（下位互換用） |
 
 ## curl で一通り叩く

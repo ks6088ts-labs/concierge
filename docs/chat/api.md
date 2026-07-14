@@ -40,11 +40,16 @@ flowchart LR
 | <http://localhost:8080/> | Unified chat UI — text chat + realtime voice (Japanese labels) |
 | <http://localhost:8080/accessible> | Minimal deafblind accessibility UI (whole-screen call toggle + text-only dialogue region) |
 | <http://localhost:8080/accessible/config> | Runtime config for `/accessible` (`{"realtime": bool, "tts_rate": number, "transcription": bool}`) |
+| <http://localhost:8080/ttsplayground/> | Voice-button playground with preset phrases, free text, and browser text-to-speech |
 | <http://localhost:8080/realtime> | Legacy path; returns `301` redirect to `/` |
 | <http://localhost:8080/capabilities> | Feature-flag JSON (`{"realtime": bool}`) consumed by the UI to show / hide the call button |
 | <http://localhost:8080/docs> | Swagger UI (interactive REST docs) |
 | <http://localhost:8080/openapi.json> | OpenAPI schema |
 | <http://localhost:8080/healthz> | Liveness probe (`{"status":"ok"}`) |
+
+The TTS playground is available by opening its URL directly; the chat UI does
+not include a navigation link to it. `/ttsplayground` redirects to the canonical
+trailing-slash URL so its relative config and audio paths resolve correctly.
 
 ## Authentication
 
@@ -75,6 +80,9 @@ export USER_ID=$(python -c 'import uuid; print(uuid.uuid4())')
 | GET | `/` | Unified HTML front-end (text + realtime voice) |
 | GET | `/accessible` | Minimal deafblind accessibility front-end |
 | GET | `/accessible/config` | Runtime config for `/accessible` (`{"realtime": bool, "tts_rate": number}`) |
+| GET | `/ttsplayground` | Redirect to `/ttsplayground/` with status `307` |
+| GET | `/ttsplayground/` | Voice-button TTS playground front-end |
+| GET | `/ttsplayground/config` | Built-in phrases and browser speech settings used by the playground |
 | GET | `/realtime` | `301` redirect to `/` (kept for backward compatibility) |
 
 ## End-to-end curl walkthrough

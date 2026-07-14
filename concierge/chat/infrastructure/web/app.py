@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from concierge.chat.infrastructure.ai.factory import ChatbotNotConfiguredError, create_realtime_responder
 from concierge.chat.infrastructure.web.exception_handlers import register_exception_handlers
 from concierge.chat.infrastructure.web.routes import router
+from concierge.chat.infrastructure.web.tts_playground import create_tts_playground_app
 from concierge.loggers import get_logger
 from concierge.observability import bootstrap_from_env
 from concierge.settings import get_chat_settings
@@ -94,6 +95,12 @@ def create_app() -> FastAPI:
         # The dedicated realtime UI has been merged into ``/``. Keep this route
         # so existing bookmarks and docs continue to work.
         return RedirectResponse(url="/", status_code=301)
+
+    @app.get("/ttsplayground", include_in_schema=False)
+    def tts_playground_index() -> RedirectResponse:
+        return RedirectResponse(url="/ttsplayground/", status_code=307)
+
+    app.mount("/ttsplayground", create_tts_playground_app(), name="ttsplayground")
 
     logger.info("Initialized Chat FastAPI app")
     return app

@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>__TITLE__</title>
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+                   "Noto Sans JP", sans-serif;
+      background: #fafafa;
+      color: #222;
+      min-height: 100vh;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #1a1a1a; color: #eee; }
+    }
+    header {
+      padding: 16px 20px;
+      text-align: center;
+      font-size: 1.25rem;
+      font-weight: 600;
+      border-bottom: 1px solid rgba(127,127,127,0.2);
+    }
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 24px 16px;
+    }
+    #status {
+      text-align: center;
+      min-height: 1.4em;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+    .controls {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    button.action {
+      appearance: none;
+      border: none;
+      border-radius: 14px;
+      padding: 14px 28px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #fff;
+      cursor: pointer;
+      transition: transform 80ms ease, box-shadow 80ms ease, filter 120ms ease;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      min-width: 140px;
+    }
+    button.action:focus-visible { outline: 3px solid rgba(79,140,255,0.45); outline-offset: 2px; }
+    button.action:active { transform: scale(0.97); }
+    button.action:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    #btn-record {
+      background: linear-gradient(135deg, #dc2626, #9f1239);
+      box-shadow: 0 4px 14px rgba(220,38,38,0.25);
+    }
+    #btn-record.recording {
+      animation: pulse-ring 1.2s ease-out infinite;
+    }
+    @keyframes pulse-ring {
+      0% { box-shadow: 0 0 0 0 rgba(220,38,38,0.5); }
+      70% { box-shadow: 0 0 0 12px rgba(220,38,38,0); }
+      100% { box-shadow: 0 0 0 0 rgba(220,38,38,0); }
+    }
+    #btn-stop {
+      background: linear-gradient(135deg, #475569, #1e293b);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+    }
+
+    .timer {
+      text-align: center;
+      font-size: 2rem;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      margin-bottom: 24px;
+      letter-spacing: 0.05em;
+      min-height: 2.5rem;
+    }
+
+    #recordings-section h2 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 0 0 12px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(127,127,127,0.2);
+    }
+
+    #recordings-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    #recordings-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(127,127,127,0.06);
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    @media (prefers-color-scheme: dark) {
+      #recordings-list li { background: rgba(255,255,255,0.06); }
+    }
+    .rec-label {
+      flex: 1;
+      min-width: 120px;
+      font-size: 0.9rem;
+      opacity: 0.75;
+    }
+    .rec-player {
+      flex: 2;
+      min-width: 160px;
+      height: 32px;
+      width: 100%;
+    }
+    .rec-actions {
+      display: flex;
+      gap: 8px;
+    }
+    button.icon-btn {
+      appearance: none;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 1.2rem;
+      padding: 4px 6px;
+      border-radius: 8px;
+      line-height: 1;
+      transition: background 120ms;
+    }
+    button.icon-btn:hover { background: rgba(127,127,127,0.15); }
+    button.icon-btn:focus-visible { outline: 2px solid rgba(79,140,255,0.45); outline-offset: 1px; }
+
+    #empty-hint {
+      text-align: center;
+      opacity: 0.45;
+      font-size: 0.9rem;
+      margin-top: 24px;
+    }
+
+    footer {
+      padding: 12px 20px 24px;
+      text-align: center;
+      font-size: 0.85rem;
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+  <header>__TITLE__</header>
+  <main>
+    <div id="status" role="status" aria-live="assertive"></div>
+    <div class="timer" id="timer" aria-label="録音時間" aria-live="off"></div>
+
+    <div class="controls">
+      <button id="btn-record" class="action" type="button" aria-pressed="false">🎙 録音開始</button>
+      <button id="btn-stop" class="action" type="button" disabled>⏹ 録音停止</button>
+    </div>
+
+    <section id="recordings-section" aria-label="録音一覧">
+      <h2>録音一覧</h2>
+      <ul id="recordings-list"></ul>
+      <p id="empty-hint">まだ録音がありません。「録音開始」ボタンを押してください。</p>
+    </section>
+  </main>
+  <footer>録音データはブラウザ内にのみ保存されます。ページを閉じると消去されます。</footer>
+
+  <script>
+    'use strict';
+
+    const els = {
+      status: document.getElementById('status'),
+      timer: document.getElementById('timer'),
+      btnRecord: document.getElementById('btn-record'),
+      btnStop: document.getElementById('btn-stop'),
+      list: document.getElementById('recordings-list'),
+      emptyHint: document.getElementById('empty-hint'),
+    };
+
+    let mediaRecorder = null;
+    let chunks = [];
+    let timerInterval = null;
+    let elapsedSeconds = 0;
+    let recordingCount = 0;
+
+    function setStatus(msg) { els.status.textContent = msg || ''; }
+
+    function formatTime(seconds) {
+      const m = String(Math.floor(seconds / 60)).padStart(2, '0');
+      const s = String(seconds % 60).padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    function startTimer() {
+      elapsedSeconds = 0;
+      els.timer.textContent = formatTime(0);
+      timerInterval = setInterval(() => {
+        elapsedSeconds += 1;
+        els.timer.textContent = formatTime(elapsedSeconds);
+      }, 1000);
+    }
+
+    function stopTimer() {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+
+    function addRecording(blob, durationSeconds) {
+      recordingCount += 1;
+      const url = URL.createObjectURL(blob);
+      const now = new Date();
+      const label = `録音 ${recordingCount}  (${formatTime(durationSeconds)})  ${now.toLocaleTimeString()}`;
+      const ext = blob.type.includes('ogg') ? 'ogg' : blob.type.includes('mp4') ? 'mp4' : 'webm';
+      const filename = `recording-${recordingCount}.${ext}`;
+
+      const li = document.createElement('li');
+
+      const span = document.createElement('span');
+      span.className = 'rec-label';
+      span.textContent = label;
+
+      const audio = document.createElement('audio');
+      audio.className = 'rec-player';
+      audio.controls = true;
+      audio.src = url;
+      audio.setAttribute('aria-label', label);
+
+      const actions = document.createElement('div');
+      actions.className = 'rec-actions';
+
+      const dlBtn = document.createElement('button');
+      dlBtn.className = 'icon-btn';
+      dlBtn.title = 'ダウンロード';
+      dlBtn.setAttribute('aria-label', `${label}をダウンロード`);
+      dlBtn.textContent = '⬇️';
+      dlBtn.addEventListener('click', () => {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+      });
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'icon-btn';
+      delBtn.title = '削除';
+      delBtn.setAttribute('aria-label', `${label}を削除`);
+      delBtn.textContent = '🗑️';
+      delBtn.addEventListener('click', () => {
+        URL.revokeObjectURL(url);
+        li.remove();
+        updateEmptyHint();
+      });
+
+      actions.appendChild(dlBtn);
+      actions.appendChild(delBtn);
+
+      li.appendChild(span);
+      li.appendChild(audio);
+      li.appendChild(actions);
+      els.list.prepend(li);
+      updateEmptyHint();
+    }
+
+    function updateEmptyHint() {
+      els.emptyHint.style.display = els.list.children.length === 0 ? '' : 'none';
+    }
+
+    async function startRecording() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setStatus('このブラウザはマイクへのアクセスに対応していません。');
+        return;
+      }
+      if (typeof MediaRecorder === 'undefined') {
+        setStatus('このブラウザは MediaRecorder に対応していません。');
+        return;
+      }
+
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (err) {
+        setStatus('マイクへのアクセスが拒否されました: ' + err.message);
+        return;
+      }
+
+      chunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+
+      mediaRecorder.addEventListener('dataavailable', e => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      });
+
+      mediaRecorder.addEventListener('stop', () => {
+        const duration = elapsedSeconds;
+        stopTimer();
+        els.timer.textContent = '';
+
+        const mimeType = mediaRecorder.mimeType || 'audio/webm';
+        const blob = new Blob(chunks, { type: mimeType });
+        chunks = [];
+        addRecording(blob, duration);
+
+        stream.getTracks().forEach(t => t.stop());
+        mediaRecorder = null;
+
+        els.btnRecord.disabled = false;
+        els.btnRecord.classList.remove('recording');
+        els.btnRecord.setAttribute('aria-pressed', 'false');
+        els.btnRecord.textContent = '🎙 録音開始';
+        els.btnStop.disabled = true;
+        setStatus('録音が完了しました。');
+      });
+
+      mediaRecorder.start(250);
+      startTimer();
+
+      els.btnRecord.disabled = true;
+      els.btnRecord.classList.add('recording');
+      els.btnRecord.setAttribute('aria-pressed', 'true');
+      els.btnRecord.textContent = '🔴 録音中…';
+      els.btnStop.disabled = false;
+      setStatus('録音中です。');
+    }
+
+    function stopRecording() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+        setStatus('録音を停止しています…');
+        els.btnStop.disabled = true;
+      }
+    }
+
+    els.btnRecord.addEventListener('click', startRecording);
+    els.btnStop.addEventListener('click', stopRecording);
+
+    updateEmptyHint();
+  </script>
+</body>
+</html>

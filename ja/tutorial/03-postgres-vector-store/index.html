@@ -1,0 +1,2471 @@
+
+<!doctype html>
+<html lang="ja" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="LangChain のベクトルストアを pgvector で永続化する。Docker Compose で動かすローカル DB と Azure Database for PostgreSQL Flexible Server を、同じ CLI から切り替えて使う">
+      
+      
+      
+        <link rel="canonical" href="https://ks6088ts-labs.github.io/concierge/ja/tutorial/03-postgres-vector-store/">
+      
+      
+        <link rel="prev" href="../02-observability/">
+      
+      
+        <link rel="next" href="../04-langgraph-todo-agent/">
+      
+      
+        
+          <link rel="alternate" href="../../../tutorial/03-postgres-vector-store/" hreflang="en">
+        
+          <link rel="alternate" href="./" hreflang="ja">
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>ステップ 3 - PostgreSQL (pgvector) CRUD - concierge</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+  
+
+
+  
+  
+
+<script id="__analytics">function __md_analytics(){function e(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],e("js",new Date),e("config","G-0ZTKFXVQ5K"),document.addEventListener("DOMContentLoaded",(function(){document.forms.search&&document.forms.search.query.addEventListener("blur",(function(){this.value&&e("event","search",{search_term:this.value})}));document$.subscribe((function(){var t=document.forms.feedback;if(void 0!==t)for(var a of t.querySelectorAll("[type=submit]"))a.addEventListener("click",(function(a){a.preventDefault();var n=document.location.pathname,d=this.getAttribute("data-md-value");e("event","feedback",{page:n,data:d}),t.firstElementChild.disabled=!0;var r=t.querySelector(".md-feedback__note [data-md-value='"+d+"']");r&&(r.hidden=!1)})),t.hidden=!1})),location$.subscribe((function(t){e("config","G-0ZTKFXVQ5K",{page_path:t.pathname})}))}));var t=document.createElement("script");t.async=!0,t.src="https://www.googletagmanager.com/gtag/js?id=G-0ZTKFXVQ5K",document.getElementById("__analytics").insertAdjacentElement("afterEnd",t)}</script>
+  
+    <script>"undefined"!=typeof __md_analytics&&__md_analytics()</script>
+  
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#ステップ-3---postgresql-pgvector-crud" class="md-skip">
+          コンテンツにスキップ
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="ヘッダー">
+    <a href="../../" title="concierge" class="md-header__button md-logo" aria-label="concierge" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            concierge
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              ステップ 3 - PostgreSQL (pgvector) CRUD
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9zM20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12zm-9.15 3.96h2.3L12 9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="言語切り替え">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="../../../tutorial/03-postgres-vector-store/" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="ja" class="md-select__link">
+              日本語
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="検索" placeholder="検索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="検索">
+        
+        <button type="reset" class="md-search__icon md-icon" title="クリア" aria-label="クリア" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            検索を初期化
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/ks6088ts-labs/concierge" title="リポジトリへ" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ks6088ts-labs/concierge
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="ナビゲーション" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../" title="concierge" class="md-nav__button md-logo" aria-label="concierge" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    concierge
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/ks6088ts-labs/concierge" title="リポジトリへ" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ks6088ts-labs/concierge
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hands-on Tutorial
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Hands-on Tutorial
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../01-foundry-langchain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Microsoft Foundry + LangChain
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../02-observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Observability (Tracing & MLflow)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. PostgreSQL (pgvector) CRUD
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. PostgreSQL (pgvector) CRUD
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="目次">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目次
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#ゴール" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ゴール
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#なぜこのステップが必要か" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        なぜこのステップが必要か
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#事前チェック" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        事前チェック
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ターゲットを選ぶ" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ターゲットを選ぶ
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#手順" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        手順
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="手順">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-接続情報を設定する" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 接続情報を設定する
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-接続先を起動する-またはサインインする" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 接続先を起動する (またはサインインする)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-ベクトルテーブルを作成する" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 ベクトルテーブルを作成する
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-サンプル文書を一括投入する-create" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 サンプル文書を一括投入する (Create)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#35-検索と取得-read" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.5 検索と取得 (Read)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#36-更新と削除" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.6 更新と削除
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#37-埋め込みデプロイなしで通しで試す" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.7 埋め込みデプロイなしで通しで試す
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#38-後片付け" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.8 後片付け
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#動作確認" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        動作確認
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="動作確認">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#crud-全コマンドの実行手順-動作確認済み" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CRUD 全コマンドの実行手順 (動作確認済み)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#azure-ターゲットのオフライン疎通確認" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Azure ターゲットのオフライン疎通確認
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#トラブルシュート" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        トラブルシュート
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#次のステップ" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        次のステップ
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../04-langgraph-todo-agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. LangGraph Todo Agent CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../05-mlflow-genai-evaluation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. MLflow GenAI Evaluation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../appendix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Appendix - References
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../appendix-azure-environment-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Appendix - Azure Environment Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../appendix-monitor-vscode-copilot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Appendix - Monitor VS Code Copilot (App Insights)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../appendix-deploy-azure-container-apps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Appendix - Deploy to Azure Container Apps (Terraform)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Todo App (Clean Architecture)
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Todo App (Clean Architecture)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../todo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../todo/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    REST API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../todo/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chat App (Clean Architecture)
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Chat App (Clean Architecture)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../chat/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../chat/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    REST API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../chat/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shared Agent Runtime
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Shared Agent Runtime
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cloud Agent App (Clean Architecture)
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Cloud Agent App (Clean Architecture)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud_agent/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    REST API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cloud_agent/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge Indexer (pgvector)
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Knowledge Indexer (pgvector)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../knowledge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../knowledge/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目次">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目次
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#ゴール" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ゴール
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#なぜこのステップが必要か" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        なぜこのステップが必要か
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#事前チェック" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        事前チェック
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ターゲットを選ぶ" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ターゲットを選ぶ
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#手順" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        手順
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="手順">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-接続情報を設定する" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 接続情報を設定する
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-接続先を起動する-またはサインインする" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 接続先を起動する (またはサインインする)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-ベクトルテーブルを作成する" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 ベクトルテーブルを作成する
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-サンプル文書を一括投入する-create" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 サンプル文書を一括投入する (Create)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#35-検索と取得-read" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.5 検索と取得 (Read)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#36-更新と削除" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.6 更新と削除
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#37-埋め込みデプロイなしで通しで試す" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.7 埋め込みデプロイなしで通しで試す
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#38-後片付け" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.8 後片付け
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#動作確認" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        動作確認
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="動作確認">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#crud-全コマンドの実行手順-動作確認済み" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CRUD 全コマンドの実行手順 (動作確認済み)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#azure-ターゲットのオフライン疎通確認" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Azure ターゲットのオフライン疎通確認
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#トラブルシュート" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        トラブルシュート
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#次のステップ" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        次のステップ
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="ステップ-3---postgresql-pgvector-crud">ステップ 3 - PostgreSQL (pgvector) CRUD<a class="headerlink" href="#ステップ-3---postgresql-pgvector-crud" title="Permanent link">&para;</a></h1>
+<h2 id="ゴール">ゴール<a class="headerlink" href="#ゴール" title="Permanent link">&para;</a></h2>
+<p>このステップを終えると、次のことができるようになります。</p>
+<ul>
+<li><a href="https://github.com/pgvector/pgvector">pgvector</a> を有効化した PostgreSQL
+  をローカル (Docker Compose) <strong>または</strong> マネージドな
+  <a href="https://learn.microsoft.com/ja-jp/azure/postgresql/flexible-server/overview">Azure Database for PostgreSQL Flexible Server</a>
+  上で使える。</li>
+<li>CLI からベクトルストア用テーブルの作成と削除ができる。</li>
+<li>LangChain の
+  <a href="https://pypi.org/project/langchain-postgres/"><code>langchain-postgres</code></a> パッケージ
+  を用いて <strong>C</strong>reate / <strong>R</strong>ead / <strong>U</strong>pdate / <strong>D</strong>elete をすべて試せる。</li>
+</ul>
+<p>1 本の Typer CLI (<code>scripts/postgresql/vanilla.py</code>) で両方をカバーします。
+グローバルオプション <code>--target/-T</code> (<code>docker</code> または <code>azure</code>) で接続先を
+切り替えてください。<code>azure</code> ターゲットでは <code>DefaultAzureCredential</code> 経由の
+Microsoft Entra 認証もサポートします。</p>
+<h2 id="なぜこのステップが必要か">なぜこのステップが必要か<a class="headerlink" href="#なぜこのステップが必要か" title="Permanent link">&para;</a></h2>
+<p>ステップ 1～2 では <code>InMemoryVectorStore</code> を使っていたため、Python プロセス
+を終了するとデータが消えてしまいました。実運用では再起動後も残るベクトル
+ストアが必要です。PostgreSQL に
+<a href="https://github.com/pgvector/pgvector">pgvector</a> 拡張を入れる構成は、リレー
+ショナルデータとベクトルを同じ DB で扱えるため広く採用されています。</p>
+<p>LangChain は <code>langchain-postgres</code> を介して pgvector をファーストクラスで
+サポートしているため、本リポジトリでは <code>PGVectorStore</code> API を標準採用して
+います。Azure Database for PostgreSQL Flexible Server も <code>vector</code> 拡張を
+入れた素の PostgreSQL なので、同じ <code>langchain-postgres</code> のコードがそのまま
+動きます。違うのは接続文字列と、データベースパスワードをどう用意するか
+だけです。</p>
+<p>CLI ではその差分を 1 つのヘルパー (<code>scripts/postgresql/vanilla.py</code> 内の
+<code>_build_connection_url</code>) に閉じ込めているので、将来別のデプロイ先を
+増やすときも基本的にここに分岐を 1 つ足すだけで済みます。</p>
+<p>このステップは Microsoft Learn の
+<a href="https://learn.microsoft.com/ja-jp/azure/postgresql/azure-ai/generative-ai-develop-with-langchain">Azure Database for PostgreSQL で LangChain を使う</a>
+を参考にしていますが、本リポジトリで既に固定済みの <code>langchain-postgres</code>
+を再利用し、追加の依存衝突を避ける構成にしています。詳細は下の
+<a href="#トラブルシュート">トラブルシュート</a> を参照してください。</p>
+<pre class="mermaid"><code>flowchart LR
+    Dev([開発者])
+    CLI["Typer CLI&lt;br/&gt;scripts/postgresql/vanilla.py"]
+    Docker["--target docker"]
+    Azure["--target azure"]
+    SettingsLocal["Pydantic 設定&lt;br/&gt;concierge/settings/postgres.py"]
+    SettingsAzure["Pydantic 設定&lt;br/&gt;concierge/settings/azure_postgres.py"]
+    Cred["DefaultAzureCredential&lt;br/&gt;(Entra アクセストークン)"]
+    LC["langchain-postgres&lt;br/&gt;PGVectorStore"]
+    Embed["埋め込みモデル&lt;br/&gt;(Foundry or Fake)"]
+    PG[("pgvector / PostgreSQL&lt;br/&gt;compose サービス")]
+    AzurePG[("Azure Database for PostgreSQL&lt;br/&gt;Flexible Server + pgvector")]
+
+    Dev --&gt; CLI
+    CLI --&gt;|"既定"| Docker
+    CLI --&gt; Azure
+    Docker --&gt; SettingsLocal
+    Azure --&gt; SettingsAzure
+    Azure --&gt;|"AZURE_USE_ENTRA_AUTH=true"| Cred
+    CLI --&gt; LC
+    CLI --&gt; Embed
+    SettingsLocal --&gt; LC
+    SettingsAzure --&gt; LC
+    LC --&gt; PG
+    LC --&gt; AzurePG
+    Cred -. token .-&gt; LC
+    Embed -.-&gt; LC</code></pre>
+<h2 id="事前チェック">事前チェック<a class="headerlink" href="#事前チェック" title="Permanent link">&para;</a></h2>
+<ul class="task-list">
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled checked/><span class="task-list-indicator"></span></label> <a href="../01-foundry-langchain/">ステップ 1</a> で <code>uv</code> 環境を整備済みである。</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <strong><code>--target docker</code> (既定) を使う場合:</strong> <a href="https://docs.docker.com/get-docker/">Docker</a>
+      がインストール済みで起動している。</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> <strong><code>--target azure</code> を使う場合:</strong>
+      <a href="https://learn.microsoft.com/ja-jp/azure/postgresql/flexible-server/quickstart-create-server-portal">Azure Database for PostgreSQL Flexible Server</a>
+      が作成済み (または作成可能) で、
+      <a href="https://learn.microsoft.com/ja-jp/azure/postgresql/extensions/how-to-use-pgvector"><code>pgvector</code> 拡張</a>
+      が許可一覧に追加され有効化されており、Microsoft Entra 認証 (または
+      DB パスワード) の準備が済んでいる。さらに
+      <a href="https://learn.microsoft.com/ja-jp/cli/azure/install-azure-cli">Azure CLI</a>
+      にサインイン済み (<code>az login</code>) であること。</li>
+<li class="task-list-item"><label class="task-list-control"><input type="checkbox" disabled/><span class="task-list-indicator"></span></label> Microsoft Foundry の資格情報 (任意。<code>--fake-embeddings</code> で省略可)。</li>
+</ul>
+<div class="admonition tip">
+<p class="admonition-title">Azure 側の簡易プロビジョニング</p>
+<p>動作確認用のサーバが必要なときは
+<a href="https://learn.microsoft.com/ja-jp/azure/postgresql/flexible-server/quickstart-create-server-portal">Azure ポータルのクイックスタート</a>
+に従って Flexible Server を作成し、<strong>サーバ パラメータ</strong> ブレードから
+<code>pgvector</code> を有効化してください。必要な Azure 側手順は、Microsoft Learn
+の LangChain ガイドにもまとめて記載されています:
+<a href="https://learn.microsoft.com/ja-jp/azure/postgresql/azure-ai/generative-ai-develop-with-langchain">https://learn.microsoft.com/ja-jp/azure/postgresql/azure-ai/generative-ai-develop-with-langchain</a>。</p>
+</div>
+<h2 id="ターゲットを選ぶ">ターゲットを選ぶ<a class="headerlink" href="#ターゲットを選ぶ" title="Permanent link">&para;</a></h2>
+<p>CLI のグローバルオプション <code>--target/-T</code> で接続先を指定します。サブ
+コマンドやその他のフラグは両ターゲットで完全に共通です。</p>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">ターゲット</th>
+<th style="text-align: left;">利用シーン</th>
+<th style="text-align: left;">設定モジュール</th>
+<th style="text-align: center;">既定?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>docker</code></td>
+<td style="text-align: left;"><a href="https://github.com/ks6088ts-labs/concierge/blob/main/compose.yml"><code>compose.yml</code></a> の <code>pgvector/pgvector:pg18</code> サービスでローカル反復する。</td>
+<td style="text-align: left;"><a href="https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/postgres.py"><code>concierge/settings/postgres.py</code></a></td>
+<td style="text-align: center;">はい</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>azure</code></td>
+<td style="text-align: left;"><code>pgvector</code> 有効済みの <a href="https://learn.microsoft.com/ja-jp/azure/postgresql/flexible-server/overview">Azure Database for PostgreSQL Flexible Server</a>。Microsoft Entra 認証も可。</td>
+<td style="text-align: left;"><a href="https://github.com/ks6088ts-labs/concierge/blob/main/concierge/settings/azure_postgres.py"><code>concierge/settings/azure_postgres.py</code></a></td>
+<td style="text-align: center;">いいえ</td>
+</tr>
+</tbody>
+</table>
+<p>以降の手順は両ターゲットの実行例を併記しているので、自分の状況に合う方
+を選んでください。最初に <code>uv run python scripts/postgresql/vanilla.py --help</code>
+を実行して、CLI が問題なくロードされることと、表示されるヘルプが下の
+記載と一致していることを確認しておくと安心です。</p>
+<h2 id="手順">手順<a class="headerlink" href="#手順" title="Permanent link">&para;</a></h2>
+<h3 id="31-接続情報を設定する">3.1 接続情報を設定する<a class="headerlink" href="#31-接続情報を設定する" title="Permanent link">&para;</a></h3>
+<p>どちらのターゲットも環境変数 / <code>.env</code> から接続情報を読みます。ローカル
+ターゲットは <code>POSTGRES_*</code>、Azure ターゲットは <code>AZURE_*</code> のブロックを
+使います。
+<a href="https://github.com/ks6088ts-labs/concierge/blob/main/.env.template"><code>.env.template</code></a>
+の該当ブロックを <code>.env</code> にコピーしてください。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a># --- ローカル Docker Compose の pgvector (--target docker, 既定) ---
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a># 既定値は compose.yml の `postgres` サービスに揃えています。必要なときだけ上書きしてください。
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>POSTGRES_HOST=localhost
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>POSTGRES_PORT=5432
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>POSTGRES_USER=concierge
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>POSTGRES_PASSWORD=concierge
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>POSTGRES_DB=concierge
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>POSTGRES_COLLECTION=concierge_docs
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a># --- Azure Database for PostgreSQL Flexible Server (--target azure) ---
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>AZURE_DBHOST=&lt;server-name&gt;.postgres.database.azure.com
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>AZURE_DBNAME=postgres
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>AZURE_DBPORT=5432
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>AZURE_SSLMODE=require
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a># AZURE_USE_ENTRA_AUTH=true で Microsoft Entra ID 経由の認証を使います。
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>AZURE_USE_ENTRA_AUTH=true
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>AZURE_DBUSER=&lt;entra-principal-or-db-user&gt;
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a># AZURE_DBPASSWORD は AZURE_USE_ENTRA_AUTH=false のときだけ必要です。
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>AZURE_DBPASSWORD=
+</code></pre></div>
+<p>接続情報は Pydantic のモデルとして定義されています。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># concierge/settings/postgres.py</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">PostgresSettings</span><span class="p">(</span><span class="n">BaseSettings</span><span class="p">):</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">postgres_host</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;localhost&quot;</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">postgres_port</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5432</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">postgres_user</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;concierge&quot;</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">postgres_password</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;concierge&quot;</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">postgres_db</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;concierge&quot;</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="n">postgres_collection</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;concierge_docs&quot;</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="c1"># concierge/settings/azure_postgres.py</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="k">class</span><span class="w"> </span><span class="nc">AzurePostgresSettings</span><span class="p">(</span><span class="n">BaseSettings</span><span class="p">):</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    <span class="n">dbhost</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    <span class="n">dbname</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>    <span class="n">dbuser</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    <span class="n">dbpassword</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>    <span class="n">dbport</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5432</span>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a>    <span class="n">sslmode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;require&quot;</span>
+<a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a>    <span class="n">use_entra_auth</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+<a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a>    <span class="n">entra_token_scope</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;https://ossrdbms-aad.database.windows.net/.default&quot;</span>
+<a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a>
+<a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a>    <span class="n">model_config</span> <span class="o">=</span> <span class="n">SettingsConfigDict</span><span class="p">(</span><span class="n">env_prefix</span><span class="o">=</span><span class="s2">&quot;AZURE_&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="32-接続先を起動する-またはサインインする">3.2 接続先を起動する (またはサインインする)<a class="headerlink" href="#32-接続先を起動する-またはサインインする" title="Permanent link">&para;</a></h3>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:2"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">ローカル Docker Compose</label><label for="__tabbed_1_2">Azure Flexible Server</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p><a href="https://hub.docker.com/r/pgvector/pgvector"><code>pgvector/pgvector:pg18</code></a>
+イメージを起動します。<code>vector</code> 拡張がプリインストール済みで、データは
+名前付きボリューム (<code>postgres-data</code>) に永続化されます。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>postgres
+</code></pre></div>
+<div class="admonition tip">
+<p class="admonition-title">サービスの確認・停止</p>
+<ul>
+<li><code>docker compose logs -f postgres</code> でログを tail できます。</li>
+<li><code>docker compose exec postgres psql -U concierge -d concierge</code> でコンテナ内の <code>psql</code> シェルを起動します。</li>
+<li><code>docker compose stop postgres</code> でサービスを停止します (ボリュームは保持)。</li>
+</ul>
+</div>
+</div>
+<div class="tabbed-block">
+<ol>
+<li><strong><code>vector</code> 拡張をサーバで有効化する。</strong> Azure ポータルで対象
+   Flexible Server の <strong>サーバ パラメータ</strong> を開き、<code>azure.extensions</code>
+   のカンマ区切りリストに <code>VECTOR</code> を追加して保存します
+   (サーバが再起動します)。続いて対象データベースに 1 度接続し、
+   <code>CREATE EXTENSION IF NOT EXISTS vector;</code> を実行します。CLI の
+   <code>create-table</code> でも同じ DDL を発行しますが、データベースごとの権限
+   チェックを通すために手動でも一度確認しておくと安全です。</li>
+<li>
+<p><strong>Microsoft Entra 認証を構成する (推奨)。</strong> Azure ポータルで
+   Flexible Server の
+   <a href="https://learn.microsoft.com/ja-jp/azure/postgresql/flexible-server/how-to-configure-sign-in-azure-ad-authentication">Microsoft Entra 認証を有効化</a>
+   し、自身 (または所属グループ) を Entra 管理者として追加します。
+   そのプリンシパルをそのまま使うか、管理者接続から対応する
+   PostgreSQL ロールを作成します。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1">-- 既存の Entra ユーザを PostgreSQL ロールにマッピング</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">SELECT</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="k">FROM</span><span class="w"> </span><span class="n">pgaadauth_create_principal</span><span class="p">(</span><span class="s1">&#39;&lt;entra-user@tenant&gt;&#39;</span><span class="p">,</span><span class="w"> </span><span class="k">false</span><span class="p">,</span><span class="w"> </span><span class="k">false</span><span class="p">);</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="k">GRANT</span><span class="w"> </span><span class="k">ALL</span><span class="w"> </span><span class="k">PRIVILEGES</span><span class="w"> </span><span class="k">ON</span><span class="w"> </span><span class="k">DATABASE</span><span class="w"> </span><span class="o">&lt;</span><span class="n">db</span><span class="o">&gt;</span><span class="w"> </span><span class="k">TO</span><span class="w"> </span><span class="ss">&quot;&lt;entra-user@tenant&gt;&quot;</span><span class="p">;</span>
+</code></pre></div>
+<p><code>.env</code> の <code>AZURE_DBUSER</code> にそのプリンシパル名 (例:
+<code>alice@contoso.com</code>) を設定します。パスワード認証を選ぶ場合は
+<code>AZURE_USE_ENTRA_AUTH=false</code> にして <code>AZURE_DBPASSWORD</code> を埋めます。</p>
+</li>
+<li>
+<p><strong>Azure CLI でサインインする。</strong> <code>DefaultAzureCredential</code> が
+   資格情報を参照できるようにします。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>az<span class="w"> </span>login
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="c1"># (任意) アクティブなサブスクリプションを確認</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>az<span class="w"> </span>account<span class="w"> </span>show<span class="w"> </span>--query<span class="w"> </span><span class="s2">&quot;{name:name, id:id}&quot;</span><span class="w"> </span>-o<span class="w"> </span>table
+</code></pre></div>
+</li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Entra トークンの有効期限</p>
+<p>Entra アクセストークンの有効期間は通常 1 時間程度と短いです。CLI
+は実行ごとにフレッシュなトークンを取得するため、<code>uv run python …</code>
+を走らせるたびに新しい接続が張られます。長寿命のサービスでは別途
+トークン更新ロジックを用意してください。</p>
+</div>
+</div>
+</div>
+</div>
+<h3 id="33-ベクトルテーブルを作成する">3.3 ベクトルテーブルを作成する<a class="headerlink" href="#33-ベクトルテーブルを作成する" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># ローカル (既定の --target docker)</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>create-table
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Azure</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--target<span class="w"> </span>azure<span class="w"> </span>create-table
+</code></pre></div>
+<p>内部では
+<a href="https://github.com/langchain-ai/langchain-postgres"><code>PGEngine.init_vectorstore_table</code></a>
+を呼び出します。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">langchain_postgres</span><span class="w"> </span><span class="kn">import</span> <span class="n">PGEngine</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="n">engine</span> <span class="o">=</span> <span class="n">PGEngine</span><span class="o">.</span><span class="n">from_connection_string</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="n">connection_url</span><span class="p">)</span>  <span class="c1"># --target ごとに組み立て</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="n">engine</span><span class="o">.</span><span class="n">init_vectorstore_table</span><span class="p">(</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>    <span class="n">table_name</span><span class="o">=</span><span class="s2">&quot;concierge_docs&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>    <span class="n">vector_size</span><span class="o">=</span><span class="mi">1536</span><span class="p">,</span>  <span class="c1"># text-embedding-3-small の次元数</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="p">)</span>
+</code></pre></div>
+<p>埋め込みモデルを変えるときは <code>--vector-size</code> を渡してください (例:
+<code>text-embedding-3-large</code> は 3072)。前回作成済みのテーブルを置き換える
+場合は <code>--overwrite</code> を付けます。</p>
+<h3 id="34-サンプル文書を一括投入する-create">3.4 サンプル文書を一括投入する (Create)<a class="headerlink" href="#34-サンプル文書を一括投入する-create" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>bulk-create
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1"># Azure 側に投入するとき:</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--target<span class="w"> </span>azure<span class="w"> </span>bulk-create
+</code></pre></div>
+<p><code>bulk-create</code> サブコマンドは 4 件のサンプル文書を投入するので、続く検索
+が成立します。任意の文書を 1 件だけ追加するときは <code>create</code> を使います。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">    </span>--id<span class="w"> </span>ml<span class="w"> </span>--source<span class="w"> </span>manual<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">    </span>--text<span class="w"> </span><span class="s2">&quot;Machine learning models are trained on data.&quot;</span>
+</code></pre></div>
+<h3 id="35-検索と取得-read">3.5 検索と取得 (Read)<a class="headerlink" href="#35-検索と取得-read" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># クエリに近い上位 3 件</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>search<span class="w"> </span>--query<span class="w"> </span><span class="s2">&quot;fruit&quot;</span><span class="w"> </span>--k<span class="w"> </span><span class="m">3</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="c1"># id 指定で個別取得</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span><span class="nb">read</span><span class="w"> </span>--id<span class="w"> </span>apple<span class="w"> </span>--id<span class="w"> </span>car
+</code></pre></div>
+<h3 id="36-更新と削除">3.6 更新と削除<a class="headerlink" href="#36-更新と削除" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>update<span class="w"> </span>--id<span class="w"> </span>apple<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">    </span>--text<span class="w"> </span><span class="s2">&quot;Apples, oranges, and bananas are fruits.&quot;</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>delete<span class="w"> </span>--id<span class="w"> </span>apple<span class="w"> </span>--id<span class="w"> </span>car
+</code></pre></div>
+<p><code>update</code> は同じ id で <code>delete</code> → <code>create</code> を行う実装にしているため、埋
+め込みベクトルも作り直されます。</p>
+<h3 id="37-埋め込みデプロイなしで通しで試す">3.7 埋め込みデプロイなしで通しで試す<a class="headerlink" href="#37-埋め込みデプロイなしで通しで試す" title="Permanent link">&para;</a></h3>
+<p>Microsoft Foundry の用意が間に合わないときはグローバルフラグ
+<code>--fake-embeddings</code> を付けると CLI が
+<a href="https://docs.langchain.com/oss/python/integrations/vectorstores/index"><code>DeterministicFakeEmbedding</code></a>
+を使うようになり、再現性のあるオフライン埋め込みになります。フラグの動
+作は両ターゲットで同じで、埋め込み計算をローカル化しつつ DB 接続は
+指定したターゲットへ向かいます。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># 純ローカルの確認 (既定の --target docker)</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--fake-embeddings<span class="w"> </span>create-table<span class="w"> </span>--overwrite
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--fake-embeddings<span class="w"> </span>bulk-create
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--fake-embeddings<span class="w"> </span>search<span class="w"> </span>--query<span class="w"> </span><span class="s2">&quot;fruit&quot;</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="c1"># Azure 接続パスだけを確認したい場合</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--target<span class="w"> </span>azure<span class="w"> </span>--fake-embeddings<span class="w"> </span>create-table<span class="w"> </span>--overwrite
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--target<span class="w"> </span>azure<span class="w"> </span>--fake-embeddings<span class="w"> </span>bulk-create
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--target<span class="w"> </span>azure<span class="w"> </span>--fake-embeddings<span class="w"> </span>search<span class="w"> </span>--query<span class="w"> </span><span class="s2">&quot;fruit&quot;</span>
+</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">フェイク埋め込みは意味検索になりません</p>
+<p><code>DeterministicFakeEmbedding</code> は安定はしますが意味のないベクトルを
+返すので、類似度スコアは見栄えだけで実意味は持ちません。</p>
+</div>
+<h3 id="38-後片付け">3.8 後片付け<a class="headerlink" href="#38-後片付け" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># ローカル</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>drop-table
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>docker<span class="w"> </span>compose<span class="w"> </span>stop<span class="w"> </span>postgres
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="c1"># Azure (Flexible Server 自体は影響を受けず、concierge_docs テーブルだけ削除されます)</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--target<span class="w"> </span>azure<span class="w"> </span>drop-table
+</code></pre></div>
+<h2 id="動作確認">動作確認<a class="headerlink" href="#動作確認" title="Permanent link">&para;</a></h2>
+<p><code>--fake-embeddings</code> を使った典型的な出力例は次の通りです。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>[create-table] table &#39;concierge_docs&#39; ready (vector_size=1536, overwrite=False)
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>[bulk-create] inserted 4 sample documents into &#39;concierge_docs&#39;
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>[search] query=&#39;fruit&#39; k=3
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>  - id=apple text=&#39;Apples and oranges are fruits.&#39; metadata={&#39;source&#39;: &#39;seed&#39;}
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>  - id=dog   text=&#39;Dogs and cats are common pets.&#39; metadata={&#39;source&#39;: &#39;seed&#39;}
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>  - id=train text=&#39;A train runs on rails.&#39;         metadata={&#39;source&#39;: &#39;seed&#39;}
+</code></pre></div>
+<h3 id="crud-全コマンドの実行手順-動作確認済み">CRUD 全コマンドの実行手順 (動作確認済み)<a class="headerlink" href="#crud-全コマンドの実行手順-動作確認済み" title="Permanent link">&para;</a></h3>
+<p>以下の 11 ステップで全サブコマンドを通しで実行します。<code>docker compose up -d postgres</code>
+でサービスを起動した直後の状態で、各ステップが終了ステータス 0 で完了す
+ることを確認済みです。<code>--target docker</code> を <code>--target azure</code> に置き換える
+だけで、<code>.env</code> を埋め <code>az login</code> を済ませた Flexible Server に対して
+同じ流れを実行できます。<code>--fake-embeddings</code> は埋め込み計算をオフライン
+化するためのもので、Microsoft Foundry の埋め込みデプロイが揃ったら外し
+てください。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># 1. テーブル作成 (前回の残骸があるときは --overwrite)</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--fake-embeddings<span class="w"> </span>create-table<span class="w"> </span>--overwrite
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># 2. サンプル文書を一括投入</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--fake-embeddings<span class="w"> </span>bulk-create
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="c1"># 3. 類似度検索</span>
+<a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--fake-embeddings<span class="w"> </span>search<span class="w"> </span>--query<span class="w"> </span><span class="s2">&quot;fruit&quot;</span>
+<a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>
+<a id="__codelineno-14-10" name="__codelineno-14-10" href="#__codelineno-14-10"></a><span class="c1"># 4. id 指定で取得</span>
+<a id="__codelineno-14-11" name="__codelineno-14-11" href="#__codelineno-14-11"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--fake-embeddings<span class="w"> </span><span class="nb">read</span><span class="w"> </span>--id<span class="w"> </span>apple<span class="w"> </span>--id<span class="w"> </span>dog
+<a id="__codelineno-14-12" name="__codelineno-14-12" href="#__codelineno-14-12"></a>
+<a id="__codelineno-14-13" name="__codelineno-14-13" href="#__codelineno-14-13"></a><span class="c1"># 5. 文書を 1 件追加</span>
+<a id="__codelineno-14-14" name="__codelineno-14-14" href="#__codelineno-14-14"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--fake-embeddings<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-15" name="__codelineno-14-15" href="#__codelineno-14-15"></a><span class="w">    </span>--text<span class="w"> </span><span class="s2">&quot;Sushi is a Japanese dish.&quot;</span><span class="w"> </span>--id<span class="w"> </span>sushi<span class="w"> </span>--source<span class="w"> </span>manual
+<a id="__codelineno-14-16" name="__codelineno-14-16" href="#__codelineno-14-16"></a>
+<a id="__codelineno-14-17" name="__codelineno-14-17" href="#__codelineno-14-17"></a><span class="c1"># 6. 追加した文書を取得</span>
+<a id="__codelineno-14-18" name="__codelineno-14-18" href="#__codelineno-14-18"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--fake-embeddings<span class="w"> </span><span class="nb">read</span><span class="w"> </span>--id<span class="w"> </span>sushi
+<a id="__codelineno-14-19" name="__codelineno-14-19" href="#__codelineno-14-19"></a>
+<a id="__codelineno-14-20" name="__codelineno-14-20" href="#__codelineno-14-20"></a><span class="c1"># 7. 文書を更新</span>
+<a id="__codelineno-14-21" name="__codelineno-14-21" href="#__codelineno-14-21"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--fake-embeddings<span class="w"> </span>update<span class="w"> </span>--id<span class="w"> </span>sushi<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-22" name="__codelineno-14-22" href="#__codelineno-14-22"></a><span class="w">    </span>--text<span class="w"> </span><span class="s2">&quot;Updated: Sushi is a famous Japanese dish made with vinegared rice.&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-23" name="__codelineno-14-23" href="#__codelineno-14-23"></a><span class="w">    </span>--source<span class="w"> </span>manual
+<a id="__codelineno-14-24" name="__codelineno-14-24" href="#__codelineno-14-24"></a>
+<a id="__codelineno-14-25" name="__codelineno-14-25" href="#__codelineno-14-25"></a><span class="c1"># 8. 更新内容を確認</span>
+<a id="__codelineno-14-26" name="__codelineno-14-26" href="#__codelineno-14-26"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--fake-embeddings<span class="w"> </span><span class="nb">read</span><span class="w"> </span>--id<span class="w"> </span>sushi
+<a id="__codelineno-14-27" name="__codelineno-14-27" href="#__codelineno-14-27"></a>
+<a id="__codelineno-14-28" name="__codelineno-14-28" href="#__codelineno-14-28"></a><span class="c1"># 9. 文書を削除</span>
+<a id="__codelineno-14-29" name="__codelineno-14-29" href="#__codelineno-14-29"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--fake-embeddings<span class="w"> </span>delete<span class="w"> </span>--id<span class="w"> </span>sushi
+<a id="__codelineno-14-30" name="__codelineno-14-30" href="#__codelineno-14-30"></a>
+<a id="__codelineno-14-31" name="__codelineno-14-31" href="#__codelineno-14-31"></a><span class="c1"># 10. 削除を確認 (&quot;no documents found&quot; が出れば OK)</span>
+<a id="__codelineno-14-32" name="__codelineno-14-32" href="#__codelineno-14-32"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--fake-embeddings<span class="w"> </span><span class="nb">read</span><span class="w"> </span>--id<span class="w"> </span>sushi
+<a id="__codelineno-14-33" name="__codelineno-14-33" href="#__codelineno-14-33"></a>
+<a id="__codelineno-14-34" name="__codelineno-14-34" href="#__codelineno-14-34"></a><span class="c1"># 11. テーブルを削除</span>
+<a id="__codelineno-14-35" name="__codelineno-14-35" href="#__codelineno-14-35"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--fake-embeddings<span class="w"> </span>drop-table
+</code></pre></div>
+<p>各ステップで観測される代表的な出力は以下の通りです。</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>サブコマンド</th>
+<th>期待する出力</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>create-table --overwrite</code></td>
+<td><code>[create-table] table 'concierge_docs' ready (vector_size=1536, overwrite=True)</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>bulk-create</code></td>
+<td><code>[bulk-create] inserted 4 sample documents into 'concierge_docs'</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>search</code></td>
+<td><code>[search] query='fruit' k=3</code> と 3 件の結果行</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>read apple dog</code></td>
+<td><code>- id=... text=...</code> が 2 行</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>create sushi</code></td>
+<td><code>[create] id=sushi text='Sushi is a Japanese dish.' metadata={'source': 'manual'}</code></td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>read sushi</code></td>
+<td><code>sushi</code> の結果行 1 件</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>update sushi</code></td>
+<td><code>[update] id=sushi text='Updated: ...' metadata={'source': 'manual'}</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>read sushi</code></td>
+<td>更新後のテキストが表示される</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>delete sushi</code></td>
+<td><code>[delete] deleted ids=['sushi']</code></td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>read sushi</code></td>
+<td><code>[read] no documents found for ids=['sushi']</code></td>
+</tr>
+<tr>
+<td>11</td>
+<td><code>drop-table</code></td>
+<td><code>[drop-table] table 'concierge_docs' dropped</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="azure-ターゲットのオフライン疎通確認">Azure ターゲットのオフライン疎通確認<a class="headerlink" href="#azure-ターゲットのオフライン疎通確認" title="Permanent link">&para;</a></h3>
+<p>Azure アカウントが手元になくても、CLI がロードできることと、必要な環境
+変数が未設定の場合にきちんとエラーになることは確認できます。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># 1. help の表示は Azure に接続しないので最初の確認に最適</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--help
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># 2. AZURE_DBHOST / AZURE_DBNAME が未設定なら --target azure のサブコマンドは</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="c1">#    Typer の BadParameter で不足変数を告げて終了します。CLI は起動時に</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="c1">#    `load_dotenv(override=True)` を呼ぶため、一時的に `.env` を退避させるのが</span>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="c1">#    最も手っ取り早いシミュレート方法です。</span>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>mv<span class="w"> </span>.env<span class="w"> </span>.env.bak<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">true</span>
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>scripts/postgresql/vanilla.py<span class="w"> </span>--target<span class="w"> </span>azure<span class="w"> </span>--fake-embeddings<span class="w"> </span>create-table<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a><span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;(想定どおり) AZURE_DBHOST / AZURE_DBNAME が未設定 (exit code 2)&quot;</span>
+<a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a>mv<span class="w"> </span>.env.bak<span class="w"> </span>.env<span class="w"> </span><span class="m">2</span>&gt;/dev/null<span class="w"> </span><span class="o">||</span><span class="w"> </span><span class="nb">true</span>
+</code></pre></div>
+<p>ステップ 2 で期待されるメッセージ:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>Usage: vanilla.py create-table [OPTIONS]
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>Try &#39;vanilla.py create-table --help&#39; for help.
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>╭─ Error ──────────────────────────────────────────────────────────────────────╮
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>│ Invalid value: AZURE_DBHOST and AZURE_DBNAME must be set in the environment  │
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>│ (.env). See .env.template for the required Azure PostgreSQL variables.       │
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>╰──────────────────────────────────────────────────────────────────────────────╯
+</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title"><code>.env</code> のリネームについて</p>
+<p>上記の <code>mv .env .env.bak</code> / <code>mv .env.bak .env</code> は未設定状態をシミュレートする
+ためだけの手順です。<code>.env</code> をすでに埋めて Flexible Server に接続する場合は
+この 2 行は不要です。</p>
+</div>
+<h2 id="トラブルシュート">トラブルシュート<a class="headerlink" href="#トラブルシュート" title="Permanent link">&para;</a></h2>
+<details class="failure">
+<summary>CLI 実行時に <code>connection refused</code> が出る (<code>--target docker</code>)</summary>
+<p><code>docker compose up -d postgres</code> で Compose サービスが起動しているか、
+<code>.env</code> の <code>POSTGRES_HOST</code> / <code>POSTGRES_PORT</code> が Docker が公開するポート
+と一致しているかを確認してください。</p>
+</details>
+<details class="failure">
+<summary><code>extension \"vector\" is not available</code> (<code>--target docker</code>)</summary>
+<p>既定の <code>pgvector/pgvector:pg18</code> イメージには拡張が同梱されており、
+テーブル初期化時に <code>CREATE EXTENSION IF NOT EXISTS vector</code> が走ります。
+<code>postgres:*</code> 系の素の image に差し替える場合は pgvector を手動で
+インストールしてください。</p>
+</details>
+<details class="failure">
+<summary>insert 時に <code>dimension mismatch</code> が出る</summary>
+<p><code>create-table</code> で固定次元のカラムを作成しています。以降のコマンドにも同じ
+<code>--vector-size</code> を渡すか、埋め込みモデルを変えたときはテーブルを
+<code>drop-table</code> → <code>create-table</code> し直してください。</p>
+</details>
+<details class="failure">
+<summary><code>AZURE_DBHOST and AZURE_DBNAME must be set in the environment (.env)</code></summary>
+<p><code>--target azure</code> でこれら 2 つの変数が未設定または空のときに CLI が
+<code>typer.BadParameter</code> で失敗します。<code>.env.template</code> の Azure 用ブロック
+を <code>.env</code> にコピーして値を埋めて再実行してください。</p>
+</details>
+<details class="failure">
+<summary><code>AZURE_DBUSER must be set to the Entra principal name</code></summary>
+<p><code>AZURE_USE_ENTRA_AUTH=true</code> のときは <code>AZURE_DBUSER</code> に、サーバ側で
+PostgreSQL ロールが付与済みの Entra プリンシパル名を入れてください。
+あるいはパスワード認証に切り替える (<code>AZURE_USE_ENTRA_AUTH=false</code> と
+<code>AZURE_DBPASSWORD</code> を設定) ことも選べます。</p>
+</details>
+<details class="failure">
+<summary><code>FATAL: password authentication failed</code> (<code>--target azure</code>)</summary>
+<p>Entra プリンシパルが PostgreSQL ロールとして登録されていないか、
+アクセストークンの audience が Azure PostgreSQL 向けでない可能性が
+あります。
+<a href="https://learn.microsoft.com/ja-jp/azure/postgresql/flexible-server/how-to-configure-sign-in-azure-ad-authentication">Microsoft Entra 認証のセットアップ</a>
+を見直し、<code>az login</code> をやり直してください。テナント固有の audience
+が必要な場合のみ <code>AZURE_ENTRA_TOKEN_SCOPE</code> を上書きします。</p>
+</details>
+<details class="failure">
+<summary><code>extension \"vector\" is not available</code> (<code>--target azure</code>)</summary>
+<p><strong>サーバ パラメータ</strong> の <code>azure.extensions</code> に <code>VECTOR</code> を追加し、
+サーバ再起動後に対象データベースで一度
+<code>CREATE EXTENSION IF NOT EXISTS vector;</code> を実行してください。詳細は
+<a href="https://learn.microsoft.com/ja-jp/azure/postgresql/extensions/how-to-use-pgvector">how-to-use-pgvector</a>
+を参照。</p>
+</details>
+<details class="failure">
+<summary><code>SSL connection is required</code> (<code>--target azure</code>)</summary>
+<p>接続文字列は既定で <code>sslmode=require</code> を付けます。<code>AZURE_SSLMODE</code> を
+上書きした場合は <code>require</code> (または <code>verify-full</code>) に戻してください。</p>
+</details>
+<details class="failure">
+<summary><code>pgvector</code> と <code>langchain-azure-postgresql</code> のバージョン衝突</summary>
+<p><code>langchain-azure-postgresql</code> は <code>pgvector&gt;=0.4,&lt;0.5</code> を要求しますが、
+本リポジトリの <code>langchain-postgres==0.0.17</code> は <code>pgvector&gt;=0.2.5,&lt;0.4</code>
+を要求するため、現時点では同居できません。CLI が
+<code>langchain-postgres</code> を再利用し、Azure 向けの接続文字列を組み立て
+る形にしているのはこのためです。詳細は
+<a href="https://github.com/ks6088ts-labs/concierge/blob/main/scripts/postgresql/vanilla.py"><code>scripts/postgresql/vanilla.py</code></a>
+の冒頭 docstring を参照してください。</p>
+</details>
+<h2 id="次のステップ">次のステップ<a class="headerlink" href="#次のステップ" title="Permanent link">&para;</a></h2>
+<p>これで再起動後も残るベクトルストアを、ローカル Compose とマネージド
+Azure サーバの両方で同じ CLI から扱えるようになりました。自然な次の一手は、
+Azure Flexible Server や関連リソースを
+<a href="https://learn.microsoft.com/ja-jp/azure/azure-resource-manager/bicep/">Bicep</a> や
+<a href="https://learn.microsoft.com/ja-jp/azure/developer/terraform/overview">Terraform</a>
+などの Infrastructure as Code でプロビジョニングすることです。</p>
+
+
+
+
+
+
+
+  
+  
+
+
+
+  
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.linkedin.com/in/ks6088ts/" target="_blank" rel="noopener" title="www.linkedin.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3M135.4 416H69V202.2h66.5V416zM102.2 96a38.5 38.5 0 1 1 0 77 38.5 38.5 0 1 1 0-77m282.1 320h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/ks6088ts" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://x.com/ks6088ts" target="_blank" rel="noopener" title="x.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M357.2 48h70.6L273.6 224.2 455 464H313L201.7 318.6 74.5 464H3.8l164.9-188.5L-5.2 48h145.6l100.5 132.9zm-24.8 373.8h39.1L119.1 88h-42z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": [], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "\u30b3\u30d4\u30fc\u3057\u307e\u3057\u305f", "clipboard.copy": "\u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u3078\u30b3\u30d4\u30fc", "search.result.more.one": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3082\u30461\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.more.other": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3042\u3068#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.none": "\u4f55\u3082\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f", "search.result.one": "1\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.other": "#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.placeholder": "\u691c\u7d22\u30ad\u30fc\u30ef\u30fc\u30c9\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044", "search.result.term.missing": "\u691c\u7d22\u306b\u542b\u307e\u308c\u306a\u3044", "select.version": "\u30d0\u30fc\u30b8\u30e7\u30f3\u5207\u308a\u66ff\u3048"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

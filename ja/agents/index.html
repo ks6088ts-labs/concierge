@@ -1,0 +1,2676 @@
+
+<!doctype html>
+<html lang="ja" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="cloud_agent と chat で共有されるトランスポート非依存エージェント契約">
+      
+      
+      
+        <link rel="canonical" href="https://ks6088ts-labs.github.io/concierge/ja/agents/">
+      
+      
+        <link rel="prev" href="../chat/cli/">
+      
+      
+        <link rel="next" href="cli/">
+      
+      
+        
+          <link rel="alternate" href="../../agents/" hreflang="en">
+        
+          <link rel="alternate" href="./" hreflang="ja">
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>共有エージェントランタイム (日本語) - concierge</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+  
+
+
+  
+  
+
+<script id="__analytics">function __md_analytics(){function e(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],e("js",new Date),e("config","G-0ZTKFXVQ5K"),document.addEventListener("DOMContentLoaded",(function(){document.forms.search&&document.forms.search.query.addEventListener("blur",(function(){this.value&&e("event","search",{search_term:this.value})}));document$.subscribe((function(){var t=document.forms.feedback;if(void 0!==t)for(var a of t.querySelectorAll("[type=submit]"))a.addEventListener("click",(function(a){a.preventDefault();var n=document.location.pathname,d=this.getAttribute("data-md-value");e("event","feedback",{page:n,data:d}),t.firstElementChild.disabled=!0;var r=t.querySelector(".md-feedback__note [data-md-value='"+d+"']");r&&(r.hidden=!1)})),t.hidden=!1})),location$.subscribe((function(t){e("config","G-0ZTKFXVQ5K",{page_path:t.pathname})}))}));var t=document.createElement("script");t.async=!0,t.src="https://www.googletagmanager.com/gtag/js?id=G-0ZTKFXVQ5K",document.getElementById("__analytics").insertAdjacentElement("afterEnd",t)}</script>
+  
+    <script>"undefined"!=typeof __md_analytics&&__md_analytics()</script>
+  
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#概要" class="md-skip">
+          コンテンツにスキップ
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="ヘッダー">
+    <a href="../" title="concierge" class="md-header__button md-logo" aria-label="concierge" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            concierge
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              共有エージェントランタイム (日本語)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9zM20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12zm-9.15 3.96h2.3L12 9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="言語切り替え">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="../../agents/" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="ja" class="md-select__link">
+              日本語
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="検索" placeholder="検索" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="検索">
+        
+        <button type="reset" class="md-search__icon md-icon" title="クリア" aria-label="クリア" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            検索を初期化
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/ks6088ts-labs/concierge" title="リポジトリへ" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ks6088ts-labs/concierge
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="ナビゲーション" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../" title="concierge" class="md-nav__button md-logo" aria-label="concierge" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    concierge
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/ks6088ts-labs/concierge" title="リポジトリへ" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ks6088ts-labs/concierge
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hands-on Tutorial
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Hands-on Tutorial
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/01-foundry-langchain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Microsoft Foundry + LangChain
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/02-observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Observability (Tracing & MLflow)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/03-postgres-vector-store/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. PostgreSQL (pgvector) CRUD
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/04-langgraph-todo-agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. LangGraph Todo Agent CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/05-mlflow-genai-evaluation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. MLflow GenAI Evaluation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/appendix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Appendix - References
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/appendix-azure-environment-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Appendix - Azure Environment Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/appendix-monitor-vscode-copilot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Appendix - Monitor VS Code Copilot (App Insights)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/appendix-deploy-azure-container-apps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Appendix - Deploy to Azure Container Apps (Terraform)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Todo App (Clean Architecture)
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Todo App (Clean Architecture)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../todo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../todo/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    REST API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../todo/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chat App (Clean Architecture)
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Chat App (Clean Architecture)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../chat/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../chat/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    REST API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../chat/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shared Agent Runtime
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Shared Agent Runtime
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="目次">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目次
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#概要" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        概要
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ディレクトリ構成" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ディレクトリ構成
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#契約" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        契約
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="契約">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agentrequest--agentresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AgentRequest / AgentResponse
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Protocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#組み込みエージェント" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        組み込みエージェント
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#設定" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        設定
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#knowledge-retrieval-tools環境変数駆動" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Knowledge retrieval tools（環境変数駆動）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Knowledge retrieval tools（環境変数駆動）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#環境変数スキーマagents_knowledge__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        環境変数スキーマ（AGENTS_KNOWLEDGE__*）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#最小動作確認手順docs--langgraph-エージェント" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        最小動作確認手順（docs/ → LangGraph エージェント）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#azure-database-for-postgresql-に向ける" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Azure Database for PostgreSQL に向ける
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#search_docs-ツールの動作確認とよくある失敗の見分け方" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        search_docs ツールの動作確認とよくある失敗の見分け方
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cloud_agent-ワーカーからの利用" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cloud_agent ワーカーからの利用
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chat-からの利用" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        chat からの利用
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#エージェント別の最小動作検証手順" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        エージェント別の最小動作検証手順
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="エージェント別の最小動作検証手順">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#echo-llm-不要" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        echo (LLM 不要)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#langgraph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        langgraph
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#github-copilot-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        github-copilot-sdk
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#microsoft-agent-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        microsoft-agent-framework
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#foundry-agent-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        foundry-agent-service
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#image-generate-llm-経由なしの直接実行" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        image generate (LLM 経由なしの直接実行)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#依存方向" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        依存方向
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cloud Agent App (Clean Architecture)
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Cloud Agent App (Clean Architecture)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cloud_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cloud_agent/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    REST API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cloud_agent/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge Indexer (pgvector)
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Knowledge Indexer (pgvector)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../knowledge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../knowledge/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="目次">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      目次
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#概要" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        概要
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ディレクトリ構成" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ディレクトリ構成
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#契約" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        契約
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="契約">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agentrequest--agentresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AgentRequest / AgentResponse
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Protocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#組み込みエージェント" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        組み込みエージェント
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#設定" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        設定
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#knowledge-retrieval-tools環境変数駆動" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Knowledge retrieval tools（環境変数駆動）
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Knowledge retrieval tools（環境変数駆動）">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#環境変数スキーマagents_knowledge__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        環境変数スキーマ（AGENTS_KNOWLEDGE__*）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#最小動作確認手順docs--langgraph-エージェント" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        最小動作確認手順（docs/ → LangGraph エージェント）
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#azure-database-for-postgresql-に向ける" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Azure Database for PostgreSQL に向ける
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#search_docs-ツールの動作確認とよくある失敗の見分け方" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        search_docs ツールの動作確認とよくある失敗の見分け方
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cloud_agent-ワーカーからの利用" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        cloud_agent ワーカーからの利用
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chat-からの利用" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        chat からの利用
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#エージェント別の最小動作検証手順" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        エージェント別の最小動作検証手順
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="エージェント別の最小動作検証手順">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#echo-llm-不要" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        echo (LLM 不要)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#langgraph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        langgraph
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#github-copilot-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        github-copilot-sdk
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#microsoft-agent-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        microsoft-agent-framework
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#foundry-agent-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        foundry-agent-service
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#image-generate-llm-経由なしの直接実行" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        image generate (LLM 経由なしの直接実行)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#依存方向" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        依存方向
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+  <h1>Overview</h1>
+
+<h2 id="概要">概要<a class="headerlink" href="#概要" title="Permanent link">&para;</a></h2>
+<p><code>concierge/agents</code> は、トランスポート非依存のエージェント契約
+（<code>AgentRequest</code> / <code>AgentResponse</code> / <code>Agent</code> Protocol / <code>AgentRegistry</code>）を定義する
+<strong>共有バウンデッドコンテキスト</strong>です。<code>cloud_agent</code> ワーカと <code>chat</code> の AI 応答経路の
+両方から同一のエージェント実装を呼び出すことができます。</p>
+<pre class="mermaid"><code>flowchart LR
+    chat[chat ChatbotResponder] --&gt; Registry
+    cloud_agent[cloud_agent ワーカー] --&gt; Registry
+    Registry[AgentRegistry] --&gt; Echo[EchoAgent]
+    Registry --&gt; LG["LangGraphAgent\n(langgraph)"]
+    Registry --&gt; GCE[GitHubCopilotSdkAgent]
+    Registry --&gt; MAF["MicrosoftAgentFrameworkAgent\n(microsoft-agent-framework)"]
+    Registry --&gt; FAS["FoundryAgentServiceAgent\n(foundry-agent-service)"]
+    subgraph agents["concierge/agents (共有カーネル)"]
+        Registry
+        Echo
+        LG
+        GCE
+        MAF
+        FAS
+    end</code></pre>
+<h2 id="ディレクトリ構成">ディレクトリ構成<a class="headerlink" href="#ディレクトリ構成" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>concierge/agents/
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  domain/
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    agent_types.py         # AgentType (StrEnum) — agent_type 定数・preset 識別子
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    exceptions.py          # AgentNotFoundError, AgentExecutionError
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  application/
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    contracts.py           # AgentRequest, AgentResponse, AgentChunk, Agent, StreamingAgent
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    registry.py            # AgentRegistry
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>  infrastructure/
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    echo_agent.py                          # EchoAgent (LLM 不要)
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    github_copilot_sdk_agent.py           # GitHubCopilotSdkAgent
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    langgraph_agent.py                     # LangGraphAgent (preset ごとに tools を代入)
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    microsoft_agent_framework_agent.py     # MicrosoftAgentFrameworkAgent (preset 構成可)
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    foundry_agent_service_agent.py         # FoundryAgentServiceAgent (Azure AI Foundry Prompt Agent)
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    tools/
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>      echo_tool.py             # build_echo_langchain_tool / build_echo_maf_tool
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>      file_management.py       # sandboxed file operation core（パス検証 + IO）
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>      file_management_tool.py  # LangChain / MAF / Copilot SDK 向け file tool builders
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>      shell_command.py         # 許可リスト方式 shell 実行コア（shell=False subprocess）
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>      shell_command_tool.py    # LangChain / MAF / Copilot SDK 向け shell tool builders
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>      image_generation.py      # フレームワーク不要の generate_image() 関数
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>      image_generation_tool.py # image_gen_langchain_tool_factory / image_gen_maf_tool_factory
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>    registry_factory.py    # get_agent_registry() — 統合クラス + preset を配線
+</code></pre></div>
+<h2 id="契約">契約<a class="headerlink" href="#契約" title="Permanent link">&para;</a></h2>
+<h3 id="agentrequest--agentresponse">AgentRequest / AgentResponse<a class="headerlink" href="#agentrequest--agentresponse" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">concierge.agents.application.contracts</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentRequest</span><span class="p">,</span> <span class="n">AgentResponse</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">request</span> <span class="o">=</span> <span class="n">AgentRequest</span><span class="p">(</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">agent_type</span><span class="o">=</span><span class="s2">&quot;echo&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">payload</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;こんにちは&quot;</span><span class="p">},</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;conversation_id&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;uuid&gt;&quot;</span><span class="p">},</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">)</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="n">response</span><span class="p">:</span> <span class="n">AgentResponse</span> <span class="o">=</span> <span class="k">await</span> <span class="n">agent</span><span class="o">.</span><span class="n">handle</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1"># response.status: &quot;succeeded&quot; | &quot;failed&quot;</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="c1"># response.result: dict | None</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="c1"># response.error: str | None</span>
+</code></pre></div>
+<h3 id="agent-protocol">Agent Protocol<a class="headerlink" href="#agent-protocol" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">concierge.agents.application.contracts</span><span class="w"> </span><span class="kn">import</span> <span class="n">Agent</span><span class="p">,</span> <span class="n">AgentRequest</span><span class="p">,</span> <span class="n">AgentResponse</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyAgent</span><span class="p">:</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="c1"># ``agent_type`` はクラス属性とインスタンス属性のどちらでも可。</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="c1"># 複数 preset を同一クラスで提供する場合 (`LangGraphAgent` など) は</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="c1"># インスタンス属性とする。</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">agent_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;my-agent&quot;</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">AgentRequest</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AgentResponse</span><span class="p">:</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        <span class="o">...</span>
+</code></pre></div>
+<h2 id="組み込みエージェント">組み込みエージェント<a class="headerlink" href="#組み込みエージェント" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>agent_type</th>
+<th>クラス</th>
+<th>説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>echo</code></td>
+<td><code>EchoAgent</code></td>
+<td><code>payload.message</code> をそのまま返す。LLM 不要。</td>
+</tr>
+<tr>
+<td><code>langgraph</code></td>
+<td><code>LangGraphAgent</code></td>
+<td><code>echo</code> / <code>generate_image_tool</code> と、共有のサンドボックス化ファイル操作ツール（デフォルト: <code>read_file</code> / <code>list_directory</code> / <code>file_search</code>）、単一ページ取得ツール（デフォルト: <code>fetch_webpage</code>）、および任意有効化の許可リスト方式 shell ツール（<code>shell_exec</code>）を備える LangGraph (<code>create_agent</code>) preset。LLM がユーザー入力に応じてツールを選択します。</td>
+</tr>
+<tr>
+<td><code>github-copilot-sdk</code></td>
+<td><code>GitHubCopilotSdkAgent</code></td>
+<td>リクエストごとに GitHub Copilot SDK セッションを開き、ユーザーメッセージを <code>send</code> し、アシスタント応答を返します。他のツール対応エージェントと同じ共有クライアント側ツールビルダーも配線されます。</td>
+</tr>
+<tr>
+<td><code>microsoft-agent-framework</code></td>
+<td><code>MicrosoftAgentFrameworkAgent</code></td>
+<td><code>echo</code> / <code>generate_image_tool</code> と、共有のサンドボックス化ファイル操作ツール（デフォルト: <code>read_file</code> / <code>list_directory</code> / <code>file_search</code>）、単一ページ取得ツール（デフォルト: <code>fetch_webpage</code>）、および任意有効化の許可リスト方式 shell ツール（<code>shell_exec</code>）を備える Microsoft Agent Framework preset。LLM がユーザー入力に応じてツールを選択します。</td>
+</tr>
+<tr>
+<td><code>foundry-agent-service</code></td>
+<td><code>FoundryAgentServiceAgent</code></td>
+<td>Azure AI Foundry の <strong>Prompt Agent</strong>（サーバーサイドホストされるエージェント）を呼び出します。初回起動時に Foundry プロジェクト上に名前付きの <code>PromptAgentDefinition</code> を作成し、<code>openai.responses.create()</code> に <code>agent_reference</code> を渡して騆動します。クライアント側のツールは読み込まれず、ツールや knowledge は Foundry 側のエージェント定義で設定します。</td>
+</tr>
+</tbody>
+</table>
+<p>クライアント側ツールに対応するエージェント (<code>langgraph</code> / <code>github-copilot-sdk</code> /
+<code>microsoft-agent-framework</code>) は <em>汎用</em> で、それぞれ全ツールビルダーを
+登録した状態で 1 度だけ登録されます。新しいツールを追加するときは
+<code>registry_factory.py</code> のリストにビルダーを追加するだけで済み、新しい
+<code>agent_type</code> を増やす必要はありません。</p>
+<p><code>foundry-agent-service</code> は <strong>サーバーサイド</strong> で、システムプロンプトや
+ツールリストは Foundry プロジェクト側に保持されます。Foundry 側でエージェント
+定義（バージョニング / 評価 / オブザーバビリティフック等）を一元管理したい
+場合に選びます。クライアント側 SDK で <code>FoundryChatClient</code> を使う側のエージェント
+が欲しい場合は <code>microsoft-agent-framework</code> を使います。</p>
+<h2 id="設定">設定<a class="headerlink" href="#設定" title="Permanent link">&para;</a></h2>
+<p>エージェント設定は <strong><code>AGENTS_</code></strong> プレフィックスの環境変数から読み込まれます。</p>
+<table>
+<thead>
+<tr>
+<th>変数</th>
+<th>デフォルト</th>
+<th>説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AGENTS_LANGGRAPH_MODEL</code></td>
+<td><code>azure_ai:gpt-5</code></td>
+<td><code>init_chat_model</code> に渡すモデル文字列。</td>
+</tr>
+<tr>
+<td><code>AGENTS_LANGGRAPH_SYSTEM_PROMPT</code></td>
+<td><em>(組み込み)</em></td>
+<td><code>langgraph</code> エージェントのシステムプロンプト。デフォルトでは <code>echo</code> / <code>generate_image_tool</code> / ファイルツール / shell ツール / <code>fetch_webpage</code> などをリクエストに応じて使い分けるよう指示します。</td>
+</tr>
+<tr>
+<td><code>AGENTS_GITHUB_COPILOT_SDK_MODEL</code></td>
+<td><code>gpt-5-mini</code></td>
+<td><code>CopilotClient.create_session(model=...)</code> に渡すモデル名。</td>
+</tr>
+<tr>
+<td><code>AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT</code></td>
+<td><em>(組み込み)</em></td>
+<td><code>github-copilot-sdk</code> 用システムプロンプト（<code>create_session</code> に <code>system_message={"mode": "replace", "content": ...}</code> として渡される）。デフォルトでは <code>echo</code> / <code>generate_image_tool</code> / ファイルツール / shell ツール / <code>fetch_webpage</code> などをリクエストに応じて使い分けるよう指示します。</td>
+</tr>
+<tr>
+<td><code>AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL</code></td>
+<td><code>gpt-5</code></td>
+<td><code>microsoft-agent-framework</code> の <code>FoundryChatClient(model=...)</code> に渡すモデル名。</td>
+</tr>
+<tr>
+<td><code>AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT</code></td>
+<td><em>(組み込み)</em></td>
+<td><code>microsoft-agent-framework</code> の <code>Agent(instructions=...)</code> に渡すシステムプロンプト。デフォルトでは <code>echo</code> / <code>generate_image_tool</code> / ファイルツール / shell ツール / <code>fetch_webpage</code> などをリクエストに応じて使い分けるよう指示します。</td>
+</tr>
+<tr>
+<td><code>AGENTS_FOUNDRY_AGENT_SERVICE_MODEL</code></td>
+<td><code>gpt-5</code></td>
+<td><code>foundry-agent-service</code> の <code>PromptAgentDefinition.model</code> に使う Foundry デプロイ名。</td>
+</tr>
+<tr>
+<td><code>AGENTS_FOUNDRY_AGENT_SERVICE_SYSTEM_PROMPT</code></td>
+<td><code>You are a helpful assistant.</code></td>
+<td>Foundry 側 <code>PromptAgentDefinition</code> に永続化される instructions。値を変更すると次回呼び出し時に新しいエージェントバージョンが作成されます。</td>
+</tr>
+<tr>
+<td><code>AGENTS_FOUNDRY_AGENT_SERVICE_AGENT_NAME</code></td>
+<td><code>concierge-foundry-agent</code></td>
+<td>Foundry 側 Prompt Agent の名前。同じ名前を使い回すと既存エージェントレコードが再利用され、環境間で分離したいときは異なる名前を設定します。</td>
+</tr>
+<tr>
+<td><code>AGENTS_FILE_ROOT_DIR</code></td>
+<td><code>""</code>（<code>&lt;cwd&gt;/workspace</code>）</td>
+<td>ファイル操作ツールの sandbox root。相対パスはカレントディレクトリ起点で解決され、起動時に自動作成されます。</td>
+</tr>
+<tr>
+<td><code>AGENTS_FILE_TOOLS_ENABLED</code></td>
+<td><code>read_file,list_directory,file_search</code></td>
+<td>有効化するファイル操作ツール名のカンマ区切り。<code>""</code> で全無効化。書き込み系（<code>write_file</code> / <code>copy_file</code> / <code>move_file</code> / <code>delete_file</code>）は明示的に opt-in が必要です。</td>
+</tr>
+<tr>
+<td><code>AGENTS_SHELL_TOOLS_ENABLED</code></td>
+<td><code>""</code></td>
+<td>有効化する shell ツール名のカンマ区切り。空文字のままなら shell ツールは無効（デフォルト・完全 opt-in）。</td>
+</tr>
+<tr>
+<td><code>AGENTS_SHELL_ALLOWED_COMMANDS</code></td>
+<td><code>""</code></td>
+<td><code>shell_exec</code> で許可するコマンド名のカンマ区切り（shell ツール有効時は必須）。コマンドパス指定は拒否されます。</td>
+</tr>
+<tr>
+<td><code>AGENTS_SHELL_ROOT_DIR</code></td>
+<td><code>""</code>（<code>AGENTS_FILE_ROOT_DIR</code> にフォールバック）</td>
+<td>shell 実行時に固定される作業ディレクトリ。</td>
+</tr>
+<tr>
+<td><code>AGENTS_SHELL_TIMEOUT_SECONDS</code></td>
+<td><code>30</code></td>
+<td>1 コマンドあたりのタイムアウト秒数。</td>
+</tr>
+<tr>
+<td><code>AGENTS_SHELL_MAX_OUTPUT_BYTES</code></td>
+<td><code>65536</code></td>
+<td><code>stdout</code> / <code>stderr</code> 各ストリームの最大バイト数（超過時は末尾に truncate マーカー付与）。</td>
+</tr>
+<tr>
+<td><code>AGENTS_WEB_TOOLS_ENABLED</code></td>
+<td><code>fetch_webpage</code></td>
+<td>有効化する web ツール名のカンマ区切り。<code>""</code> で web 取得を無効化。</td>
+</tr>
+<tr>
+<td><code>AGENTS_WEB_FETCH_TIMEOUT_SECONDS</code></td>
+<td><code>10</code></td>
+<td>1 ページ取得のタイムアウト秒数。</td>
+</tr>
+<tr>
+<td><code>AGENTS_WEB_FETCH_MAX_BYTES</code></td>
+<td><code>3000000</code></td>
+<td>truncate 前に読み込む最大レスポンスバイト数。</td>
+</tr>
+<tr>
+<td><code>AGENTS_WEB_FETCH_MAX_CONTENT_CHARS</code></td>
+<td><code>8000</code></td>
+<td>モデルへ返す抽出 Markdown の既定最大文字数。</td>
+</tr>
+<tr>
+<td><code>AGENTS_WEB_FETCH_USER_AGENT</code></td>
+<td><code>conciergebot/1.0 (+https://github.com/ks6088ts-labs/concierge)</code></td>
+<td><code>fetch_webpage</code> が送信する User-Agent。</td>
+</tr>
+<tr>
+<td><code>AGENTS_WEB_FETCH_ALLOW_DOMAINS</code></td>
+<td><code>""</code></td>
+<td>任意のカンマ区切りドメイン allowlist。空なら deny されていない公開 http(s) ホストを許可。</td>
+</tr>
+<tr>
+<td><code>AGENTS_WEB_FETCH_DENY_DOMAINS</code></td>
+<td><code>""</code></td>
+<td>任意のカンマ区切りドメイン denylist。</td>
+</tr>
+<tr>
+<td><code>AGENTS_WEB_FETCH_MAX_REDIRECTS</code></td>
+<td><code>5</code></td>
+<td>追跡する最大リダイレクト数。各リダイレクト先も再検証されます。</td>
+</tr>
+<tr>
+<td><code>AGENTS_WEB_FETCH_ALLOW_PRIVATE_IPS</code></td>
+<td><code>false</code></td>
+<td>開発・テスト用の回避設定。通常利用では <code>false</code> のままにし、private / loopback / link-local / metadata アドレスへの SSRF をブロックします。</td>
+</tr>
+<tr>
+<td><code>AGENTS_IMAGE_MODEL</code></td>
+<td><code>gpt-image-2</code></td>
+<td>共有画像生成ツールが使う Foundry デプロイ名。</td>
+</tr>
+<tr>
+<td><code>AGENTS_IMAGE_SIZE</code></td>
+<td><code>1024x1024</code></td>
+<td>既定サイズ（<code>1024x1024</code> / <code>1536x1024</code> / <code>1024x1536</code> / <code>4K</code>）。</td>
+</tr>
+<tr>
+<td><code>AGENTS_IMAGE_N</code></td>
+<td><code>1</code></td>
+<td>1 回の呼び出しで要求する既定画像枚数。</td>
+</tr>
+<tr>
+<td><code>AGENTS_IMAGE_API_VERSION</code></td>
+<td><code>2025-04-01-preview</code></td>
+<td><code>openai.AzureOpenAI</code> に渡す API バージョン。</td>
+</tr>
+</tbody>
+</table>
+<p>画像生成ツールは <a href="../tutorial/02-observability/"><code>MicrosoftFoundrySettings</code></a>
+から以下の Foundry エンドポイント変数も読み込みます:</p>
+<table>
+<thead>
+<tr>
+<th>変数</th>
+<th>デフォルト</th>
+<th>説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AZURE_AI_PROJECT_ENDPOINT</code></td>
+<td><code>""</code></td>
+<td>全エージェント共通で使う Foundry プロジェクトエンドポイント。</td>
+</tr>
+<tr>
+<td><code>AZURE_AI_PROJECT_ENDPOINT_IMAGE</code></td>
+<td><code>""</code></td>
+<td><code>gpt-image-2</code> デプロイをホストする別の Foundry プロジェクトを指す任意のオーバーライド。<code>gpt-image-2</code> は現在 GA 提供されているリージョンが限定的であるため、メインの Foundry プロジェクトが対応リージョン外の場合に設定します。空の場合は共有の <code>AZURE_AI_PROJECT_ENDPOINT</code> が使われます。</td>
+</tr>
+</tbody>
+</table>
+<p>ファイル操作ツールは <code>AGENTS_FILE_ROOT_DIR</code> 配下に厳密にサンドボックス化され、
+絶対パスやパストラバーサルは拒否されます。shell ツールも固定 <code>cwd</code> かつ
+<code>shell=False</code>、コマンド名許可リスト（<code>AGENTS_SHELL_ALLOWED_COMMANDS</code>）で実行されます。
+<code>fetch_webpage</code> は静的な HTTP(S) ページを 1 件だけ取得し、本文を Markdown として
+抽出します。リンクのクロール、Web 検索、JavaScript 実行は行いません。既定では
+非公開 IP へ解決されるホストを拒否し、各リダイレクト先も再検証します。
+書き込み系ツールや shell ツールを有効化する場合は
+<a href="https://python.langchain.com/docs/security">LangChain Security Notice</a> を必ず確認してください。</p>
+<h2 id="knowledge-retrieval-tools環境変数駆動">Knowledge retrieval tools（環境変数駆動）<a class="headerlink" href="#knowledge-retrieval-tools環境変数駆動" title="Permanent link">&para;</a></h2>
+<p><code>concierge.knowledge.application.use_cases.SearchKnowledge</code> を呼び出す
+セマンティック検索ツールを複数登録できます。ツール名や description は
+<code>AGENTS_KNOWLEDGE__*</code> で差し替え可能です。</p>
+<pre class="mermaid"><code>flowchart LR
+    LLM[LangChain / MAF / Copilot SDK Agent]
+    Tool1["search_docs tool&lt;br/&gt;(env description)"]
+    Tool2["search_runbooks tool&lt;br/&gt;(env description)"]
+    Core["search_knowledge_chunks()&lt;br/&gt;SDK 非依存コア"]
+    UC["SearchKnowledge&lt;br/&gt;(concierge.knowledge use case)"]
+    Store[(pgvector / 将来 backend)]
+
+    LLM --&gt; Tool1
+    LLM --&gt; Tool2
+    Tool1 --&gt; Core
+    Tool2 --&gt; Core
+    Core --&gt; UC
+    UC --&gt; Store</code></pre>
+<h3 id="環境変数スキーマagents_knowledge__">環境変数スキーマ（<code>AGENTS_KNOWLEDGE__*</code>）<a class="headerlink" href="#環境変数スキーマagents_knowledge__" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>変数</th>
+<th>必須</th>
+<th>説明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AGENTS_KNOWLEDGE__TOOLS</code></td>
+<td>有効化時は必須</td>
+<td>ツール名のカンマ区切り（<code>snake_case</code>、重複不可）。未設定/空なら no-op（後方互換）。</td>
+</tr>
+<tr>
+<td><code>AGENTS_KNOWLEDGE__TARGET</code></td>
+<td>任意</td>
+<td>全 knowledge ツール共通の PostgreSQL バックエンド。<code>docker</code>（<code>POSTGRES_*</code> / ローカル pgvector、既定）または <code>azure</code>（<code>AZURE_*</code> / Azure Database for PostgreSQL）。realtime 音声・text・agents の全サーフェスに反映されます。</td>
+</tr>
+<tr>
+<td><code>AGENTS_KNOWLEDGE__&lt;NAME&gt;__COLLECTION</code></td>
+<td>必須</td>
+<td>そのツールが検索する collection。</td>
+</tr>
+<tr>
+<td><code>AGENTS_KNOWLEDGE__&lt;NAME&gt;__DESCRIPTION</code></td>
+<td>任意</td>
+<td>LLM に見せる description。</td>
+</tr>
+<tr>
+<td><code>AGENTS_KNOWLEDGE__&lt;NAME&gt;__TOP_K</code></td>
+<td>任意</td>
+<td>モデルが <code>k</code> を省略した場合の既定件数（既定 <code>4</code>、上限 <code>20</code>）。</td>
+</tr>
+<tr>
+<td><code>AGENTS_KNOWLEDGE__&lt;NAME&gt;__MAX_CHARS</code></td>
+<td>任意</td>
+<td>1 hit あたりの本文上限（<code>len()</code> ベース、既定 <code>1200</code>）。</td>
+</tr>
+</tbody>
+</table>
+<p>最小 <code>.env</code> 例:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nv">AGENTS_KNOWLEDGE__TOOLS</span><span class="o">=</span>search_docs,search_runbooks
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nv">AGENTS_KNOWLEDGE__SEARCH_DOCS__COLLECTION</span><span class="o">=</span>knowledge_default
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="nv">AGENTS_KNOWLEDGE__SEARCH_DOCS__DESCRIPTION</span><span class="o">=</span>Search<span class="w"> </span>the<span class="w"> </span>product<span class="w"> </span>docs.
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="nv">AGENTS_KNOWLEDGE__SEARCH_RUNBOOKS__COLLECTION</span><span class="o">=</span>runbooks
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="nv">AGENTS_KNOWLEDGE__SEARCH_RUNBOOKS__DESCRIPTION</span><span class="o">=</span>Search<span class="w"> </span>operational<span class="w"> </span>runbooks.
+</code></pre></div>
+<p>ツール返却値は compact JSON 文字列です:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span><span class="nt">&quot;collection&quot;</span><span class="p">:</span><span class="s2">&quot;knowledge_default&quot;</span><span class="p">,</span><span class="nt">&quot;hits&quot;</span><span class="p">:[{</span><span class="nt">&quot;source&quot;</span><span class="p">:</span><span class="s2">&quot;docs/index.md&quot;</span><span class="p">,</span><span class="nt">&quot;chunk_index&quot;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="nt">&quot;score&quot;</span><span class="p">:</span><span class="mf">0.83</span><span class="p">,</span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="s2">&quot;...&quot;</span><span class="p">}],</span><span class="nt">&quot;truncated&quot;</span><span class="p">:</span><span class="kc">false</span><span class="p">}</span>
+</code></pre></div>
+<p>0 件時は <code>hits: []</code> + <code>message</code>、失敗時は
+<code>{"error":"knowledge search failed: ...","collection":"..."}</code> を返し、
+エージェント全体のクラッシュを避けます。</p>
+<blockquote>
+<p>トレース範囲: LangChain 経路は LangChain/MLflow autologging の対象です。
+Microsoft Agent Framework と GitHub Copilot SDK は SDK 側の OpenTelemetry
+span emit に依存する best-effort です。</p>
+</blockquote>
+<h3 id="最小動作確認手順docs--langgraph-エージェント">最小動作確認手順（docs/ → LangGraph エージェント）<a class="headerlink" href="#最小動作確認手順docs--langgraph-エージェント" title="Permanent link">&para;</a></h3>
+<p>環境変数駆動の knowledge ツールが
+<code>LLM → search_docs tool → SearchKnowledge use case → pgvector</code> まで
+実際に流れることを確認する最小ルートです。本リポジトリの <code>docs/</code> を
+デフォルト collection に取り込み、<code>langgraph</code> エージェントから検索します。</p>
+<blockquote>
+<p>エージェント実行時のバックエンド解決は
+<a href="../../concierge/knowledge/__init__.py"><code>get_search_knowledge_use_case</code></a>
+が行い、<code>AGENTS_KNOWLEDGE__TARGET</code>（既定 <code>docker</code> = <code>POSTGRES_*</code> ブロック、
+または <code>azure</code> = <code>AZURE_*</code> ブロック）で切り替えます。インジェストと
+エージェント検索は同じ target を指す必要があるため、以下の最小手順では
+Docker Compose の postgres（<code>docker</code> target）を使います。Azure に向ける
+手順は本節末尾の「Azure Database for PostgreSQL に向ける」を参照してください。</p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># 1. ローカル pgvector を起動（エージェント runtime と同じ target）。</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>postgres
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># 2. Entra ID 認証で Foundry（埋め込み + チャットモデル）にサインイン。</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>az<span class="w"> </span>login
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AZURE_AI_PROJECT_ENDPOINT</span><span class="o">=</span><span class="s2">&quot;https://&lt;resource&gt;.services.ai.azure.com/api/projects/&lt;project&gt;&quot;</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="c1"># 3. docs/ をデフォルト collection に取り込み。</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>uv<span class="w"> </span>run<span class="w"> </span>knowledge-cli<span class="w"> </span>ingest<span class="w"> </span>run<span class="w"> </span>--collection<span class="w"> </span>knowledge_default<span class="w"> </span>docs
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a>uv<span class="w"> </span>run<span class="w"> </span>knowledge-cli<span class="w"> </span>ingest<span class="w"> </span>stats<span class="w"> </span>--collection<span class="w"> </span>knowledge_default
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="c1"># 期待値: {&quot;collection&quot;: &quot;knowledge_default&quot;, &quot;records&quot;: &lt;N &gt; 0&gt;}</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="c1"># 4. エージェント runtime にツールを登録（.env）。</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="c1">#    AGENTS_KNOWLEDGE__TOOLS=search_docs</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="c1">#    AGENTS_KNOWLEDGE__SEARCH_DOCS__COLLECTION=knowledge_default</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="c1">#    AGENTS_KNOWLEDGE__SEARCH_DOCS__DESCRIPTION=Search the concierge docs.</span>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="c1"># 5. ツールがエージェントレジストリに登録されたことを確認。</span>
+<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>knowledge<span class="w"> </span>list
+<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="c1"># [{&quot;name&quot;:&quot;search_docs&quot;,&quot;collection&quot;:&quot;knowledge_default&quot;, ...}]</span>
+<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>
+<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="c1"># 6. LangGraph エージェントを起動し、LLM に search_docs を呼ばせる。</span>
+<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>invoke<span class="w"> </span>--agent-type<span class="w"> </span>langgraph<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="w">  </span>--message<span class="w"> </span><span class="s2">&quot;search_docs ツールを使って &#39;agents registry&#39; に関するドキュメントを取得し、要点を 3 行で要約してください。&quot;</span>
+<a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="c1"># 返却 JSON の tool_calls に search_docs が含まれ、最終メッセージで docs/ の</span>
+<a id="__codelineno-5-26" name="__codelineno-5-26" href="#__codelineno-5-26"></a><span class="c1"># 内容が引用されることを確認します。</span>
+</code></pre></div>
+<p>スモークテスト中に観測された注意点:</p>
+<ul>
+<li>AIServices S0 上の <code>text-embedding-3-small</code> は <code>docs/</code> 一括取り込み時に
+  HTTP 429 を返すことがあります。<code>IngestMarkdown</code> は all-or-nothing なので
+  途中で 429 になると collection は 0 件のままになります。60 秒程度待って
+  再実行するか、サブディレクトリ単位（例: <code>docs/agents</code>, <code>docs/chat</code> …）
+  に分割して取り込んでください。</li>
+<li>インジェスト（<code>knowledge-cli --target azure</code>）とエージェント検索
+  （<code>AGENTS_KNOWLEDGE__TARGET=azure</code>）は<strong>同じ Azure Postgres</strong>を指す必要が
+  あります。target がずれるとテーブルが存在せず <code>search_docs</code> が「該当なし」
+  を返します。具体的な手順は次節を参照してください。</li>
+</ul>
+<h3 id="azure-database-for-postgresql-に向ける">Azure Database for PostgreSQL に向ける<a class="headerlink" href="#azure-database-for-postgresql-に向ける" title="Permanent link">&para;</a></h3>
+<p>realtime 音声アシスタントや LangGraph / MAF / Copilot SDK エージェントの
+knowledge 検索先を、ローカル Docker Compose から Azure Database for
+PostgreSQL Flexible Server に切り替える手順です。全サーフェスが
+<code>search_knowledge_chunks()</code> を共有するため、<code>AGENTS_KNOWLEDGE__TARGET=azure</code>
+を設定すれば realtime / text / agents すべてが Azure を参照します。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># 1. Flexible Server で pgvector を許可リストへ追加（未設定だと CREATE</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="c1">#    EXTENSION vector が失敗し、ingest/検索が落ちます）。</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>az<span class="w"> </span>postgres<span class="w"> </span>flexible-server<span class="w"> </span>parameter<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>-g<span class="w"> </span>&lt;resource-group&gt;<span class="w"> </span>-s<span class="w"> </span>&lt;server-name&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span>--name<span class="w"> </span>azure.extensions<span class="w"> </span>--value<span class="w"> </span>vector
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c1"># 2. Entra 認証（AZURE_USE_ENTRA_AUTH=true）の場合、接続するプリンシパルを</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="c1">#    サーバーの Microsoft Entra 管理者として登録する。</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>az<span class="w"> </span>postgres<span class="w"> </span>flexible-server<span class="w"> </span>microsoft-entra-admin<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span>-g<span class="w"> </span>&lt;resource-group&gt;<span class="w"> </span>-s<span class="w"> </span>&lt;server-name&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">  </span>--object-id<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>az<span class="w"> </span>ad<span class="w"> </span>signed-in-user<span class="w"> </span>show<span class="w"> </span>--query<span class="w"> </span>id<span class="w"> </span>-o<span class="w"> </span>tsv<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">  </span>--display-name<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>az<span class="w"> </span>ad<span class="w"> </span>signed-in-user<span class="w"> </span>show<span class="w"> </span>--query<span class="w"> </span>userPrincipalName<span class="w"> </span>-o<span class="w"> </span>tsv<span class="k">)</span><span class="s2">&quot;</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="c1"># 3. .env を Azure 接続へ向ける（AZURE_* + AGENTS_KNOWLEDGE__TARGET）。</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="c1">#    AZURE_DBHOST=&lt;server-name&gt;.postgres.database.azure.com</span>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="c1">#    AZURE_DBNAME=&lt;database&gt;</span>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="c1">#    AZURE_DBUSER=&lt;entra-principal&gt;   # 例: admin@contoso.onmicrosoft.com</span>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="c1">#    AZURE_USE_ENTRA_AUTH=true        # パスワード認証なら false + AZURE_DBPASSWORD</span>
+<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a><span class="c1">#    AGENTS_KNOWLEDGE__TARGET=azure</span>
+<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a>
+<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a><span class="c1"># 4. エージェントが読むのと同じ target（azure）で docs/ を取り込む。</span>
+<a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a>uv<span class="w"> </span>run<span class="w"> </span>knowledge-cli<span class="w"> </span>ingest<span class="w"> </span>run<span class="w">   </span>--collection<span class="w"> </span>knowledge_default<span class="w"> </span>--target<span class="w"> </span>azure<span class="w"> </span>docs
+<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a>uv<span class="w"> </span>run<span class="w"> </span>knowledge-cli<span class="w"> </span>ingest<span class="w"> </span>stats<span class="w"> </span>--collection<span class="w"> </span>knowledge_default<span class="w"> </span>--target<span class="w"> </span>azure
+<a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a>uv<span class="w"> </span>run<span class="w"> </span>knowledge-cli<span class="w"> </span>search<span class="w"> </span>run<span class="w">   </span>--collection<span class="w"> </span>knowledge_default<span class="w"> </span>--target<span class="w"> </span>azure<span class="w"> </span><span class="s2">&quot;MLflow&quot;</span><span class="w"> </span>-k<span class="w"> </span><span class="m">4</span>
+<a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a>
+<a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a><span class="c1"># 5. 常駐サーバ（chat-web など）は .env をキャッシュするため再起動する。</span>
+</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">埋め込みプロバイダは ingest と検索で一致させる</p>
+<p><code>KNOWLEDGE_EMBEDDING_PROVIDER</code> は ingest 時にベクターを確定します。意味
+検索では <code>foundry</code> を使い、<code>fake</code> で作ったコレクションは drop して入れ
+直してください。詳細は
+<a href="../knowledge/#トラブルシューティング">Knowledge Indexer のトラブルシューティング</a>
+を参照。</p>
+</div>
+<h3 id="search_docs-ツールの動作確認とよくある失敗の見分け方">search_docs ツールの動作確認とよくある失敗の見分け方<a class="headerlink" href="#search_docs-ツールの動作確認とよくある失敗の見分け方" title="Permanent link">&para;</a></h3>
+<p>最小手順を実行したら、<code>agents-cli invoke</code> の返却 JSON を確認します。正常時は
+次の 3 点が揃います。</p>
+<ul>
+<li><code>status</code> が <code>"succeeded"</code></li>
+<li><code>result.tool_calls</code> に <code>name: "search_docs"</code> を含むエントリが 1 つ以上ある</li>
+<li><code>result.reply</code> が取り込んだドキュメントの内容に言及している</li>
+</ul>
+<p>トレース系のログに埋もれないよう stderr を捨てて確認すると分かりやすいです:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>-m<span class="w"> </span>invoke<span class="w"> </span>--agent-type<span class="w"> </span>langgraph<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--message<span class="w"> </span><span class="s2">&quot;search_docs ツールを使って &#39;agents registry&#39; に関するドキュメントを 2 件取得し、要点を 3 行で要約してください&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">  </span><span class="m">2</span>&gt;/dev/null
+</code></pre></div>
+<p>期待される返却 JSON（抜粋）:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="p">{</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;succeeded&quot;</span><span class="p">,</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="nt">&quot;result&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="nt">&quot;tool_calls&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;search_docs&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;query&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;agents registry&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;k&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">}}],</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="nt">&quot;reply&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;... docs/agents/index.md ... AgentRegistry ...&quot;</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">  </span><span class="p">},</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="w">  </span><span class="nt">&quot;error&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="p">}</span>
+</code></pre></div>
+<p><code>result.reply</code> に <code>OperationalError</code> や <code>ValueError</code> という単語が出ている場合、
+LLM は <code>search_docs</code> を<strong>正しく呼んでいます</strong>。ツール側が内部で失敗を捕捉して
+<code>{"error":"knowledge search failed: &lt;ExceptionClass&gt;","collection":"..."}</code> を
+返し、LLM がそれを自然言語化しているだけです。よくある 2 ケース:</p>
+<table>
+<thead>
+<tr>
+<th><code>result.reply</code> に出る症状</th>
+<th>原因</th>
+<th>対処</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>... OperationalError ...</code></td>
+<td>ローカルの pgvector（または Azure Postgres）に接続できない。</td>
+<td><code>docker compose up -d postgres</code> でコンテナを起動し、<code>docker exec concierge-postgres pg_isready -U concierge -d concierge</code> で疎通確認。</td>
+</tr>
+<tr>
+<td><code>... ValueError ...</code></td>
+<td>対象 collection の pgvector テーブルがまだ作成されていない（ingest 未実施）。</td>
+<td><code>uv run knowledge-cli ingest run --collection &lt;name&gt; docs/agents</code> を実行し、<code>uv run knowledge-cli ingest stats --collection &lt;name&gt;</code> で <code>records &gt; 0</code> を確認。</td>
+</tr>
+</tbody>
+</table>
+<p>エージェントの配線側の問題か、knowledge バックエンド側の問題かを切り分け
+たいときは、LLM を介さずに同じ <code>SearchKnowledge</code> ユースケースを直接呼び出せます:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>uv<span class="w"> </span>run<span class="w"> </span>knowledge-cli<span class="w"> </span>search<span class="w"> </span>run<span class="w"> </span>--collection<span class="w"> </span>knowledge_default<span class="w"> </span>--k<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="s2">&quot;agents registry&quot;</span>
+</code></pre></div>
+<p>このコマンドが成功するなら、エージェント経由（<code>langgraph</code> / <code>microsoft-agent-framework</code>
+/ <code>github-copilot-sdk</code>）でも検索パスは動作します。あとは LLM に
+<code>search_docs</code> を選ばせるかどうかの問題です。失敗するなら、エージェント経由でも
+同じエラーになります。</p>
+<h2 id="cloud_agent-ワーカーからの利用">cloud_agent ワーカーからの利用<a class="headerlink" href="#cloud_agent-ワーカーからの利用" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>uv<span class="w"> </span>run<span class="w"> </span>cloud-agent-cli<span class="w"> </span>task<span class="w"> </span>dispatch<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>--agent-type<span class="w"> </span>langgraph<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>--payload<span class="w"> </span><span class="s1">&#39;{&quot;message&quot;: &quot;Hello LangGraph&quot;}&#39;</span>
+</code></pre></div>
+<h2 id="chat-からの利用">chat からの利用<a class="headerlink" href="#chat-からの利用" title="Permanent link">&para;</a></h2>
+<p><code>CHAT_BOT_AGENT_TYPE</code> に登録済みのエージェント名を設定すると、チャット返信が共有エージェント経由になります（デフォルトの <code>foundry</code> は従来通り Foundry ストリーミングを使用）。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">CHAT_BOT_AGENT_TYPE</span><span class="o">=</span><span class="nb">echo</span><span class="w">   </span><span class="c1"># LLM 不要のスモークテスト</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-web
+</code></pre></div>
+<p><code>github-copilot-sdk</code> を使う場合:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">CHAT_BOT_AGENT_TYPE</span><span class="o">=</span>github-copilot-sdk
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-web
+</code></pre></div>
+<p><code>microsoft-agent-framework</code> を使う場合:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">CHAT_BOT_AGENT_TYPE</span><span class="o">=</span>microsoft-agent-framework
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-web
+</code></pre></div>
+<p><code>github-copilot-sdk</code> は LangChain/LangGraph ベースではないため、MLflow の
+LangChain autologging では内部 SDK スパンは自動収集されません。
+<code>microsoft-agent-framework</code> も LangChain/LangGraph ではなく Microsoft
+Agent Framework（<code>agent_framework.Agent</code> + <code>agent_framework.foundry.FoundryChatClient</code>）
+で実装されているため同様で、内部スパンが必要な場合は Microsoft Agent
+Framework 側の OTLP / Foundry トレーシングを有効化してください。</p>
+<h2 id="エージェント別の最小動作検証手順">エージェント別の最小動作検証手順<a class="headerlink" href="#エージェント別の最小動作検証手順" title="Permanent link">&para;</a></h2>
+<p>以下は <code>agents-cli</code> から各登録エージェントを最小限の構成で実行するための手順です。
+レジストリへの配線が正しく、必要な設定（モデル名・エンドポイント・認証）が
+揃っていることを確認できる "スモークテスト" の最小集合です。</p>
+<p>LLM を使うエージェントに共通する事前準備:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># 1. .env を読み込み（uv が自動的に読み込みます）、Entra ID 認証のため az login する</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>az<span class="w"> </span>login
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="c1"># 2. Foundry 系エージェントすべてに必須</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AZURE_AI_PROJECT_ENDPOINT</span><span class="o">=</span><span class="s2">&quot;https://&lt;resource&gt;.services.ai.azure.com/api/projects/&lt;project&gt;&quot;</span>
+</code></pre></div>
+<h3 id="echo-llm-不要"><code>echo</code> (LLM 不要)<a class="headerlink" href="#echo-llm-不要" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>invoke<span class="w"> </span>--agent-type<span class="w"> </span><span class="nb">echo</span><span class="w"> </span>--message<span class="w"> </span><span class="s2">&quot;hello&quot;</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="c1"># 期待値: {&quot;status&quot;: &quot;succeeded&quot;, &quot;result&quot;: {&quot;message&quot;: &quot;hello&quot;, &quot;reply&quot;: &quot;hello&quot;}, &quot;error&quot;: null}</span>
+</code></pre></div>
+<h3 id="langgraph"><code>langgraph</code><a class="headerlink" href="#langgraph" title="Permanent link">&para;</a></h3>
+<p><code>AZURE_AI_PROJECT_ENDPOINT</code> と <code>az login</code> が必要です。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>info<span class="w"> </span>--agent-type<span class="w"> </span>langgraph<span class="w">             </span><span class="c1"># 設定確認のみ（LLM 呼び出しなし）</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>invoke<span class="w"> </span>--agent-type<span class="w"> </span>langgraph<span class="w"> </span>--message<span class="w"> </span><span class="s2">&quot;Say hi&quot;</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="c1"># 画像生成パス（AGENTS_IMAGE_MODEL のデプロイが必要、下記の注意点も参照）:</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>invoke<span class="w"> </span>--agent-type<span class="w"> </span>langgraph<span class="w"> </span>--message<span class="w"> </span><span class="s2">&quot;Draw a red fox in watercolor style&quot;</span>
+</code></pre></div>
+<h3 id="github-copilot-sdk"><code>github-copilot-sdk</code><a class="headerlink" href="#github-copilot-sdk" title="Permanent link">&para;</a></h3>
+<p>デフォルトの echo パスでは
+<a href="https://github.com/github/copilot-cli">GitHub Copilot CLI</a> のインストールと
+認証が必要で、Foundry エンドポイントは不要です。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>info<span class="w"> </span>--agent-type<span class="w"> </span>github-copilot-sdk
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>invoke<span class="w"> </span>--agent-type<span class="w"> </span>github-copilot-sdk<span class="w"> </span>--message<span class="w"> </span><span class="s2">&quot;Say hi&quot;</span>
+</code></pre></div>
+<h3 id="microsoft-agent-framework"><code>microsoft-agent-framework</code><a class="headerlink" href="#microsoft-agent-framework" title="Permanent link">&para;</a></h3>
+<p><code>AZURE_AI_PROJECT_ENDPOINT</code> と <code>az login</code> が必要です。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>info<span class="w"> </span>--agent-type<span class="w"> </span>microsoft-agent-framework
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>invoke<span class="w"> </span>--agent-type<span class="w"> </span>microsoft-agent-framework<span class="w"> </span>--message<span class="w"> </span><span class="s2">&quot;Say hi&quot;</span>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="c1"># 画像生成パス:</span>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>invoke<span class="w"> </span>--agent-type<span class="w"> </span>microsoft-agent-framework<span class="w"> </span>--message<span class="w"> </span><span class="s2">&quot;Draw a red fox in watercolor style&quot;</span>
+</code></pre></div>
+<h3 id="foundry-agent-service"><code>foundry-agent-service</code><a class="headerlink" href="#foundry-agent-service" title="Permanent link">&para;</a></h3>
+<p><code>AZURE_AI_PROJECT_ENDPOINT</code> と <code>az login</code> が必要です。初回起動時に
+<code>project.agents.create_version()</code> を呼び出すため、サインインした
+プリンシパルに Foundry プロジェクト上で <strong>Azure AI Developer</strong> ロールが
+必要です。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>info<span class="w"> </span>--agent-type<span class="w"> </span>foundry-agent-service
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>invoke<span class="w"> </span>--agent-type<span class="w"> </span>foundry-agent-service<span class="w"> </span>--message<span class="w"> </span><span class="s2">&quot;フランスの面積を平方マイルで教えて&quot;</span>
+</code></pre></div>
+<p>正常時のレスポンスには、Foundry 側エージェントの返答とともに
+実際に使われた model / agent_name が入ります。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="p">{</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;succeeded&quot;</span><span class="p">,</span>
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">  </span><span class="nt">&quot;result&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="w">    </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;フランスの面積を平方マイルで教えて&quot;</span><span class="p">,</span>
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="w">    </span><span class="nt">&quot;reply&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;France is approximately 248,573 square miles.&quot;</span><span class="p">,</span>
+<a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="w">    </span><span class="nt">&quot;model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gpt-5&quot;</span><span class="p">,</span>
+<a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="w">    </span><span class="nt">&quot;agent_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;concierge-foundry-agent&quot;</span>
+<a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="w">  </span><span class="p">},</span>
+<a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="w">  </span><span class="nt">&quot;error&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a><span class="p">}</span>
+</code></pre></div>
+<p>初回呼び出しは <code>create_version</code> を伴う 1 ラウンドトリップが発生し、
+2 回目以降は同一プロセス内で同じエージェントを再利用します（内部
+ロックでキャッシュ）。agents-cli を介さずに同じコードパスを踏む
+ための小さなプローブスクリプトも用意されています:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>scripts.microsoft_foundry.prompt_agent<span class="w"> </span>invoke<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">  </span>--message<span class="w"> </span><span class="s2">&quot;フランスの面積を平方マイルで教えて&quot;</span>
+</code></pre></div>
+<h3 id="image-generate-llm-経由なしの直接実行"><code>image generate</code> (LLM 経由なしの直接実行)<a class="headerlink" href="#image-generate-llm-経由なしの直接実行" title="Permanent link">&para;</a></h3>
+<p><code>gpt-image-2</code> は現在 GA リージョンが限定的なため、<code>AZURE_AI_PROJECT_ENDPOINT</code>
+が対象外リージョンを指している場合は、画像モデルをホストする別の Foundry
+プロジェクトを <code>AZURE_AI_PROJECT_ENDPOINT_IMAGE</code> で指定してください。</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AZURE_AI_PROJECT_ENDPOINT_IMAGE</span><span class="o">=</span><span class="s2">&quot;https://&lt;image-resource&gt;.services.ai.azure.com/api/projects/&lt;project&gt;&quot;</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>./tmp_out
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>image<span class="w"> </span>generate<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">  </span>--prompt<span class="w"> </span><span class="s2">&quot;A photo of a Shibuya crossing at night&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="w">  </span>--output-dir<span class="w"> </span>./tmp_out
+<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>ls<span class="w"> </span>./tmp_out/*.png
+</code></pre></div>
+<h2 id="依存方向">依存方向<a class="headerlink" href="#依存方向" title="Permanent link">&para;</a></h2>
+<p><code>concierge.agents</code> は <code>concierge.chat</code> / <code>concierge.cloud_agent</code> / <code>concierge.todo</code>
+に依存しません。この制約は <code>pyproject.toml</code> の <code>agents-no-service-coupling</code>
+import-linter 契約によって静的に強制されます。</p>
+
+
+
+
+
+
+
+  
+  
+
+
+
+  
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.linkedin.com/in/ks6088ts/" target="_blank" rel="noopener" title="www.linkedin.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3M135.4 416H69V202.2h66.5V416zM102.2 96a38.5 38.5 0 1 1 0 77 38.5 38.5 0 1 1 0-77m282.1 320h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/ks6088ts" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://x.com/ks6088ts" target="_blank" rel="noopener" title="x.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M357.2 48h70.6L273.6 224.2 455 464H313L201.7 318.6 74.5 464H3.8l164.9-188.5L-5.2 48h145.6l100.5 132.9zm-24.8 373.8h39.1L119.1 88h-42z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": [], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "\u30b3\u30d4\u30fc\u3057\u307e\u3057\u305f", "clipboard.copy": "\u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u3078\u30b3\u30d4\u30fc", "search.result.more.one": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3082\u30461\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.more.other": "\u3053\u306e\u30da\u30fc\u30b8\u5185\u306b\u3042\u3068#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.none": "\u4f55\u3082\u898b\u3064\u304b\u308a\u307e\u305b\u3093\u3067\u3057\u305f", "search.result.one": "1\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.other": "#\u4ef6\u898b\u3064\u304b\u308a\u307e\u3057\u305f", "search.result.placeholder": "\u691c\u7d22\u30ad\u30fc\u30ef\u30fc\u30c9\u3092\u5165\u529b\u3057\u3066\u304f\u3060\u3055\u3044", "search.result.term.missing": "\u691c\u7d22\u306b\u542b\u307e\u308c\u306a\u3044", "select.version": "\u30d0\u30fc\u30b8\u30e7\u30f3\u5207\u308a\u66ff\u3048"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,3945 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="FastAPI + Typer chat sample with clean architecture layers">
+      
+      
+      
+        <link rel="canonical" href="https://ks6088ts-labs.github.io/concierge/chat/">
+      
+      
+        <link rel="prev" href="../todo/cli/">
+      
+      
+        <link rel="next" href="api/">
+      
+      
+        
+          <link rel="alternate" href="./" hreflang="en">
+        
+          <link rel="alternate" href="../ja/chat/" hreflang="ja">
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Chat App (Clean Architecture) - concierge</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+  
+
+
+  
+  
+
+<script id="__analytics">function __md_analytics(){function e(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],e("js",new Date),e("config","G-0ZTKFXVQ5K"),document.addEventListener("DOMContentLoaded",(function(){document.forms.search&&document.forms.search.query.addEventListener("blur",(function(){this.value&&e("event","search",{search_term:this.value})}));document$.subscribe((function(){var t=document.forms.feedback;if(void 0!==t)for(var a of t.querySelectorAll("[type=submit]"))a.addEventListener("click",(function(a){a.preventDefault();var n=document.location.pathname,d=this.getAttribute("data-md-value");e("event","feedback",{page:n,data:d}),t.firstElementChild.disabled=!0;var r=t.querySelector(".md-feedback__note [data-md-value='"+d+"']");r&&(r.hidden=!1)})),t.hidden=!1})),location$.subscribe((function(t){e("config","G-0ZTKFXVQ5K",{page_path:t.pathname})}))}));var t=document.createElement("script");t.async=!0,t.src="https://www.googletagmanager.com/gtag/js?id=G-0ZTKFXVQ5K",document.getElementById("__analytics").insertAdjacentElement("afterEnd",t)}</script>
+  
+    <script>"undefined"!=typeof __md_analytics&&__md_analytics()</script>
+  
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#what-is-this" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="concierge" class="md-header__button md-logo" aria-label="concierge" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            concierge
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Chat App (Clean Architecture)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9zM20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12zm-9.15 3.96h2.3L12 9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="Select language">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="../ja/chat/" hreflang="ja" class="md-select__link">
+              日本語
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/ks6088ts-labs/concierge" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ks6088ts-labs/concierge
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="concierge" class="md-nav__button md-logo" aria-label="concierge" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    concierge
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/ks6088ts-labs/concierge" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ks6088ts-labs/concierge
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hands-on Tutorial
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Hands-on Tutorial
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/01-foundry-langchain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Microsoft Foundry + LangChain
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/02-observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Observability (Tracing & MLflow)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/03-postgres-vector-store/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. PostgreSQL (pgvector) CRUD
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/04-langgraph-todo-agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. LangGraph Todo Agent CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/05-mlflow-genai-evaluation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. MLflow GenAI Evaluation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/appendix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Appendix - References
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/appendix-azure-environment-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Appendix - Azure Environment Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/appendix-monitor-vscode-copilot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Appendix - Monitor VS Code Copilot (App Insights)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/appendix-deploy-azure-container-apps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Appendix - Deploy to Azure Container Apps (Terraform)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Todo App (Clean Architecture)
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Todo App (Clean Architecture)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../todo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../todo/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    REST API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../todo/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chat App (Clean Architecture)
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Chat App (Clean Architecture)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-this" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is this?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-minute-smoke-test-rest-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5-minute smoke test (REST-only)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5-minute smoke test (REST-only)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-start-the-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Start the API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-open-swagger-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Open Swagger UI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-drive-it-with-curl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Drive it with curl
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#voice-input-speech-to-text" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Voice Input (Speech-to-Text)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Voice Input (Speech-to-Text)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-to-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to use
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#browser-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Browser support
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#privacy-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Privacy notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#voice-output-text-to-speech" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Voice Output (Text-to-Speech)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Voice Output (Text-to-Speech)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-to-use_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to use
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#browser-support_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Browser support
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#privacy-notes_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Privacy notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli-only-smoke-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI-only smoke test
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#choose-a-persistence-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choose a persistence backend
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Choose a persistence backend">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup-workflow-any-sql-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup workflow (any SQL backend)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#postgresql-quickstart-docker-compose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PostgreSQL Quickstart (Docker Compose)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#azure-database-for-postgresql-quickstart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Azure Database for PostgreSQL Quickstart
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ai-chatbot-replies-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AI chatbot replies (optional)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="AI chatbot replies (optional)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#settings-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settings reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enable-the-chatbot-foundry-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable the chatbot (Foundry backend)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent-backed-responder-llm-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent-backed responder (LLM-optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#text-chat-image-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sharing an image with a text-chat agent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#api-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API design
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification checklist
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Verification checklist">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-memory-backend-rest-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A. memory backend (REST only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-postgres-backend-rest--cli-shared" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B. postgres backend (REST ↔ CLI shared)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-chatbot-foundry-enabled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C. Chatbot (Foundry) enabled
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#realtime-voice-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Realtime voice (optional)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Realtime voice (optional)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-the-ui-pipeline-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How the UI pipeline works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#realtime-input-transcription" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Seeing your own recognized speech (input transcription)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Seeing your own recognized speech (input transcription)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-to-enable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to enable
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-happens-under-the-hood" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What happens under the hood
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#realtime-image-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sharing a photo during a call
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#browser-support_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Browser support
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settings-reference_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settings reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Settings reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#realtime-turn-detection-tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stopping the AI from interrupting you
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#realtime-tool-calling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool calling (function calling)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tool calling (function calling)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#built-in-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Built-in tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-new-tool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a new tool
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#minimal-end-to-end-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimal end-to-end check
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-to-look-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where to look next
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#accessibility-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Accessibility mode (deafblind)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Accessibility mode (deafblind)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-it-connects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it connects
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multi-person-conversations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-person conversations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#relation-chat_conversations-does-not-exist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        relation "chat_conversations" does not exist
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#conversation-not-found--between-two-cli-invocations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conversation not found: ... between two CLI invocations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#azure_dbuser-must-be-set---azure_dbhost-and-azure_dbname-must-be-set" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AZURE_DBUSER must be set ... / AZURE_DBHOST and AZURE_DBNAME must be set
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chatbot-is-not-configured-http-503-or-cli-exits-1-on-message-reply" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chatbot is not configured (HTTP 503) or CLI exits 1 on message reply
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#foundry-call-fails-with-clientauthenticationerror--defaultazurecredential-failed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Foundry call fails with ClientAuthenticationError / DefaultAzureCredential failed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#realtime-websocket-closes-with-4503--call-button-hidden" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Realtime WebSocket closes with 4503 / call button hidden
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#realtime-websocket-closes-with-4404" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Realtime WebSocket closes with 4404
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#realtime-websocket-closes-with-4400" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Realtime WebSocket closes with 4400
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#microphone-permission-denied-red-banner-in-the-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Microphone permission denied (red banner in the UI)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    REST API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shared Agent Runtime
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Shared Agent Runtime
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cloud Agent App (Clean Architecture)
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Cloud Agent App (Clean Architecture)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cloud_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cloud_agent/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    REST API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cloud_agent/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge Indexer (pgvector)
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Knowledge Indexer (pgvector)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../knowledge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../knowledge/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-is-this" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What is this?
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-minute-smoke-test-rest-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5-minute smoke test (REST-only)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5-minute smoke test (REST-only)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-start-the-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Start the API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-open-swagger-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Open Swagger UI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-drive-it-with-curl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Drive it with curl
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#voice-input-speech-to-text" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Voice Input (Speech-to-Text)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Voice Input (Speech-to-Text)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-to-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to use
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#browser-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Browser support
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#privacy-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Privacy notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#voice-output-text-to-speech" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Voice Output (Text-to-Speech)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Voice Output (Text-to-Speech)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-to-use_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to use
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#browser-support_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Browser support
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#privacy-notes_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Privacy notes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli-only-smoke-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI-only smoke test
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#choose-a-persistence-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Choose a persistence backend
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Choose a persistence backend">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#setup-workflow-any-sql-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Setup workflow (any SQL backend)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#postgresql-quickstart-docker-compose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        PostgreSQL Quickstart (Docker Compose)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#azure-database-for-postgresql-quickstart" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Azure Database for PostgreSQL Quickstart
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#ai-chatbot-replies-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AI chatbot replies (optional)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="AI chatbot replies (optional)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#settings-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settings reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#enable-the-chatbot-foundry-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable the chatbot (Foundry backend)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent-backed-responder-llm-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent-backed responder (LLM-optional)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#text-chat-image-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sharing an image with a text-chat agent
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#api-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        API design
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#verification-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verification checklist
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Verification checklist">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-memory-backend-rest-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A. memory backend (REST only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-postgres-backend-rest--cli-shared" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B. postgres backend (REST ↔ CLI shared)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-chatbot-foundry-enabled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C. Chatbot (Foundry) enabled
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#realtime-voice-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Realtime voice (optional)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Realtime voice (optional)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#quick-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick start
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#how-the-ui-pipeline-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How the UI pipeline works
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#realtime-input-transcription" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Seeing your own recognized speech (input transcription)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Seeing your own recognized speech (input transcription)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-to-enable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to enable
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#what-happens-under-the-hood" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What happens under the hood
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#realtime-image-input" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Sharing a photo during a call
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#browser-support_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Browser support
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settings-reference_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settings reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Settings reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#realtime-turn-detection-tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stopping the AI from interrupting you
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#realtime-tool-calling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tool calling (function calling)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tool calling (function calling)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#built-in-tools" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Built-in tools
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-new-tool" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a new tool
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#minimal-end-to-end-check" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimal end-to-end check
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-to-look-next" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where to look next
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#accessibility-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Accessibility mode (deafblind)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Accessibility mode (deafblind)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#how-it-connects" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How it connects
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multi-person-conversations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-person conversations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#relation-chat_conversations-does-not-exist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        relation "chat_conversations" does not exist
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#conversation-not-found--between-two-cli-invocations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conversation not found: ... between two CLI invocations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#azure_dbuser-must-be-set---azure_dbhost-and-azure_dbname-must-be-set" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AZURE_DBUSER must be set ... / AZURE_DBHOST and AZURE_DBNAME must be set
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chatbot-is-not-configured-http-503-or-cli-exits-1-on-message-reply" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chatbot is not configured (HTTP 503) or CLI exits 1 on message reply
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#foundry-call-fails-with-clientauthenticationerror--defaultazurecredential-failed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Foundry call fails with ClientAuthenticationError / DefaultAzureCredential failed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#realtime-websocket-closes-with-4503--call-button-hidden" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Realtime WebSocket closes with 4503 / call button hidden
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#realtime-websocket-closes-with-4404" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Realtime WebSocket closes with 4404
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#realtime-websocket-closes-with-4400" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Realtime WebSocket closes with 4400
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#microphone-permission-denied-red-banner-in-the-ui" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Microphone permission denied (red banner in the UI)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+  <h1>Overview</h1>
+
+<h2 id="what-is-this">What is this?<a class="headerlink" href="#what-is-this" title="Permanent link">&para;</a></h2>
+<p>A minimal text chat app with two entry points that share the <strong>same</strong>
+business logic. Use whichever feels natural and switch persistence backends
+without touching the use cases.</p>
+<table>
+<thead>
+<tr>
+<th>Entry point</th>
+<th>What it is</th>
+<th>Use it when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><code>chat-web</code></strong></td>
+<td>FastAPI server on <code>:8080</code> with REST + a built-in browser UI</td>
+<td>You want Swagger UI, curl, or the bundled web client</td>
+</tr>
+<tr>
+<td><strong><code>chat-cli</code></strong></td>
+<td>Typer CLI (<code>conversation</code>, <code>message</code>, <code>db</code>, <code>realtime</code> sub-commands)</td>
+<td>You want JSON output for scripts or quick local checks</td>
+</tr>
+</tbody>
+</table>
+<p>Both call into the same <code>concierge.chat.application.use_cases</code> module, so
+features added in either surface show up in both.</p>
+<pre class="mermaid"><code>flowchart LR
+    Web[chat-web&lt;br/&gt;FastAPI Routes] --&gt; App[Application Use Cases]
+    CLI[chat-cli&lt;br/&gt;Typer Commands] --&gt; App
+    App --&gt; Domain[Domain Entities / Value Objects]
+    App --&gt; Repo[Repositories]
+    Repo --&gt; Domain</code></pre>
+<p>Where to go next:</p>
+<ul>
+<li><strong>Just trying it out?</strong> → <a href="#5-minute-smoke-test-rest-only">5-minute smoke test</a> below.</li>
+<li><strong>REST reference</strong> → <a href="api/">REST API Reference</a>.</li>
+<li><strong>CLI reference</strong> → <a href="cli/">CLI Reference</a>.</li>
+<li><strong>Realtime voice</strong> → <a href="#realtime-voice-optional">Realtime voice (optional)</a> below.</li>
+</ul>
+<hr />
+<h2 id="5-minute-smoke-test-rest-only">5-minute smoke test (REST-only)<a class="headerlink" href="#5-minute-smoke-test-rest-only" title="Permanent link">&para;</a></h2>
+<p>This path needs <strong>no Azure account, no Docker, no <code>.env</code> editing</strong>. It uses
+the default <code>memory</code> backend, which keeps data in process memory for as long
+as <code>chat-web</code> is running.</p>
+<div class="admonition warning">
+<p class="admonition-title">The <code>memory</code> backend is per-process</p>
+<p>Conversations created by <code>chat-web</code> are <strong>not visible</strong> to <code>chat-cli</code>
+(they run as separate processes). For an end-to-end smoke test, stick
+to one surface at a time — REST in this section, CLI in
+<a href="#cli-only-smoke-test">its own section</a>. For a CLI ↔ Web shared view,
+switch to the <code>postgres</code> backend.</p>
+</div>
+<h3 id="1-start-the-api">1. Start the API<a class="headerlink" href="#1-start-the-api" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-web
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1"># → Uvicorn running on http://0.0.0.0:8080</span>
+</code></pre></div>
+<h3 id="2-open-swagger-ui">2. Open Swagger UI<a class="headerlink" href="#2-open-swagger-ui" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>open<span class="w"> </span>http://localhost:8080/docs
+</code></pre></div>
+<p>Or browse to the bundled chat UI at <a href="http://localhost:8080/">http://localhost:8080/</a>.</p>
+<h3 id="3-drive-it-with-curl">3. Drive it with curl<a class="headerlink" href="#3-drive-it-with-curl" title="Permanent link">&para;</a></h3>
+<p>Copy-paste these lines into a second terminal. They run <strong>against the same
+<code>chat-web</code> process</strong>, so the in-memory data survives between calls.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># A stable user identity for this session.</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">USER_ID</span><span class="o">=</span><span class="k">$(</span>python<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;import uuid; print(uuid.uuid4())&#39;</span><span class="k">)</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Create a conversation, capture its id.</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nv">CONV_ID</span><span class="o">=</span><span class="k">$(</span>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8080/conversations<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;X-User-Id: </span><span class="si">${</span><span class="nv">USER_ID</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;content-type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;title&quot;:&quot;smoke-test&quot;,&quot;display_name&quot;:&quot;alice&quot;}&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span><span class="p">|</span><span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;import json,sys; print(json.load(sys.stdin)[&quot;id&quot;])&#39;</span><span class="k">)</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;CONV_ID=</span><span class="nv">$CONV_ID</span><span class="s2">&quot;</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="c1"># Post a message.</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;http://localhost:8080/conversations/</span><span class="si">${</span><span class="nv">CONV_ID</span><span class="si">}</span><span class="s2">/messages&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;X-User-Id: </span><span class="si">${</span><span class="nv">USER_ID</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;content-type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;content&quot;:&quot;hello from curl&quot;,&quot;display_name&quot;:&quot;alice&quot;}&#39;</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="c1"># List messages.</span>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>curl<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;http://localhost:8080/conversations/</span><span class="si">${</span><span class="nv">CONV_ID</span><span class="si">}</span><span class="s2">/messages&quot;</span>
+</code></pre></div>
+<p>Expected: <code>201 Created</code> on the first two calls and a JSON array containing
+your message on the last. If you also get <code>503 Service Unavailable</code> on
+<code>/agent-replies</code>, that is <strong>expected</strong> until <code>AZURE_AI_PROJECT_ENDPOINT</code> is
+configured — see
+<a href="#ai-chatbot-replies-optional">AI chatbot replies (optional)</a> to turn it on.</p>
+<hr />
+<h2 id="voice-input-speech-to-text">Voice Input (Speech-to-Text)<a class="headerlink" href="#voice-input-speech-to-text" title="Permanent link">&para;</a></h2>
+<p>The bundled web UI at <a href="http://localhost:8080/">http://localhost:8080/</a> supports voice input through
+the browser Web Speech API.</p>
+<h3 id="how-to-use">How to use<a class="headerlink" href="#how-to-use" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Create/select a conversation so the message composer is enabled.</li>
+<li>Click the microphone button (<code>🎤</code>) next to the send button.</li>
+<li>Speak; interim and final recognition text is appended in the message box.</li>
+<li>Click the button again (<code>⏹</code>) to stop recognition.</li>
+<li>Send manually with the existing send button (or <code>Shift+Enter</code>).</li>
+</ol>
+<p>Voice input never auto-sends messages. Only text is sent when you explicitly
+submit.</p>
+<h3 id="browser-support">Browser support<a class="headerlink" href="#browser-support" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Supported: latest Google Chrome, Microsoft Edge, Safari (macOS / iOS)</li>
+<li>Not supported: Firefox (Web Speech API is not available by default)</li>
+<li>On unsupported browsers, the microphone button is disabled and a warning
+  toast is shown in the UI.</li>
+</ul>
+<h3 id="privacy-notes">Privacy notes<a class="headerlink" href="#privacy-notes" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Microphone permission is handled by the browser prompt.</li>
+<li>Speech recognition may be processed by the browser vendor cloud service
+  (for example, Chrome/Edge implementations).</li>
+<li>The concierge backend does <strong>not</strong> receive raw audio. It only receives text
+  if/when you send the message through the existing API flow.</li>
+</ul>
+<hr />
+<h2 id="voice-output-text-to-speech">Voice Output (Text-to-Speech)<a class="headerlink" href="#voice-output-text-to-speech" title="Permanent link">&para;</a></h2>
+<p>The bundled web UI at <a href="http://localhost:8080/">http://localhost:8080/</a> supports text-to-speech for
+<strong>AGENT</strong> messages through the browser Web Speech API.</p>
+<h3 id="how-to-use_1">How to use<a class="headerlink" href="#how-to-use_1" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Receive an AGENT message in the conversation view.</li>
+<li>Click the speaker button (<code>🔊</code>) on the message bubble.</li>
+<li>While speaking, the same button switches to stop (<code>■</code>).</li>
+<li>Click <code>■</code> to stop immediately, or click <code>🔊</code> on another AGENT message to
+   switch playback.</li>
+</ol>
+<h3 id="browser-support_1">Browser support<a class="headerlink" href="#browser-support_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Supported: latest Google Chrome and Microsoft Edge (Chromium-based)</li>
+<li>Not supported by default: Firefox (Web Speech API speech synthesis may be
+  unavailable)</li>
+<li>On unsupported browsers, the speaker button is not rendered.</li>
+</ul>
+<h3 id="privacy-notes_1">Privacy notes<a class="headerlink" href="#privacy-notes_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Speech synthesis may be processed by the browser vendor cloud service,
+  depending on browser implementation and selected voice.</li>
+<li>The concierge backend does <strong>not</strong> send message text to any new TTS API.
+  Playback uses text already present in the browser.</li>
+</ul>
+<hr />
+<h2 id="cli-only-smoke-test">CLI-only smoke test<a class="headerlink" href="#cli-only-smoke-test" title="Permanent link">&para;</a></h2>
+<p>The CLI works the same way, but each invocation is its own process. For the
+<code>memory</code> backend that means: never chain <code>create</code> and <code>post</code> calls across
+two <code>uv run chat-cli ...</code> invocations. Two options work:</p>
+<ol>
+<li><strong>Use the <code>postgres</code> backend</strong> (recommended for multi-step CLI flows).
+   Then every command sees the same database. See
+   <a href="#postgresql-quickstart-docker-compose">PostgreSQL Quickstart</a>.</li>
+<li><strong>Use the REST API</strong> for any multi-step user-side flow, and use the CLI
+   only for one-shot operations (<code>db init</code>, <code>db ping</code>, <code>conversation list</code>,
+   etc.).</li>
+</ol>
+<p>For a single-process sanity check that always works, just inspect the help:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-cli<span class="w"> </span>--help
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-cli<span class="w"> </span>conversation<span class="w"> </span>--help
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-cli<span class="w"> </span>message<span class="w"> </span>--help
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-cli<span class="w"> </span>db<span class="w"> </span>--help
+</code></pre></div>
+<p>A full CLI walkthrough lives in the <a href="cli/#full-walkthrough-with-the-postgres-backend">CLI Reference</a>.</p>
+<hr />
+<h2 id="choose-a-persistence-backend">Choose a persistence backend<a class="headerlink" href="#choose-a-persistence-backend" title="Permanent link">&para;</a></h2>
+<p>All Chat configuration is centralised in <code>concierge.settings.ChatSettings</code>,
+which reads <code>CHAT_REPOSITORY_BACKEND</code> and table-name overrides from the
+environment (or <code>.env</code>).</p>
+<table>
+<thead>
+<tr>
+<th><code>CHAT_REPOSITORY_BACKEND</code></th>
+<th>Enum member</th>
+<th>When to use it</th>
+<th>Schema init</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>memory</code> (default)</td>
+<td><code>ChatRepositoryBackend.MEMORY</code></td>
+<td>Fastest read-through; data is lost on restart <strong>and not shared between processes</strong></td>
+<td>Not needed</td>
+</tr>
+<tr>
+<td><code>postgres</code></td>
+<td><code>ChatRepositoryBackend.POSTGRES</code></td>
+<td>Local Docker Compose PostgreSQL (<code>POSTGRES_*</code> variables)</td>
+<td><strong>Required</strong> (see below)</td>
+</tr>
+<tr>
+<td><code>azure-postgres</code></td>
+<td><code>ChatRepositoryBackend.AZURE_POSTGRES</code></td>
+<td>Azure Database for PostgreSQL Flexible Server (<code>AZURE_*</code> variables)</td>
+<td><strong>Required</strong> (see below)</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="admonition-title">Run <code>chat-cli db init</code> before starting <code>postgres</code> / <code>azure-postgres</code></p>
+<p>Switching the backend alone does not create the chat tables
+(<code>chat_conversations</code>, <code>chat_participants</code>, <code>chat_messages</code>). If you skip
+initialisation, the first message you POST through <code>chat-web</code> fails with
+<code>relation "chat_conversations" does not exist</code>.</p>
+</div>
+<h3 id="setup-workflow-any-sql-backend">Setup workflow (any SQL backend)<a class="headerlink" href="#setup-workflow-any-sql-backend" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># 1. Pick a backend in .env (example: local Postgres).</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;CHAT_REPOSITORY_BACKEND=postgres&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.env
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># 2. Sanity-check connectivity.</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-cli<span class="w"> </span>db<span class="w"> </span>ping
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="c1"># → Connection OK.</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="c1"># 3. Create the tables (idempotent: CREATE TABLE IF NOT EXISTS).</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-cli<span class="w"> </span>db<span class="w"> </span>init
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="c1"># → Database schema initialised successfully.</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="c1"># 4. Boot the API / CLI.</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-web
+</code></pre></div>
+<p>Related commands:</p>
+<table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>uv run chat-cli db ping</code></td>
+<td>Connectivity check (<code>SELECT 1</code>)</td>
+</tr>
+<tr>
+<td><code>uv run chat-cli db init</code></td>
+<td>Create chat tables (idempotent)</td>
+</tr>
+<tr>
+<td><code>uv run chat-cli db drop --yes</code></td>
+<td>Drop chat tables (destructive)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="postgresql-quickstart-docker-compose">PostgreSQL Quickstart (Docker Compose)<a class="headerlink" href="#postgresql-quickstart-docker-compose" title="Permanent link">&para;</a></h3>
+<p>Uses the <code>POSTGRES_*</code> values from
+<a href="https://github.com/ks6088ts-labs/concierge/blob/main/.env.template"><code>.env.template</code></a>
+against the Postgres service in <code>compose.yml</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>postgres
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;CHAT_REPOSITORY_BACKEND=postgres&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.env
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-cli<span class="w"> </span>db<span class="w"> </span>ping
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-cli<span class="w"> </span>db<span class="w"> </span>init<span class="w">   </span><span class="c1"># only once</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-web
+</code></pre></div>
+<h3 id="azure-database-for-postgresql-quickstart">Azure Database for PostgreSQL Quickstart<a class="headerlink" href="#azure-database-for-postgresql-quickstart" title="Permanent link">&para;</a></h3>
+<p>Set <code>AZURE_DBHOST</code> / <code>AZURE_DBNAME</code> / <code>AZURE_DBUSER</code> (Entra principal name)
+in <code>.env</code>, then:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;CHAT_REPOSITORY_BACKEND=azure-postgres&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.env
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-cli<span class="w"> </span>db<span class="w"> </span>ping
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-cli<span class="w"> </span>db<span class="w"> </span>init<span class="w">   </span><span class="c1"># only once</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-web
+</code></pre></div>
+<p>With Entra ID auth (<code>AZURE_USE_ENTRA_AUTH=true</code>), make sure
+<code>DefaultAzureCredential</code> can resolve a token beforehand (for example via
+<code>az login</code>).</p>
+<hr />
+<h2 id="ai-chatbot-replies-optional">AI chatbot replies (optional)<a class="headerlink" href="#ai-chatbot-replies-optional" title="Permanent link">&para;</a></h2>
+<p>The Chat app can call <strong>Microsoft Foundry</strong> through LangChain so an agent
+participant replies inside a conversation. The wiring lives in
+<a href="https://github.com/ks6088ts-labs/concierge/tree/main/concierge/chat/infrastructure/ai"><code>concierge/chat/infrastructure/ai/</code></a>:</p>
+<ul>
+<li><code>application/responders.py</code> — defines the <code>ChatbotResponder</code> protocol
+  (<code>stream_reply</code> yields token-sized strings).</li>
+<li><code>infrastructure/ai/foundry_responder.py</code> — implements it with
+  <code>langchain.chat_models.init_chat_model</code> + <code>DefaultAzureCredential</code>,
+  consuming <code>chat_model.stream(...)</code>.</li>
+<li><code>infrastructure/ai/agent_responder.py</code> — implements it via the shared
+  <code>concierge.agents</code> registry (LLM-optional path).</li>
+<li><code>infrastructure/ai/factory.py</code> — single read-side for settings; raises
+  <code>ChatbotNotConfiguredError</code> when the backend is not properly configured.</li>
+</ul>
+<pre class="mermaid"><code>flowchart LR
+    Caller[FastAPI route / CLI command] --&gt; Factory[create_chatbot_responder]
+    Factory --&gt;|CHAT_BOT_AGENT_TYPE=foundry| Foundry[FoundryChatbotResponder]
+    Factory --&gt;|CHAT_BOT_AGENT_TYPE=&lt;agent-name&gt;| Agent[AgentChatbotResponder]
+    Factory --&gt;|not configured| Error[ChatbotNotConfiguredError\nHTTP 503 / CLI exit 1]
+    Foundry --&gt;|init_chat_model.stream&lt;br/&gt;+ DefaultAzureCredential| Azure[(Azure AI Foundry)]
+    Agent --&gt; Registry[concierge.agents.AgentRegistry]</code></pre>
+<p><code>create_chatbot_responder()</code> selects the responder via <code>CHAT_BOT_AGENT_TYPE</code>
+(default <code>foundry</code>). For <code>foundry</code>, <code>AZURE_AI_PROJECT_ENDPOINT</code> must be set;
+otherwise <code>ChatbotNotConfiguredError</code> is raised (HTTP 503 / exit 1). Any other
+value (e.g. <code>echo</code>, <code>langgraph</code>, <code>github-copilot-sdk</code>, <code>microsoft-agent-framework</code>) is resolved from
+the shared <code>AgentRegistry</code>.</p>
+<p>For external-knowledge retrieval in text chat (<code>/agent-replies</code>), use an
+AgentRegistry-backed responder (for example <code>CHAT_BOT_AGENT_TYPE=langgraph</code>):
+that path can execute knowledge tools. The default <code>foundry</code> responder remains
+a plain chat-completion path without tool-calling.</p>
+<h3 id="settings-reference">Settings reference<a class="headerlink" href="#settings-reference" title="Permanent link">&para;</a></h3>
+<p>All chatbot settings are part of <code>ChatSettings</code> (prefix <code>CHAT_</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CHAT_BOT_MODEL</code></td>
+<td><code>azure_ai:gpt-5</code></td>
+<td>Model identifier passed to <code>init_chat_model</code></td>
+</tr>
+<tr>
+<td><code>CHAT_BOT_SYSTEM_PROMPT</code></td>
+<td><code>あなたは Concierge Chat のアシスタントです。日本語で簡潔に応答してください。</code></td>
+<td>System message prepended to every reply</td>
+</tr>
+<tr>
+<td><code>CHAT_BOT_DISPLAY_NAME</code></td>
+<td><code>Concierge AI</code></td>
+<td>Display name shown for the agent participant</td>
+</tr>
+<tr>
+<td><code>CHAT_BOT_PARTICIPANT_ID</code></td>
+<td><code>00000000-0000-0000-0000-000000000001</code></td>
+<td>Stable UUID for the agent participant</td>
+</tr>
+<tr>
+<td><code>CHAT_BOT_HISTORY_LIMIT</code></td>
+<td><code>20</code></td>
+<td>Maximum number of past messages forwarded as context</td>
+</tr>
+<tr>
+<td><code>AZURE_AI_PROJECT_ENDPOINT</code></td>
+<td>unset</td>
+<td>Required when <code>CHAT_BOT_AGENT_TYPE=foundry</code></td>
+</tr>
+<tr>
+<td><code>CHAT_BOT_AGENT_TYPE</code></td>
+<td><code>foundry</code></td>
+<td>Responder selector: <code>foundry</code> (default, streaming) or a registered agent type (<code>echo</code>, <code>langgraph</code>, <code>github-copilot-sdk</code>, <code>microsoft-agent-framework</code>)</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Note:</strong> The previous <code>CHAT_RESPONDER_BACKEND</code> variable has been removed.
+If it is still present in your <code>.env</code>, it is silently ignored and a
+<code>DeprecationWarning</code> is emitted at startup.</p>
+</blockquote>
+<h3 id="enable-the-chatbot-foundry-backend">Enable the chatbot (Foundry backend)<a class="headerlink" href="#enable-the-chatbot-foundry-backend" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># 1. Configure the Foundry endpoint.</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;AZURE_AI_PROJECT_ENDPOINT=https://&lt;resource&gt;.services.ai.azure.com/api/projects/&lt;project&gt;&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.env
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># 2. Make sure DefaultAzureCredential can issue a token.</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>az<span class="w"> </span>login
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1"># 3. Boot the API.</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-web
+</code></pre></div>
+<h3 id="agent-backed-responder-llm-optional">Agent-backed responder (LLM-optional)<a class="headerlink" href="#agent-backed-responder-llm-optional" title="Permanent link">&para;</a></h3>
+<p>Use the <code>echo</code> agent for a quick smoke-test without Azure credentials:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">CHAT_BOT_AGENT_TYPE</span><span class="o">=</span><span class="nb">echo</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-web
+</code></pre></div>
+<p>For the LangGraph echo agent (requires <code>AZURE_AI_PROJECT_ENDPOINT</code>):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">CHAT_BOT_AGENT_TYPE</span><span class="o">=</span>langgraph
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AGENTS_LANGGRAPH_MODEL</span><span class="o">=</span>azure_ai:gpt-5
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>az<span class="w"> </span>login
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-web
+</code></pre></div>
+<p>See <a href="../agents/">Shared Agent Runtime</a> for more details on available agents
+and configuration.</p>
+<h3 id="text-chat-image-input">Sharing an image with a text-chat agent<a class="headerlink" href="#text-chat-image-input" title="Permanent link">&para;</a></h3>
+<p>The same camera capture overlay used by the realtime voice call is also
+available in <strong>text chat</strong>. When a conversation is selected, the <strong>📷 camera
+button</strong> appears at the left of the composer input row (next to the textarea and
+the 🎤 voice-input button); capturing a frame attaches it to the composer
+(a thumbnail chip appears). Type your question and send — the image rides the
+next agent reply as an inline <code>data:image/*;base64,…</code> URL.</p>
+<p>The image is delivered on the optional JSON body of
+<code>POST /conversations/{id}/agent-replies</code> (see
+<a href="api/#agent-reply-image-input">Optional image input</a>) and threaded to the
+selected agent as <code>payload.image_url</code>:</p>
+<ul>
+<li><strong><code>langgraph</code></strong> builds a multimodal user turn (text + image) so a vision
+  capable Azure OpenAI model grounds its reply in the image. Select it from the
+  <strong>🧠 エージェント</strong> dropdown (or <code>CHAT_BOT_AGENT_TYPE=langgraph</code>).</li>
+<li><strong><code>echo</code></strong> acknowledges receipt (<code>🖼️（画像を受信しました）</code>) — a quick way to
+  verify the end-to-end contract without a vision model.</li>
+<li>The default <strong><code>foundry</code></strong> responder and the other SDK agents accept the
+  contract but ignore the image for now; wiring their vision support is an
+  incremental follow-up.</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Images are session-scoped (not persisted)</p>
+<p>As with the realtime voice call, a shared image is <strong>never written to the
+message repository</strong>. It is rendered locally for the rest of the session and
+passed to a single agent reply, then discarded. Sharing an image is treated
+as an explicit request for a response, so a reply is generated on send even
+when 🤖 auto-reply is off. Attaching an image still requires a typed
+question so the agent has a user turn to answer.</p>
+</div>
+<h3 id="api-design">API design<a class="headerlink" href="#api-design" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>POST /conversations/{id}/messages</code> — <strong>persists the user message only</strong>.
+  It never triggers a bot reply, so clients can rely on a deterministic
+  response and decide independently whether to request an agent answer.</li>
+<li><code>POST /conversations/{id}/agent-replies</code> — streams the agent reply via
+  Server-Sent Events (<code>text/event-stream</code>). Emits <code>delta</code> events with
+  partial tokens followed by a single <code>complete</code> event carrying the persisted
+  <code>AGENT</code> message. Returns HTTP 503 (or CLI exit code 1) when
+  the chatbot is not configured.</li>
+<li>The CLI mirrors the same split: <code>message post</code> saves only, <code>message reply</code>
+  streams the response.</li>
+</ul>
+<hr />
+<h2 id="verification-checklist">Verification checklist<a class="headerlink" href="#verification-checklist" title="Permanent link">&para;</a></h2>
+<p>A copy-paste sequence you can run after any change to confirm both surfaces
+still work. Pick the matching backend section.</p>
+<h3 id="a-memory-backend-rest-only">A. <code>memory</code> backend (REST only)<a class="headerlink" href="#a-memory-backend-rest-only" title="Permanent link">&para;</a></h3>
+<p>In <strong>one terminal</strong>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Force memory mode for this run (overrides .env).</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="nv">CHAT_REPOSITORY_BACKEND</span><span class="o">=</span>memory<span class="w"> </span>uv<span class="w"> </span>run<span class="w"> </span>chat-web
+</code></pre></div>
+<p>In <strong>another terminal</strong>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>curl<span class="w"> </span>-s<span class="w"> </span>http://localhost:8080/healthz
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="c1"># → {&quot;status&quot;:&quot;ok&quot;}</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">USER_ID</span><span class="o">=</span><span class="k">$(</span>python<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;import uuid; print(uuid.uuid4())&#39;</span><span class="k">)</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="nv">CONV_ID</span><span class="o">=</span><span class="k">$(</span>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8080/conversations<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;X-User-Id: </span><span class="si">${</span><span class="nv">USER_ID</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s1">&#39;content-type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;title&quot;:&quot;smoke&quot;,&quot;display_name&quot;:&quot;alice&quot;}&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">  </span><span class="p">|</span><span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;import json,sys; print(json.load(sys.stdin)[&quot;id&quot;])&#39;</span><span class="k">)</span>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;CONV_ID=</span><span class="nv">$CONV_ID</span><span class="s2">&quot;</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;http://localhost:8080/conversations/</span><span class="si">${</span><span class="nv">CONV_ID</span><span class="si">}</span><span class="s2">/messages&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;X-User-Id: </span><span class="si">${</span><span class="nv">USER_ID</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s1">&#39;content-type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;content&quot;:&quot;hello&quot;,&quot;display_name&quot;:&quot;alice&quot;}&#39;</span>
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a>
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>curl<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;http://localhost:8080/conversations/</span><span class="si">${</span><span class="nv">CONV_ID</span><span class="si">}</span><span class="s2">/messages&quot;</span>
+<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a>
+<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a><span class="c1"># Expected when the Foundry endpoint is unset.</span>
+<a id="__codelineno-11-18" name="__codelineno-11-18" href="#__codelineno-11-18"></a>curl<span class="w"> </span>-s<span class="w"> </span>-o<span class="w"> </span>/dev/null<span class="w"> </span>-w<span class="w"> </span><span class="s2">&quot;agent-replies → HTTP %{http_code}\n&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-19" name="__codelineno-11-19" href="#__codelineno-11-19"></a><span class="w">  </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;http://localhost:8080/conversations/</span><span class="si">${</span><span class="nv">CONV_ID</span><span class="si">}</span><span class="s2">/agent-replies&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-20" name="__codelineno-11-20" href="#__codelineno-11-20"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;X-User-Id: </span><span class="si">${</span><span class="nv">USER_ID</span><span class="si">}</span><span class="s2">&quot;</span>
+<a id="__codelineno-11-21" name="__codelineno-11-21" href="#__codelineno-11-21"></a><span class="c1"># → agent-replies → HTTP 503</span>
+</code></pre></div>
+<p>Pass criteria:</p>
+<ul>
+<li><code>healthz</code> returns <code>{"status":"ok"}</code>.</li>
+<li>The two POSTs return JSON with <code>role</code> <code>USER</code>.</li>
+<li><code>GET .../messages</code> returns a list containing the message.</li>
+<li><code>agent-replies</code> returns HTTP 503 (or 200 + SSE stream when the Foundry
+  endpoint is configured).</li>
+</ul>
+<h3 id="b-postgres-backend-rest--cli-shared">B. <code>postgres</code> backend (REST ↔ CLI shared)<a class="headerlink" href="#b-postgres-backend-rest--cli-shared" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>postgres
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;CHAT_REPOSITORY_BACKEND=postgres&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.env
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-cli<span class="w"> </span>db<span class="w"> </span>ping
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-cli<span class="w"> </span>db<span class="w"> </span>init
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="c1"># Boot the server in the background, then run the CLI in the same shell.</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-web<span class="w"> </span><span class="p">&amp;</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="nv">SERVER_PID</span><span class="o">=</span><span class="nv">$!</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>sleep<span class="w"> </span><span class="m">2</span>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="c1"># CLI sees the same database the server uses.</span>
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="nv">RESPONSE</span><span class="o">=</span><span class="k">$(</span>uv<span class="w"> </span>run<span class="w"> </span>chat-cli<span class="w"> </span>conversation<span class="w"> </span>create<span class="w"> </span>--title<span class="w"> </span><span class="s2">&quot;shared&quot;</span><span class="w"> </span>--display-name<span class="w"> </span><span class="s2">&quot;alice&quot;</span><span class="k">)</span>
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESPONSE</span><span class="s2">&quot;</span>
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="nv">CONV_ID</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RESPONSE</span><span class="s2">&quot;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;import json,sys; print(json.load(sys.stdin)[&quot;id&quot;])&#39;</span><span class="k">)</span>
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>curl<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;http://localhost:8080/conversations/</span><span class="si">${</span><span class="nv">CONV_ID</span><span class="si">}</span><span class="s2">&quot;</span>
+<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a><span class="c1"># → shows the same conversation</span>
+<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>
+<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-cli<span class="w"> </span>message<span class="w"> </span>post<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$CONV_ID</span><span class="s2">&quot;</span><span class="w"> </span>--content<span class="w"> </span><span class="s2">&quot;hi&quot;</span><span class="w"> </span>--display-name<span class="w"> </span><span class="s2">&quot;alice&quot;</span>
+<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-cli<span class="w"> </span>message<span class="w"> </span>list<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$CONV_ID</span><span class="s2">&quot;</span>
+<a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a>
+<a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a><span class="nb">kill</span><span class="w"> </span><span class="nv">$SERVER_PID</span>
+</code></pre></div>
+<p>Pass criteria:</p>
+<ul>
+<li><code>db ping</code> prints <code>Connection OK.</code>.</li>
+<li><code>db init</code> prints <code>Database schema initialised successfully.</code>.</li>
+<li><code>GET /conversations/{id}</code> returns the conversation that the CLI created.</li>
+<li><code>message list</code> shows the message that was posted via CLI.</li>
+</ul>
+<h3 id="c-chatbot-foundry-enabled">C. Chatbot (Foundry) enabled<a class="headerlink" href="#c-chatbot-foundry-enabled" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Prerequisites: AZURE_AI_PROJECT_ENDPOINT set, az login completed.</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-web<span class="w"> </span><span class="p">&amp;</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="nv">SERVER_PID</span><span class="o">=</span><span class="nv">$!</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>sleep<span class="w"> </span><span class="m">2</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="nb">export</span><span class="w"> </span><span class="nv">USER_ID</span><span class="o">=</span><span class="k">$(</span>python<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;import uuid; print(uuid.uuid4())&#39;</span><span class="k">)</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="nv">CONV_ID</span><span class="o">=</span><span class="k">$(</span>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8080/conversations<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;X-User-Id: </span><span class="si">${</span><span class="nv">USER_ID</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s1">&#39;content-type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;title&quot;:&quot;ai&quot;,&quot;display_name&quot;:&quot;alice&quot;}&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a><span class="w">  </span><span class="p">|</span><span class="w"> </span>python<span class="w"> </span>-c<span class="w"> </span><span class="s1">&#39;import json,sys; print(json.load(sys.stdin)[&quot;id&quot;])&#39;</span><span class="k">)</span>
+<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>
+<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="c1"># 1. Persist the user message (no reply triggered).</span>
+<a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;http://localhost:8080/conversations/</span><span class="si">${</span><span class="nv">CONV_ID</span><span class="si">}</span><span class="s2">/messages&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;X-User-Id: </span><span class="si">${</span><span class="nv">USER_ID</span><span class="si">}</span><span class="s2">&quot;</span><span class="w"> </span>-H<span class="w"> </span><span class="s1">&#39;content-type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;content&quot;:&quot;自己紹介して&quot;,&quot;display_name&quot;:&quot;alice&quot;}&#39;</span>
+<a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a>
+<a id="__codelineno-13-18" name="__codelineno-13-18" href="#__codelineno-13-18"></a><span class="c1"># 2. Stream the agent reply via SSE.</span>
+<a id="__codelineno-13-19" name="__codelineno-13-19" href="#__codelineno-13-19"></a>curl<span class="w"> </span>-N<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">&quot;http://localhost:8080/conversations/</span><span class="si">${</span><span class="nv">CONV_ID</span><span class="si">}</span><span class="s2">/agent-replies&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-20" name="__codelineno-13-20" href="#__codelineno-13-20"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">&quot;X-User-Id: </span><span class="si">${</span><span class="nv">USER_ID</span><span class="si">}</span><span class="s2">&quot;</span>
+<a id="__codelineno-13-21" name="__codelineno-13-21" href="#__codelineno-13-21"></a>
+<a id="__codelineno-13-22" name="__codelineno-13-22" href="#__codelineno-13-22"></a><span class="c1"># 3. Confirm the persisted AGENT message is in the conversation.</span>
+<a id="__codelineno-13-23" name="__codelineno-13-23" href="#__codelineno-13-23"></a>curl<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;http://localhost:8080/conversations/</span><span class="si">${</span><span class="nv">CONV_ID</span><span class="si">}</span><span class="s2">/messages&quot;</span>
+<a id="__codelineno-13-24" name="__codelineno-13-24" href="#__codelineno-13-24"></a>
+<a id="__codelineno-13-25" name="__codelineno-13-25" href="#__codelineno-13-25"></a><span class="nb">kill</span><span class="w"> </span><span class="nv">$SERVER_PID</span>
+</code></pre></div>
+<p>Pass criteria: step 2 streams <code>event: delta</code> / <code>event: complete</code> frames, and
+step 3 returns two messages — yours with <code>role: USER</code> and the bot reply with
+<code>role: AGENT</code> and <code>display_name: Concierge AI</code>.</p>
+<hr />
+<h2 id="realtime-voice-optional">Realtime voice (optional)<a class="headerlink" href="#realtime-voice-optional" title="Permanent link">&para;</a></h2>
+<p>The realtime voice feature adds a <strong>bidirectional WebSocket proxy</strong> between
+the browser and Microsoft Foundry's GPT Realtime API. Audio is processed
+server-side — Foundry credentials never leave the server. User and AI
+transcripts are persisted as regular <code>Message</code> objects, so they appear in
+<code>/conversations/{id}/messages</code> alongside text-chat messages.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>Browser ⇄ FastAPI (chat-web) ⇄ Foundry /openai/v1/realtime
+</code></pre></div>
+<h3 id="quick-start">Quick start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># 1. Configure the realtime endpoint in .env (see the settings table below).</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;AZURE_AI_PROJECT_ENDPOINT_REALTIME=https://&lt;resource&gt;.openai.azure.com/&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>.env
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># 2. Confirm the configuration is picked up (no live call).</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-cli<span class="w"> </span>realtime<span class="w"> </span>status
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="c1"># → ステータス: ✅ 設定済み</span>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="c1"># 3. Start the API server.</span>
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-web
+</code></pre></div>
+<p>Then open <a href="http://localhost:8080/">http://localhost:8080/</a> in a recent Chromium / Firefox / Safari
+browser, create a conversation from the sidebar, and click
+<strong>🎙 通話開始 (Start call)</strong> in the composer. Microphone permission is requested
+on the first call. The legacy URL <a href="http://localhost:8080/realtime">http://localhost:8080/realtime</a> now
+returns a <code>301</code> redirect to <code>/</code>, so existing bookmarks keep working.</p>
+<p>The call button appears only when the server reports <code>{"realtime": true}</code>
+from <a href="api/#realtime-voice-websocket"><code>GET /capabilities</code></a>. When
+<code>AZURE_AI_PROJECT_ENDPOINT_REALTIME</code> is empty the call button is hidden and
+text chat continues to work normally.</p>
+<div class="admonition tip">
+<p class="admonition-title">Region note</p>
+<p>Use a Foundry resource in a region that supports the GPT Realtime model
+(for example <code>swedencentral</code> or <code>eastus2</code>). This is typically <strong>different</strong>
+from the region used for standard text chat, so a separate endpoint
+variable is provided. Reference:
+<a href="https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/realtime-audio-websockets?tabs=ga">Use the GPT Realtime API via WebSockets (Microsoft Learn)</a>.</p>
+</div>
+<h3 id="how-the-ui-pipeline-works">How the UI pipeline works<a class="headerlink" href="#how-the-ui-pipeline-works" title="Permanent link">&para;</a></h3>
+<ol>
+<li><code>getUserMedia({ audio: true })</code> requests microphone permission.</li>
+<li>An <code>AudioWorklet</code> resamples to 24 kHz mono PCM16 (the value of
+   <code>CHAT_REALTIME_AUDIO_SAMPLE_RATE_HZ</code>) in 200 ms chunks.</li>
+<li>Each chunk is base64-encoded and sent over the WebSocket as
+   <code>{"type":"oai-event","payload":{"type":"input_audio_buffer.append","audio":"&lt;b64&gt;"}}</code>.</li>
+<li>Foundry-emitted <code>response.output_audio.delta</code> events are decoded back to
+   PCM16 and played through a queued <code>AudioBufferSource</code> graph. The partial
+   transcript (<code>response.output_audio_transcript.delta</code>) streams into the
+   interim line (prefixed <code>🤖</code>) until the final message is persisted.</li>
+<li>The user's own speech is shown in the same interim line, prefixed <code>🗣️</code>,
+   from <code>conversation.item.input_audio_transcription.delta</code> / <code>.completed</code>
+   events. This requires <code>CHAT_REALTIME_TRANSCRIPTION_MODEL</code> to be set; when
+   it is empty Foundry does not transcribe the user's audio, so no input text
+   appears (assistant speech still works).</li>
+</ol>
+<p>The text composer is locked while a call is active to avoid input-mode
+conflicts. The conversation list, message log, and <code>localStorage</code> profile
+(<code>chat_user_id</code> / <code>chat_display_name</code>) are shared between text chat and
+voice calls. Legacy keys <code>chat_rt_user_id</code> / <code>chat_rt_display_name</code> from
+the previous standalone realtime UI are migrated automatically on first
+load.</p>
+<h3 id="realtime-input-transcription">Seeing your own recognized speech (input transcription)<a class="headerlink" href="#realtime-input-transcription" title="Permanent link">&para;</a></h3>
+<p>By default a realtime call shows only the <strong>assistant's</strong> words in the interim
+line (prefixed <code>🤖</code>). Your own speech is still streamed to Foundry as audio and
+the model replies correctly, but the text of what <em>you</em> said is not shown —
+Foundry transcribes the user's microphone audio only when you explicitly enable
+an input-transcription model. Enable it to make your recognized speech appear
+live in the interim line (prefixed <code>🗣️</code>) and to have the final text saved as a
+USER message in the conversation log.</p>
+<h4 id="how-to-enable">How to enable<a class="headerlink" href="#how-to-enable" title="Permanent link">&para;</a></h4>
+<ol>
+<li><strong>Deploy a transcription model</strong> in the <strong>same</strong> Foundry resource as
+   <code>AZURE_AI_PROJECT_ENDPOINT_REALTIME</code> (the realtime resource — not necessarily
+   the one used for text chat). Suitable models include <code>gpt-4o-mini-transcribe</code>,
+   <code>gpt-4o-transcribe</code>, and <code>whisper</code>.</li>
+<li><strong>Set the deployment name</strong> (not the bare OpenAI model id) in <code>.env</code>:</li>
+</ol>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nv">CHAT_REALTIME_TRANSCRIPTION_MODEL</span><span class="o">=</span>gpt-4o-mini-transcribe
+</code></pre></div>
+<ol>
+<li>Restart <code>chat-web</code> and start a new call. As you speak, the recognized text
+   streams into the interim line; when you finish, it is persisted as a USER
+   <code>Message</code> and appears in the conversation alongside the assistant's reply.</li>
+</ol>
+<h4 id="what-happens-under-the-hood">What happens under the hood<a class="headerlink" href="#what-happens-under-the-hood" title="Permanent link">&para;</a></h4>
+<p>When <code>CHAT_REALTIME_TRANSCRIPTION_MODEL</code> is non-empty, the server adds a
+<code>transcription</code> block to the <code>audio.input</code> section of <code>session.update</code>, using
+the deployment name as <code>model</code> and the ISO-639-1 primary subtag of
+<code>CHAT_REALTIME_LOCALE</code> as <code>language</code> (so <code>ja-JP</code> becomes <code>ja</code>). Foundry then
+emits two server events that the web UI consumes:</p>
+<ul>
+<li><code>conversation.item.input_audio_transcription.delta</code> — partial user transcript,
+  streamed into the <code>🗣️</code> interim line as you speak (some models skip deltas and
+  send only the final result).</li>
+<li><code>conversation.item.input_audio_transcription.completed</code> — final user
+  transcript. The server persists it as a USER <code>Message</code>, which replaces the
+  interim line with a real message bubble on the next reload.</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Use a deployment name, not the OpenAI model id</p>
+<p>On Azure the <code>model</code> field must be the name of a deployment in the same
+resource. The OpenAI model id <code>gpt-4o-mini-transcribe</code> does <strong>not</strong>
+correspond to a deployment in most resources, so the default is left empty
+to avoid a silent failure (no transcript and no error). If you set this and
+no input text appears, confirm that a deployment with exactly that name
+exists in the realtime Foundry resource and that the signed-in principal can
+use it.</p>
+</div>
+<h3 id="realtime-image-input">Sharing a photo during a call<a class="headerlink" href="#realtime-image-input" title="Permanent link">&para;</a></h3>
+<p>While a call is active the <strong>📷 camera button</strong> in the composer input row stays
+active (the rest of the composer is locked during a call). It is designed for
+phones: tapping it opens an in-app live
+viewfinder (no context switch to the OS camera app) with a shutter, a
+front/back toggle, and cancel. After capturing, you confirm or retake; on
+send the frame is downscaled to a 1024 px JPEG and delivered over the same
+WebSocket as a <code>concierge.image.input</code> control frame.</p>
+<p>The server injects it into the live session as a <code>conversation.item.create</code>
+<code>input_image</code> item, so the model can ground its next spoken turn in what you
+showed — just snap the photo, then ask <em>"これ何に見える？"</em>. No reply is
+forced on send, which keeps turn-taking natural. The captured image is shown
+inline in the message log for the rest of the session.</p>
+<div class="admonition note">
+<p class="admonition-title">Images are session-scoped (not persisted)</p>
+<p>Shared images are injected into the live conversation and rendered
+locally, but they are <strong>not</strong> written to the message repository, so they
+disappear on a full page reload. The assistant's spoken answer about the
+image is still persisted as a normal AGENT transcript. Persisting images
+(blob storage + <code>Message</code> attachments) is a deliberate future extension —
+the server-side seam for it is <code>StreamRealtimeVoiceUseCase.send_image</code>.</p>
+</div>
+<h3 id="browser-support_2">Browser support<a class="headerlink" href="#browser-support_2" title="Permanent link">&para;</a></h3>
+<p>The UI relies on <code>AudioWorklet</code>, <code>WebSocket</code>, <code>MediaDevices.getUserMedia</code>,
+and <code>crypto.randomUUID</code>. Recent Chrome, Edge, Firefox, and Safari all work.
+Safari requires the <strong>通話開始</strong> click before the <code>AudioContext</code> can start
+producing audio.</p>
+<h3 id="settings-reference_1">Settings reference<a class="headerlink" href="#settings-reference_1" title="Permanent link">&para;</a></h3>
+<p>All realtime settings use the <code>CHAT_</code> prefix (full schema in
+<code>ChatSettings</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AZURE_AI_PROJECT_ENDPOINT_REALTIME</code></td>
+<td><code>""</code> (disabled)</td>
+<td>Foundry endpoint for the realtime model. Accepts both <code>https://&lt;r&gt;.openai.azure.com/</code> and <code>https://&lt;r&gt;.services.ai.azure.com/</code> (auto-normalised). When empty the realtime WebSocket closes with code <code>4503</code>.</td>
+</tr>
+<tr>
+<td><code>CHAT_REALTIME_MODEL</code></td>
+<td><code>gpt-realtime-1.5</code></td>
+<td>Realtime model deployment name</td>
+</tr>
+<tr>
+<td><code>CHAT_REALTIME_VOICE</code></td>
+<td><code>alloy</code></td>
+<td>Voice id: <code>alloy</code> / <code>ash</code> / <code>ballad</code> / <code>coral</code> / <code>echo</code> / <code>sage</code> / <code>shimmer</code> / <code>verse</code></td>
+</tr>
+<tr>
+<td><code>CHAT_REALTIME_LOCALE</code></td>
+<td><code>ja-JP</code></td>
+<td>Transcription locale. BCP-47 values like <code>ja-JP</code> are reduced to the ISO-639-1 primary subtag (<code>ja</code>) when forwarded to Foundry.</td>
+</tr>
+<tr>
+<td><code>CHAT_REALTIME_SYSTEM_PROMPT</code></td>
+<td>Japanese default prompt</td>
+<td>System message for the realtime session</td>
+</tr>
+<tr>
+<td><code>CHAT_REALTIME_AUDIO_SAMPLE_RATE_HZ</code></td>
+<td><code>24000</code></td>
+<td>PCM16 sample rate (Foundry fixed value)</td>
+</tr>
+<tr>
+<td><code>CHAT_REALTIME_MAX_SESSION_SECONDS</code></td>
+<td><code>600</code></td>
+<td>Server-side session timeout in seconds</td>
+</tr>
+<tr>
+<td><code>CHAT_REALTIME_TRANSCRIPTION_MODEL</code></td>
+<td><code>""</code></td>
+<td>Azure deployment name for input-audio transcription. When empty the <code>transcription</code> block is omitted from <code>session.update</code> and your spoken input is neither shown nor saved. See <a href="#realtime-input-transcription">Seeing your own recognized speech</a>.</td>
+</tr>
+<tr>
+<td><code>CHAT_REALTIME_TURN_DETECTION_TYPE</code></td>
+<td><code>server_vad</code></td>
+<td>How the model decides the user finished a turn: <code>server_vad</code> (silence-based), <code>semantic_vad</code> (decides from sentence meaning; much less likely to interrupt), or <code>none</code> (push-to-talk; client commits the buffer and sends <code>response.create</code>).</td>
+</tr>
+<tr>
+<td><code>CHAT_REALTIME_VAD_THRESHOLD</code></td>
+<td><code>0.5</code></td>
+<td><code>server_vad</code> activation threshold (0.0-1.0). Higher needs louder speech, better in noisy rooms.</td>
+</tr>
+<tr>
+<td><code>CHAT_REALTIME_VAD_PREFIX_PADDING_MS</code></td>
+<td><code>300</code></td>
+<td><code>server_vad</code> audio (ms) retained before detected speech start.</td>
+</tr>
+<tr>
+<td><code>CHAT_REALTIME_VAD_SILENCE_DURATION_MS</code></td>
+<td><code>700</code></td>
+<td><code>server_vad</code> silence (ms) required before the turn ends. Raised above the API default so brief pauses don't trigger a reply; increase further if the model still cuts in.</td>
+</tr>
+<tr>
+<td><code>CHAT_REALTIME_VAD_EAGERNESS</code></td>
+<td><code>low</code></td>
+<td><code>semantic_vad</code> eagerness: <code>low</code> / <code>medium</code> / <code>high</code> / <code>auto</code>. <code>low</code> lets the user finish before the model responds.</td>
+</tr>
+<tr>
+<td><code>CHAT_REALTIME_VAD_CREATE_RESPONSE</code></td>
+<td><code>true</code></td>
+<td>Auto-generate a response when a turn ends. <code>false</code> requires an explicit <code>response.create</code>.</td>
+</tr>
+<tr>
+<td><code>CHAT_REALTIME_VAD_INTERRUPT_RESPONSE</code></td>
+<td><code>true</code></td>
+<td>Whether new user speech interrupts (barges in on) an in-progress response.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="realtime-turn-detection-tuning">Stopping the AI from interrupting you<a class="headerlink" href="#realtime-turn-detection-tuning" title="Permanent link">&para;</a></h4>
+<p>If the assistant starts talking the moment you pause — before you've finished
+your thought — the turn-detection (VAD) settings above are the fix. The model
+is taking its turn too eagerly. Two recommended approaches:</p>
+<ul>
+<li><strong>Semantic VAD (recommended).</strong> Set <code>CHAT_REALTIME_TURN_DETECTION_TYPE=semantic_vad</code>
+  and <code>CHAT_REALTIME_VAD_EAGERNESS=low</code>. The model decides you've finished based
+  on sentence meaning rather than raw silence, so mid-sentence pauses no longer
+  trigger a response.</li>
+<li><strong>Tune server VAD.</strong> Keep <code>server_vad</code> and raise
+  <code>CHAT_REALTIME_VAD_SILENCE_DURATION_MS</code> (e.g. <code>1000</code>-<code>1200</code>) so a longer pause
+  is required before the model replies. Raise <code>CHAT_REALTIME_VAD_THRESHOLD</code>
+  (e.g. <code>0.6</code>) if background noise is triggering false speech detection.</li>
+</ul>
+<p>For full manual control (push-to-talk), set
+<code>CHAT_REALTIME_TURN_DETECTION_TYPE=none</code>; the client must then send
+<code>input_audio_buffer.commit</code> and <code>response.create</code> itself.</p>
+<h3 id="realtime-tool-calling">Tool calling (function calling)<a class="headerlink" href="#realtime-tool-calling" title="Permanent link">&para;</a></h3>
+<p>The realtime session is wired as a tool-using AI agent: the model can call
+server-side Python functions mid-conversation and continue speaking with the
+result in context. This follows the
+<a href="https://learn.microsoft.com/en-us/azure/ai-foundry/openai/realtime-audio-reference">OpenAI Realtime function-calling contract</a>
+(also used by Foundry's GA endpoint):</p>
+<ol>
+<li><code>session.update</code> advertises the available tools under <code>session.tools</code>
+   (<code>tool_choice: "auto"</code>).</li>
+<li>When the model decides to call a tool it emits a <code>function_call</code> item,
+   surfaced as a <code>response.output_item.done</code> server event.</li>
+<li>The server runs the tool locally and replies with a
+   <code>conversation.item.create</code> event carrying a <code>function_call_output</code> item.</li>
+<li>A <code>response.create</code> event asks the model to continue with the tool result.</li>
+</ol>
+<p>All of this happens server-side inside <code>StreamRealtimeVoiceUseCase</code>; the
+browser only hears the spoken answer (no front-end changes are required).</p>
+<h4 id="built-in-tools">Built-in tools<a class="headerlink" href="#built-in-tools" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>get_current_time</code></td>
+<td>Returns the current date/time, optionally for a given IANA timezone (e.g. <code>Asia/Tokyo</code>).</td>
+</tr>
+<tr>
+<td><code>echo</code></td>
+<td>Echoes text back (useful for smoke-testing tool calling).</td>
+</tr>
+<tr>
+<td><code>read_file</code> / <code>list_directory</code> / <code>file_search</code></td>
+<td>Read-only sandbox file tools shared with <code>concierge.agents</code>.</td>
+</tr>
+<tr>
+<td><code>&lt;AGENTS_KNOWLEDGE__TOOLS names&gt;</code> (optional)</td>
+<td>Knowledge-retrieval tools backed by PostgreSQL/pgvector, loaded from <code>AGENTS_KNOWLEDGE__...</code> settings.</td>
+</tr>
+</tbody>
+</table>
+<p>Enable a knowledge tool in <code>.env</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nv">AGENTS_KNOWLEDGE__TOOLS</span><span class="o">=</span>search_docs
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="nv">AGENTS_KNOWLEDGE__SEARCH_DOCS__COLLECTION</span><span class="o">=</span>knowledge_default
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="nv">AGENTS_KNOWLEDGE__SEARCH_DOCS__DESCRIPTION</span><span class="o">=</span><span class="s2">&quot;Search the docs knowledge base&quot;</span>
+</code></pre></div>
+<p>The backing PostgreSQL is selected by <code>AGENTS_KNOWLEDGE__TARGET</code> (default
+<code>docker</code> = local pgvector, <code>azure</code> = Azure Database for PostgreSQL). To make
+the realtime voice assistant query a collection on Azure, add:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nv">AGENTS_KNOWLEDGE__TARGET</span><span class="o">=</span>azure
+</code></pre></div>
+<p>For the Azure-side prerequisites (allowlisting the pgvector extension,
+registering the Entra admin, and pre-ingesting with <code>--target azure</code>), see
+<a href="../agents/">Shared Agent Runtime (Pointing at Azure Database for PostgreSQL)</a>.</p>
+<h4 id="adding-a-new-tool">Adding a new tool<a class="headerlink" href="#adding-a-new-tool" title="Permanent link">&para;</a></h4>
+<p>Tools live in a single registry,
+<a href="https://github.com/ks6088ts-labs/concierge/blob/main/concierge/chat/application/realtime_tools.py"><code>concierge/chat/application/realtime_tools.py</code></a>.
+Each tool bundles its JSON schema and its Python handler in one <code>RealtimeTool</code>,
+so the responder (which needs the schema) and the use case (which runs the
+handler) share a single source of truth. To add a capability, append a new
+entry to <code>build_default_realtime_tools()</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">concierge.chat.application.realtime_tools</span><span class="w"> </span><span class="kn">import</span> <span class="n">RealtimeTool</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="n">RealtimeTool</span><span class="p">(</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;get_weather&quot;</span><span class="p">,</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>    <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Get the current weather for a city. Use when the user asks about weather.&quot;</span><span class="p">,</span>
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>    <span class="n">parameters</span><span class="o">=</span><span class="p">{</span>
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;object&quot;</span><span class="p">,</span>
+<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>        <span class="s2">&quot;properties&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>            <span class="s2">&quot;city&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;string&quot;</span><span class="p">,</span> <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;City name, e.g. &#39;Tokyo&#39;.&quot;</span><span class="p">},</span>
+<a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a>        <span class="p">},</span>
+<a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a>        <span class="s2">&quot;required&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;city&quot;</span><span class="p">],</span>
+<a id="__codelineno-19-12" name="__codelineno-19-12" href="#__codelineno-19-12"></a>    <span class="p">},</span>
+<a id="__codelineno-19-13" name="__codelineno-19-13" href="#__codelineno-19-13"></a>    <span class="n">handler</span><span class="o">=</span><span class="k">lambda</span> <span class="n">args</span><span class="p">:</span> <span class="n">fetch_weather</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="s2">&quot;city&quot;</span><span class="p">]),</span>  <span class="c1"># returns a str (JSON recommended)</span>
+<a id="__codelineno-19-14" name="__codelineno-19-14" href="#__codelineno-19-14"></a><span class="p">)</span>
+</code></pre></div>
+<p>Guidelines:</p>
+<ul>
+<li>The <code>handler</code> signature is <code>dict -&gt; str</code>. Return a JSON string when possible;
+  the value is sent back to the model verbatim as <code>function_call_output</code>.</li>
+<li>Keep handlers fast and synchronous — they run on the relay thread between
+  audio turns. Offload slow I/O or wrap it with a short timeout.</li>
+<li>Handler exceptions are caught and returned to the model as
+  <code>{"error": "..."}</code>, so a failing tool degrades gracefully instead of
+  dropping the call.</li>
+<li>No env var or restart wiring is needed beyond editing the registry:
+  <code>create_realtime_responder()</code> and the WebSocket route both pull from
+  <code>build_default_realtime_tools()</code> automatically.</li>
+</ul>
+<h4 id="minimal-end-to-end-check">Minimal end-to-end check<a class="headerlink" href="#minimal-end-to-end-check" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># 1. Configure + verify the realtime endpoint (see Quick start above).</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-cli<span class="w"> </span>realtime<span class="w"> </span>status<span class="w">   </span><span class="c1"># → ステータス: ✅ 設定済み</span>
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># 2. Start the server and open http://localhost:8080/.</span>
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-web
+<a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>
+<a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="c1"># 3. Start a call and ask a question that triggers a tool, e.g.</span>
+<a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="c1">#    「今何時?」(What time is it?) → the model calls get_current_time and</span>
+<a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="c1">#    answers with the real time. Server logs show:</span>
+<a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a><span class="c1">#       INFO Executed realtime tool name=get_current_time call_id=...</span>
+</code></pre></div>
+<p>Unit tests for the flow (tool execution, unknown-tool error output, and the
+no-tools fall-through) live in
+<a href="https://github.com/ks6088ts-labs/concierge/blob/main/tests/chat/test_realtime_use_case.py"><code>tests/chat/test_realtime_use_case.py</code></a>
+and run without any live Foundry call:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>uv<span class="w"> </span>run<span class="w"> </span>pytest<span class="w"> </span>tests/chat/test_realtime_use_case.py<span class="w"> </span>-o<span class="w"> </span><span class="nv">addopts</span><span class="o">=</span><span class="s2">&quot;&quot;</span>
+</code></pre></div>
+<h3 id="where-to-look-next">Where to look next<a class="headerlink" href="#where-to-look-next" title="Permanent link">&para;</a></h3>
+<ul>
+<li>WebSocket wire protocol (events, close codes) → <a href="api/#realtime-voice-websocket">REST API Reference → Realtime voice WebSocket</a>.</li>
+<li>Non-interactive sanity check → <a href="cli/#realtime-status"><code>chat-cli realtime status</code></a>.</li>
+</ul>
+<hr />
+<h2 id="accessibility-mode">Accessibility mode (deafblind)<a class="headerlink" href="#accessibility-mode" title="Permanent link">&para;</a></h2>
+<p>A stripped-down voice UI for deafblind users, served at
+<a href="http://localhost:8080/accessible">http://localhost:8080/accessible</a>. It reuses the realtime voice backend but
+removes all chrome so a braille display's web reader reaches the dialogue text
+immediately instead of wading through buttons like "+ New conversation".</p>
+<ul>
+<li><strong>Whole-screen single button.</strong> Tap anywhere on the screen to start the call;
+  tap again to end it. There are no separate buttons to locate — the entire
+  screen is one giant toggle.</li>
+<li><strong>Text-only dialogue for braille.</strong> The only content is one ARIA live region
+  holding the running transcript (your speech + the assistant's replies), so a
+  BrailleSense web reader can read it directly.</li>
+<li><strong>Slow, simple speech.</strong> The realtime API has no speech-rate control, so the
+  session uses <code>CHAT_REALTIME_ACCESSIBLE_SYSTEM_PROMPT</code> to ask the model to
+  speak slowly in short sentences and explain concepts concretely (aimed at
+  users who find concept formation difficult).</li>
+<li><strong>Hands-free camera.</strong> Ask the assistant to take a photo (e.g. "写真を撮って",
+  "周りを教えて") and it calls the <code>capture_image</code> tool; the browser captures a
+  frame automatically (no shutter to press) and the model describes what it
+  sees, spoken aloud and written to the braille dialogue region.</li>
+<li><strong>Search.</strong> "調べて …" uses the same knowledge/file tools as any realtime
+  session (configure <code>AGENTS_KNOWLEDGE__…</code> to enable knowledge retrieval).</li>
+</ul>
+<h3 id="how-it-connects">How it connects<a class="headerlink" href="#how-it-connects" title="Permanent link">&para;</a></h3>
+<p>The page auto-creates a conversation on load and opens the realtime WebSocket
+with <code>?mode=accessible</code>. That flag selects the accessible system prompt and adds
+the <code>capture_image</code> tool server-side (see
+<a href="api/#realtime-voice-websocket">Realtime voice WebSocket</a>). The
+<code>chat_user_id</code> / <code>chat_display_name</code> localStorage profile is shared with the
+main UI.</p>
+<h3 id="multi-person-conversations">Multi-person conversations<a class="headerlink" href="#multi-person-conversations" title="Permanent link">&para;</a></h3>
+<p>The accessible voice page is currently designed as a single-user realtime
+session. If several people speak into the same microphone, their speech may be
+transcribed, but it is saved and shown as the current user because the realtime
+transcription stream does not include speaker diarization. Separate browser
+clients can provide separate <code>user_id</code> / <code>display_name</code> values at the WebSocket
+level, but the accessible page does not yet broadcast one live session to
+multiple participants or identify multiple speakers inside one microphone feed.</p>
+<p>For a true multi-person accessible conversation, add shared-conversation join
+links, multi-WebSocket broadcast, participant display in the accessible page,
+and speaker attribution (or an external diarization step for a shared mic).</p>
+<h3 id="settings">Settings<a class="headerlink" href="#settings" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CHAT_REALTIME_ACCESSIBLE_SYSTEM_PROMPT</code></td>
+<td>slow / simple-concept JA prompt</td>
+<td>Instructions applied to <code>?mode=accessible</code> sessions (overrides <code>CHAT_REALTIME_SYSTEM_PROMPT</code>).</td>
+</tr>
+<tr>
+<td><code>CHAT_ACCESSIBLE_TTS_RATE</code></td>
+<td><code>0.85</code></td>
+<td>Default browser Text-to-Speech rate for the optional read-aloud (<code>?tts=1</code>).</td>
+</tr>
+</tbody>
+</table>
+<p>Recommended companion settings:
+<code>CHAT_REALTIME_TURN_DETECTION_TYPE=semantic_vad</code> +
+<code>CHAT_REALTIME_VAD_EAGERNESS=low</code> (fewer interruptions for slow speakers), and
+<code>CHAT_REALTIME_TRANSCRIPTION_MODEL=&lt;deployment&gt;</code> so your own speech is echoed as
+text (braille) too — see <a href="#realtime-input-transcription">Seeing your own recognized speech</a>.
+When <code>CHAT_REALTIME_TRANSCRIPTION_MODEL</code> is unset, the accessible page announces
+once on load (in the braille dialogue region) that your own speech will not be
+shown, so the omission is never silent.</p>
+<h3 id="query-parameters">Query parameters<a class="headerlink" href="#query-parameters" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>?tts=1</code> — read the assistant's text with the browser voice at
+  <code>CHAT_ACCESSIBLE_TTS_RATE</code> and mute the realtime audio (true rate control that
+  avoids doubled speech). Off by default, so the realtime voice plays and is
+  slowed only via the prompt.</li>
+<li><code>?rate=0.7</code> — override the TTS rate for this device without a server change.</li>
+</ul>
+<div class="admonition note">
+<p class="admonition-title">Camera / microphone permissions</p>
+<p>Voice needs microphone permission (requested on the first tap) and the
+hands-free camera needs camera permission (requested on the first photo
+request). A blind user cannot see the browser prompt, so grant these once
+with sighted assistance or persistent site permissions during setup.</p>
+</div>
+<hr />
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="relation-chat_conversations-does-not-exist"><code>relation "chat_conversations" does not exist</code><a class="headerlink" href="#relation-chat_conversations-does-not-exist" title="Permanent link">&para;</a></h3>
+<p><strong>Cause</strong>: Backend switched to <code>postgres</code> / <code>azure-postgres</code> but the chat
+tables have not been created yet.</p>
+<p><strong>Fix</strong>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-cli<span class="w"> </span>db<span class="w"> </span>ping<span class="w">   </span><span class="c1"># confirm connectivity</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-cli<span class="w"> </span>db<span class="w"> </span>init<span class="w">   </span><span class="c1"># create tables</span>
+</code></pre></div>
+<p>You do not need to restart <code>chat-web</code> afterwards; subsequent requests
+succeed.</p>
+<h3 id="conversation-not-found--between-two-cli-invocations"><code>Conversation not found: ...</code> between two CLI invocations<a class="headerlink" href="#conversation-not-found--between-two-cli-invocations" title="Permanent link">&para;</a></h3>
+<p>You are using the <code>memory</code> backend, which is <strong>per-process</strong>. Each <code>uv run
+chat-cli ...</code> call starts a fresh interpreter with an empty store. Switch to
+the <code>postgres</code> backend (<code>chat-cli db init</code> first) and rerun.</p>
+<h3 id="azure_dbuser-must-be-set---azure_dbhost-and-azure_dbname-must-be-set"><code>AZURE_DBUSER must be set ...</code> / <code>AZURE_DBHOST and AZURE_DBNAME must be set</code><a class="headerlink" href="#azure_dbuser-must-be-set---azure_dbhost-and-azure_dbname-must-be-set" title="Permanent link">&para;</a></h3>
+<p>Required environment variables for the <code>azure-postgres</code> backend are missing.
+Fill in the <code>AZURE_*</code> section of
+<a href="https://github.com/ks6088ts-labs/concierge/blob/main/.env.template"><code>.env.template</code></a>
+into your <code>.env</code>.</p>
+<h3 id="chatbot-is-not-configured-http-503-or-cli-exits-1-on-message-reply"><code>Chatbot is not configured</code> (HTTP 503) or CLI exits <code>1</code> on <code>message reply</code><a class="headerlink" href="#chatbot-is-not-configured-http-503-or-cli-exits-1-on-message-reply" title="Permanent link">&para;</a></h3>
+<p><code>create_chatbot_responder()</code> raised <code>ChatbotNotConfiguredError</code> because
+<code>AZURE_AI_PROJECT_ENDPOINT</code> is empty. Set it and restart <code>chat-web</code>. The
+<code>POST /messages</code> endpoint never triggers replies, so this error only ever
+surfaces on <code>/agent-replies</code> (or <code>chat-cli message reply</code>).</p>
+<h3 id="foundry-call-fails-with-clientauthenticationerror--defaultazurecredential-failed">Foundry call fails with <code>ClientAuthenticationError</code> / <code>DefaultAzureCredential failed</code><a class="headerlink" href="#foundry-call-fails-with-clientauthenticationerror--defaultazurecredential-failed" title="Permanent link">&para;</a></h3>
+<p><code>FoundryChatbotResponder</code> builds the chat model with
+<code>DefaultAzureCredential()</code>. Make sure your shell can issue a token (for
+example via <code>az login</code>, a managed identity, or environment variables that the
+credential chain accepts).</p>
+<h3 id="realtime-websocket-closes-with-4503--call-button-hidden">Realtime WebSocket closes with <code>4503</code> / call button hidden<a class="headerlink" href="#realtime-websocket-closes-with-4503--call-button-hidden" title="Permanent link">&para;</a></h3>
+<p><code>AZURE_AI_PROJECT_ENDPOINT_REALTIME</code> is empty, so <code>GET /capabilities</code>
+returns <code>{"realtime": false}</code> and the <strong>通話開始</strong> button is hidden. Set the
+variable in <code>.env</code> and restart <code>chat-web</code>. Use
+<a href="cli/#realtime-status"><code>chat-cli realtime status</code></a> for a quick check
+without opening a browser.</p>
+<h3 id="realtime-websocket-closes-with-4404">Realtime WebSocket closes with <code>4404</code><a class="headerlink" href="#realtime-websocket-closes-with-4404" title="Permanent link">&para;</a></h3>
+<p>The <code>conversation_id</code> in the URL does not exist. Reselect or create a
+conversation, then start the call again.</p>
+<h3 id="realtime-websocket-closes-with-4400">Realtime WebSocket closes with <code>4400</code><a class="headerlink" href="#realtime-websocket-closes-with-4400" title="Permanent link">&para;</a></h3>
+<p>The <code>user_id</code> query parameter is missing or is not a valid UUID. Clear
+<code>localStorage</code> (<code>chat_user_id</code>) in the browser DevTools and reload — the
+page regenerates a UUID on next visit.</p>
+<h3 id="microphone-permission-denied-red-banner-in-the-ui">Microphone permission denied (red banner in the UI)<a class="headerlink" href="#microphone-permission-denied-red-banner-in-the-ui" title="Permanent link">&para;</a></h3>
+<p>The browser blocked microphone access. Allow microphone for
+<code>localhost:8080</code> in the browser's site permissions (<code>chrome://settings/content/microphone</code>
+in Chrome / Edge) and reload the tab.</p>
+
+
+
+
+
+
+
+  
+  
+
+
+
+  
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.linkedin.com/in/ks6088ts/" target="_blank" rel="noopener" title="www.linkedin.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3M135.4 416H69V202.2h66.5V416zM102.2 96a38.5 38.5 0 1 1 0 77 38.5 38.5 0 1 1 0-77m282.1 320h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/ks6088ts" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://x.com/ks6088ts" target="_blank" rel="noopener" title="x.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M357.2 48h70.6L273.6 224.2 455 464H313L201.7 318.6 74.5 464H3.8l164.9-188.5L-5.2 48h145.6l100.5 132.9zm-24.8 373.8h39.1L119.1 88h-42z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

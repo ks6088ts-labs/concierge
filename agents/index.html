@@ -1,0 +1,2756 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Transport-independent agent contracts shared by cloud_agent and chat">
+      
+      
+      
+        <link rel="canonical" href="https://ks6088ts-labs.github.io/concierge/agents/">
+      
+      
+        <link rel="prev" href="../chat/cli/">
+      
+      
+        <link rel="next" href="cli/">
+      
+      
+        
+          <link rel="alternate" href="./" hreflang="en">
+        
+          <link rel="alternate" href="../ja/agents/" hreflang="ja">
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Shared Agent Runtime - concierge</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+  
+
+
+  
+  
+
+<script id="__analytics">function __md_analytics(){function e(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],e("js",new Date),e("config","G-0ZTKFXVQ5K"),document.addEventListener("DOMContentLoaded",(function(){document.forms.search&&document.forms.search.query.addEventListener("blur",(function(){this.value&&e("event","search",{search_term:this.value})}));document$.subscribe((function(){var t=document.forms.feedback;if(void 0!==t)for(var a of t.querySelectorAll("[type=submit]"))a.addEventListener("click",(function(a){a.preventDefault();var n=document.location.pathname,d=this.getAttribute("data-md-value");e("event","feedback",{page:n,data:d}),t.firstElementChild.disabled=!0;var r=t.querySelector(".md-feedback__note [data-md-value='"+d+"']");r&&(r.hidden=!1)})),t.hidden=!1})),location$.subscribe((function(t){e("config","G-0ZTKFXVQ5K",{page_path:t.pathname})}))}));var t=document.createElement("script");t.async=!0,t.src="https://www.googletagmanager.com/gtag/js?id=G-0ZTKFXVQ5K",document.getElementById("__analytics").insertAdjacentElement("afterEnd",t)}</script>
+  
+    <script>"undefined"!=typeof __md_analytics&&__md_analytics()</script>
+  
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#overview" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="concierge" class="md-header__button md-logo" aria-label="concierge" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            concierge
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Shared Agent Runtime
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9zM20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12zm-9.15 3.96h2.3L12 9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="Select language">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="../ja/agents/" hreflang="ja" class="md-select__link">
+              日本語
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/ks6088ts-labs/concierge" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ks6088ts-labs/concierge
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="concierge" class="md-nav__button md-logo" aria-label="concierge" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    concierge
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/ks6088ts-labs/concierge" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    ks6088ts-labs/concierge
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hands-on Tutorial
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Hands-on Tutorial
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/01-foundry-langchain/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    1. Microsoft Foundry + LangChain
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/02-observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    2. Observability (Tracing & MLflow)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/03-postgres-vector-store/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    3. PostgreSQL (pgvector) CRUD
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/04-langgraph-todo-agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    4. LangGraph Todo Agent CLI
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/05-mlflow-genai-evaluation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    5. MLflow GenAI Evaluation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/appendix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Appendix - References
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/appendix-azure-environment-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Appendix - Azure Environment Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/appendix-monitor-vscode-copilot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Appendix - Monitor VS Code Copilot (App Insights)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorial/appendix-deploy-azure-container-apps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Appendix - Deploy to Azure Container Apps (Terraform)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Todo App (Clean Architecture)
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Todo App (Clean Architecture)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../todo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../todo/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    REST API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../todo/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chat App (Clean Architecture)
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Chat App (Clean Architecture)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../chat/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../chat/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    REST API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../chat/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shared Agent Runtime
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Shared Agent Runtime
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#directory-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Directory Layout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#contracts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contracts
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Contracts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agentrequest--agentresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AgentRequest / AgentResponse
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Protocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentregistry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AgentRegistry
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#built-in-agents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Built-in Agents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#knowledge-retrieval-tools-env-driven" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Knowledge retrieval tools (env-driven)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Knowledge retrieval tools (env-driven)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-schema-agents_knowledge__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment schema (AGENTS_KNOWLEDGE__*)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#minimum-end-to-end-procedure-docs--langgraph-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimum end-to-end procedure (docs/ → LangGraph agent)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pointing-at-azure-database-for-postgresql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pointing at Azure Database for PostgreSQL
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verifying-the-search_docs-tool-and-recognising-common-failures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifying the search_docs tool (and recognising common failures)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-from-cloud_agent-worker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using from cloud_agent worker
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-from-chat" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using from chat
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-from-chat_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using from chat
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#minimum-verification-steps-per-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimum verification steps per agent
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Minimum verification steps per agent">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#echo-no-llm-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        echo (no LLM required)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#langgraph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        langgraph
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#github-copilot-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        github-copilot-sdk
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#microsoft-agent-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        microsoft-agent-framework
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#foundry-agent-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        foundry-agent-service
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#image-generate-direct-no-llm-mediation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        image generate (direct, no LLM mediation)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependency-direction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependency Direction
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cloud Agent App (Clean Architecture)
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Cloud Agent App (Clean Architecture)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cloud_agent/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cloud_agent/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    REST API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cloud_agent/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knowledge Indexer (pgvector)
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Knowledge Indexer (pgvector)
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../knowledge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../knowledge/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#directory-layout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Directory Layout
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#contracts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Contracts
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Contracts">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agentrequest--agentresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AgentRequest / AgentResponse
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agent-protocol" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Agent Protocol
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#agentregistry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AgentRegistry
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#built-in-agents" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Built-in Agents
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#knowledge-retrieval-tools-env-driven" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Knowledge retrieval tools (env-driven)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Knowledge retrieval tools (env-driven)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-schema-agents_knowledge__" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment schema (AGENTS_KNOWLEDGE__*)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#minimum-end-to-end-procedure-docs--langgraph-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimum end-to-end procedure (docs/ → LangGraph agent)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pointing-at-azure-database-for-postgresql" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pointing at Azure Database for PostgreSQL
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#verifying-the-search_docs-tool-and-recognising-common-failures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Verifying the search_docs tool (and recognising common failures)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-from-cloud_agent-worker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using from cloud_agent worker
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-from-chat" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using from chat
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-from-chat_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using from chat
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#minimum-verification-steps-per-agent" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Minimum verification steps per agent
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Minimum verification steps per agent">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#echo-no-llm-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        echo (no LLM required)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#langgraph" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        langgraph
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#github-copilot-sdk" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        github-copilot-sdk
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#microsoft-agent-framework" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        microsoft-agent-framework
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#foundry-agent-service" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        foundry-agent-service
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#image-generate-direct-no-llm-mediation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        image generate (direct, no LLM mediation)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependency-direction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependency Direction
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+  <h1>Overview</h1>
+
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p><code>concierge/agents</code> is a <strong>shared bounded context</strong> that defines transport-independent
+agent contracts (<code>AgentRequest</code> / <code>AgentResponse</code> / <code>Agent</code> Protocol / <code>AgentRegistry</code>).
+Both the <code>cloud_agent</code> worker and the <code>chat</code> AI responder path can call the same
+agent implementations without any cross-context import violations.</p>
+<pre class="mermaid"><code>flowchart LR
+    chat[chat ChatbotResponder] --&gt; Registry
+    cloud_agent[cloud_agent worker] --&gt; Registry
+    Registry[AgentRegistry] --&gt; Echo[EchoAgent]
+    Registry --&gt; LG["LangGraphAgent\n(langgraph)"]
+    Registry --&gt; GCE[GitHubCopilotSdkAgent]
+    Registry --&gt; MAF["MicrosoftAgentFrameworkAgent\n(microsoft-agent-framework)"]
+    Registry --&gt; FAS["FoundryAgentServiceAgent\n(foundry-agent-service)"]
+    subgraph agents["concierge/agents (shared kernel)"]
+        Registry
+        Echo
+        LG
+        GCE
+        MAF
+        FAS
+    end</code></pre>
+<h2 id="directory-layout">Directory Layout<a class="headerlink" href="#directory-layout" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>concierge/agents/
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  domain/
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    agent_types.py         # AgentType (StrEnum) — canonical agent_type identifiers / presets
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    exceptions.py          # AgentNotFoundError, AgentExecutionError
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  application/
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    contracts.py           # AgentRequest, AgentResponse, AgentChunk, Agent, StreamingAgent
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    registry.py            # AgentRegistry
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>  infrastructure/
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    echo_agent.py                          # EchoAgent (no LLM)
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    github_copilot_sdk_agent.py           # GitHubCopilotSdkAgent
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>    langgraph_agent.py                     # LangGraphAgent (configurable; tools supplied per preset)
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>    microsoft_agent_framework_agent.py     # MicrosoftAgentFrameworkAgent (configurable)
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>    foundry_agent_service_agent.py         # FoundryAgentServiceAgent (Azure AI Foundry Prompt Agent)
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    tools/
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>      echo_tool.py             # build_echo_langchain_tool / build_echo_maf_tool
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>      file_management.py       # sandboxed file operation core (path validation + io)
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>      file_management_tool.py  # file tool builders for LangChain / MAF / Copilot SDK
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>      shell_command.py         # allowlisted shell command core (shell=False subprocess)
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>      shell_command_tool.py    # shell tool builders for LangChain / MAF / Copilot SDK
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>      image_generation.py      # pure async generate_image() (no framework deps)
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>      image_generation_tool.py # image_gen_langchain_tool_factory / image_gen_maf_tool_factory
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>    registry_factory.py    # get_agent_registry() — wires presets onto unified classes
+</code></pre></div>
+<h2 id="contracts">Contracts<a class="headerlink" href="#contracts" title="Permanent link">&para;</a></h2>
+<h3 id="agentrequest--agentresponse">AgentRequest / AgentResponse<a class="headerlink" href="#agentrequest--agentresponse" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">concierge.agents.application.contracts</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentRequest</span><span class="p">,</span> <span class="n">AgentResponse</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">request</span> <span class="o">=</span> <span class="n">AgentRequest</span><span class="p">(</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">agent_type</span><span class="o">=</span><span class="s2">&quot;echo&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">payload</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;message&quot;</span><span class="p">:</span> <span class="s2">&quot;hello&quot;</span><span class="p">},</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">context</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;conversation_id&quot;</span><span class="p">:</span> <span class="s2">&quot;&lt;uuid&gt;&quot;</span><span class="p">},</span>  <span class="c1"># transport-specific metadata</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">)</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="n">response</span><span class="p">:</span> <span class="n">AgentResponse</span> <span class="o">=</span> <span class="k">await</span> <span class="n">agent</span><span class="o">.</span><span class="n">handle</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1"># response.status: &quot;succeeded&quot; | &quot;failed&quot;</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="c1"># response.result: dict | None</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="c1"># response.error: str | None</span>
+</code></pre></div>
+<h3 id="agent-protocol">Agent Protocol<a class="headerlink" href="#agent-protocol" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">concierge.agents.application.contracts</span><span class="w"> </span><span class="kn">import</span> <span class="n">Agent</span><span class="p">,</span> <span class="n">AgentRequest</span><span class="p">,</span> <span class="n">AgentResponse</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="k">class</span><span class="w"> </span><span class="nc">MyAgent</span><span class="p">:</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="c1"># ``agent_type`` may be a class attribute (single-purpose agents) or an</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="c1"># instance attribute (configurable agents that register as multiple</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="c1"># presets under different ids — see ``LangGraphAgent``).</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">agent_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;my-agent&quot;</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">handle</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">:</span> <span class="n">AgentRequest</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">AgentResponse</span><span class="p">:</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>        <span class="o">...</span>
+</code></pre></div>
+<h3 id="agentregistry">AgentRegistry<a class="headerlink" href="#agentregistry" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">concierge.agents.application.registry</span><span class="w"> </span><span class="kn">import</span> <span class="n">AgentRegistry</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="n">registry</span> <span class="o">=</span> <span class="n">AgentRegistry</span><span class="p">()</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="n">registry</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="n">MyAgent</span><span class="p">())</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="n">agent</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">resolve</span><span class="p">(</span><span class="s2">&quot;my-agent&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h2 id="built-in-agents">Built-in Agents<a class="headerlink" href="#built-in-agents" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>agent_type</th>
+<th>Class</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>echo</code></td>
+<td><code>EchoAgent</code></td>
+<td>Returns <code>payload.message</code> verbatim. No LLM required.</td>
+</tr>
+<tr>
+<td><code>langgraph</code></td>
+<td><code>LangGraphAgent</code></td>
+<td>LangGraph (<code>create_agent</code>) preset wired with <code>echo</code>, <code>generate_image_tool</code>, shared sandboxed file-management tools (<code>read_file</code>, <code>list_directory</code>, <code>file_search</code> by default), the single-page web reader (<code>fetch_webpage</code> by default), and optional allowlisted shell tool (<code>shell_exec</code>). The LLM picks the appropriate tool based on user input.</td>
+</tr>
+<tr>
+<td><code>github-copilot-sdk</code></td>
+<td><code>GitHubCopilotSdkAgent</code></td>
+<td>Opens a GitHub Copilot SDK session per request, <code>send</code>s the user message, and returns the assistant reply. It is wired with the same shared client-side tool builders as the other tool-capable agents.</td>
+</tr>
+<tr>
+<td><code>microsoft-agent-framework</code></td>
+<td><code>MicrosoftAgentFrameworkAgent</code></td>
+<td>Microsoft Agent Framework preset wired with <code>echo</code>, <code>generate_image_tool</code>, shared sandboxed file-management tools (<code>read_file</code>, <code>list_directory</code>, <code>file_search</code> by default), the single-page web reader (<code>fetch_webpage</code> by default), and optional allowlisted shell tool (<code>shell_exec</code>). The LLM picks the appropriate tool based on user input.</td>
+</tr>
+<tr>
+<td><code>foundry-agent-service</code></td>
+<td><code>FoundryAgentServiceAgent</code></td>
+<td>Azure AI Foundry <strong>Prompt Agent</strong> (server-side hosted agent). Creates a named <code>PromptAgentDefinition</code> on the Foundry project on first invocation, then drives it through <code>openai.responses.create()</code> with an <code>agent_reference</code>. No client-side tools are wired — tools/knowledge are configured on the Foundry agent itself.</td>
+</tr>
+</tbody>
+</table>
+<p>The client-side tool-capable agents (<code>langgraph</code> / <code>github-copilot-sdk</code> /
+<code>microsoft-agent-framework</code>) are <em>generic</em>: they are each registered once with
+the full set of tool builders, and the LLM picks the right tool for each
+request. Adding a new tool means adding another builder to the lists in
+<code>registry_factory.py</code> — no new <code>agent_type</code> is required.</p>
+<p><code>foundry-agent-service</code> is <strong>server-side</strong>: the prompt and the tool list
+live inside the Foundry project, not in this codebase. Use this agent
+when you want Foundry to own the agent definition (versioning,
+evaluations, observability hooks, ...). Use <code>microsoft-agent-framework</code>
+when you want a client-side Agent Framework SDK agent backed by
+<code>FoundryChatClient</code> chat completions instead.</p>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<p>Agent settings are read from environment variables with the <strong><code>AGENTS_</code></strong> prefix.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AGENTS_LANGGRAPH_MODEL</code></td>
+<td><code>azure_ai:gpt-5</code></td>
+<td>Model string for <code>init_chat_model</code> (e.g. <code>azure_ai:gpt-4o-mini</code>).</td>
+</tr>
+<tr>
+<td><code>AGENTS_LANGGRAPH_SYSTEM_PROMPT</code></td>
+<td><em>(built-in)</em></td>
+<td>System prompt for the <code>langgraph</code> agent. Defaults instruct the LLM to pick between built-in tools such as <code>echo</code>, <code>generate_image_tool</code>, file tools, shell tools, and <code>fetch_webpage</code> based on the user request.</td>
+</tr>
+<tr>
+<td><code>AGENTS_GITHUB_COPILOT_SDK_MODEL</code></td>
+<td><code>gpt-5-mini</code></td>
+<td>Model name passed to <code>CopilotClient.create_session(model=...)</code>.</td>
+</tr>
+<tr>
+<td><code>AGENTS_GITHUB_COPILOT_SDK_SYSTEM_PROMPT</code></td>
+<td><em>(built-in)</em></td>
+<td>System prompt for <code>github-copilot-sdk</code> (sent to <code>create_session</code> via <code>system_message={"mode": "replace", "content": ...}</code>). Defaults instruct the LLM to pick between built-in tools such as <code>echo</code>, <code>generate_image_tool</code>, file tools, shell tools, and <code>fetch_webpage</code> based on the user request.</td>
+</tr>
+<tr>
+<td><code>AGENTS_MICROSOFT_AGENT_FRAMEWORK_MODEL</code></td>
+<td><code>gpt-5</code></td>
+<td>Model string passed to <code>FoundryChatClient(model=...)</code> for <code>microsoft-agent-framework</code>.</td>
+</tr>
+<tr>
+<td><code>AGENTS_MICROSOFT_AGENT_FRAMEWORK_SYSTEM_PROMPT</code></td>
+<td><em>(built-in)</em></td>
+<td>System prompt passed as <code>Agent(instructions=...)</code> for <code>microsoft-agent-framework</code>. Defaults instruct the LLM to pick between built-in tools such as <code>echo</code>, <code>generate_image_tool</code>, file tools, shell tools, and <code>fetch_webpage</code> based on the user request.</td>
+</tr>
+<tr>
+<td><code>AGENTS_FOUNDRY_AGENT_SERVICE_MODEL</code></td>
+<td><code>gpt-5</code></td>
+<td>Foundry deployment name used as <code>PromptAgentDefinition.model</code> for the <code>foundry-agent-service</code> agent.</td>
+</tr>
+<tr>
+<td><code>AGENTS_FOUNDRY_AGENT_SERVICE_SYSTEM_PROMPT</code></td>
+<td><code>You are a helpful assistant.</code></td>
+<td>Instructions persisted on the Foundry-side <code>PromptAgentDefinition</code>. Updated on the next call when changed (a new agent version is created).</td>
+</tr>
+<tr>
+<td><code>AGENTS_FOUNDRY_AGENT_SERVICE_AGENT_NAME</code></td>
+<td><code>concierge-foundry-agent</code></td>
+<td>Name of the Foundry-side Prompt Agent. Reuse the same name across runs to reuse the existing agent record; use a different name for isolation between environments.</td>
+</tr>
+<tr>
+<td><code>AGENTS_FILE_ROOT_DIR</code></td>
+<td><code>""</code> (<code>&lt;cwd&gt;/workspace</code>)</td>
+<td>Sandbox root for file-management tools. Relative paths are resolved from current working directory; root is auto-created at startup.</td>
+</tr>
+<tr>
+<td><code>AGENTS_FILE_TOOLS_ENABLED</code></td>
+<td><code>read_file,list_directory,file_search</code></td>
+<td>Comma-separated enabled file tools. Set <code>""</code> to disable all file tools; write tools (<code>write_file</code>,<code>copy_file</code>,<code>move_file</code>,<code>delete_file</code>) require explicit opt-in.</td>
+</tr>
+<tr>
+<td><code>AGENTS_SHELL_TOOLS_ENABLED</code></td>
+<td><code>""</code></td>
+<td>Comma-separated enabled shell tools. Keep empty to disable shell tools (default, fully opt-in).</td>
+</tr>
+<tr>
+<td><code>AGENTS_SHELL_ALLOWED_COMMANDS</code></td>
+<td><code>""</code></td>
+<td>Comma-separated command-name allowlist for <code>shell_exec</code> (required when shell tools are enabled). Command paths are rejected.</td>
+</tr>
+<tr>
+<td><code>AGENTS_SHELL_ROOT_DIR</code></td>
+<td><code>""</code> (<code>AGENTS_FILE_ROOT_DIR</code> fallback)</td>
+<td>Fixed working directory for shell commands.</td>
+</tr>
+<tr>
+<td><code>AGENTS_SHELL_TIMEOUT_SECONDS</code></td>
+<td><code>30</code></td>
+<td>Per-command timeout in seconds.</td>
+</tr>
+<tr>
+<td><code>AGENTS_SHELL_MAX_OUTPUT_BYTES</code></td>
+<td><code>65536</code></td>
+<td>Per-stream (<code>stdout</code>/<code>stderr</code>) output cap in bytes before truncation marker is appended.</td>
+</tr>
+<tr>
+<td><code>AGENTS_WEB_TOOLS_ENABLED</code></td>
+<td><code>fetch_webpage</code></td>
+<td>Comma-separated enabled web tools. Set <code>""</code> to disable web fetching.</td>
+</tr>
+<tr>
+<td><code>AGENTS_WEB_FETCH_TIMEOUT_SECONDS</code></td>
+<td><code>10</code></td>
+<td>Timeout for a single web page request.</td>
+</tr>
+<tr>
+<td><code>AGENTS_WEB_FETCH_MAX_BYTES</code></td>
+<td><code>3000000</code></td>
+<td>Maximum response bytes read before truncation.</td>
+</tr>
+<tr>
+<td><code>AGENTS_WEB_FETCH_MAX_CONTENT_CHARS</code></td>
+<td><code>8000</code></td>
+<td>Default maximum extracted Markdown characters returned to the model.</td>
+</tr>
+<tr>
+<td><code>AGENTS_WEB_FETCH_USER_AGENT</code></td>
+<td><code>conciergebot/1.0 (+https://github.com/ks6088ts-labs/concierge)</code></td>
+<td>User-Agent sent by <code>fetch_webpage</code>.</td>
+</tr>
+<tr>
+<td><code>AGENTS_WEB_FETCH_ALLOW_DOMAINS</code></td>
+<td><code>""</code></td>
+<td>Optional comma-separated domain allowlist. Empty allows any public http(s) host not denied.</td>
+</tr>
+<tr>
+<td><code>AGENTS_WEB_FETCH_DENY_DOMAINS</code></td>
+<td><code>""</code></td>
+<td>Optional comma-separated domain denylist.</td>
+</tr>
+<tr>
+<td><code>AGENTS_WEB_FETCH_MAX_REDIRECTS</code></td>
+<td><code>5</code></td>
+<td>Maximum redirects followed; every redirect target is re-validated.</td>
+</tr>
+<tr>
+<td><code>AGENTS_WEB_FETCH_ALLOW_PRIVATE_IPS</code></td>
+<td><code>false</code></td>
+<td>Development/testing escape hatch. Keep <code>false</code> in normal use to block SSRF to private, loopback, link-local, and metadata addresses.</td>
+</tr>
+<tr>
+<td><code>AGENTS_IMAGE_MODEL</code></td>
+<td><code>gpt-image-2</code></td>
+<td>Foundry deployment name used by shared image generation tool.</td>
+</tr>
+<tr>
+<td><code>AGENTS_IMAGE_SIZE</code></td>
+<td><code>1024x1024</code></td>
+<td>Default image size (<code>1024x1024</code> / <code>1536x1024</code> / <code>1024x1536</code> / <code>4K</code>).</td>
+</tr>
+<tr>
+<td><code>AGENTS_IMAGE_N</code></td>
+<td><code>1</code></td>
+<td>Default number of images requested per call.</td>
+</tr>
+<tr>
+<td><code>AGENTS_IMAGE_API_VERSION</code></td>
+<td><code>2025-04-01-preview</code></td>
+<td>API version passed to <code>openai.AzureOpenAI</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>The image generation tool also reads two Foundry endpoint variables from
+<a href="../tutorial/02-observability/"><code>MicrosoftFoundrySettings</code></a>:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AZURE_AI_PROJECT_ENDPOINT</code></td>
+<td><code>""</code></td>
+<td>Shared Foundry project endpoint used by all built-in agents.</td>
+</tr>
+<tr>
+<td><code>AZURE_AI_PROJECT_ENDPOINT_IMAGE</code></td>
+<td><code>""</code></td>
+<td>Optional override pointing at a different Foundry project that hosts the <code>gpt-image-2</code> deployment. <code>gpt-image-2</code> is currently only GA in a limited set of regions, so set this when your main Foundry project is in a region where it is not available. When empty, the shared <code>AZURE_AI_PROJECT_ENDPOINT</code> is used.</td>
+</tr>
+</tbody>
+</table>
+<p>File-management tools are sandboxed to <code>AGENTS_FILE_ROOT_DIR</code> and reject absolute
+paths or traversal attempts. Shell tools are also sandboxed and run with
+<code>shell=False</code> plus command-name allowlisting (<code>AGENTS_SHELL_ALLOWED_COMMANDS</code>).
+<code>fetch_webpage</code> fetches exactly one static HTTP(S) page, extracts the main text
+as Markdown, and does not crawl links, search the web, or execute JavaScript. It
+rejects non-public resolved IPs by default and re-validates each redirect target.
+Keep write tools and shell tools disabled unless required, and follow the
+<a href="https://python.langchain.com/docs/security">LangChain security guidance</a>.</p>
+<h2 id="knowledge-retrieval-tools-env-driven">Knowledge retrieval tools (env-driven)<a class="headerlink" href="#knowledge-retrieval-tools-env-driven" title="Permanent link">&para;</a></h2>
+<p>You can register one or more semantic-retrieval tools that call
+<code>concierge.knowledge.application.use_cases.SearchKnowledge</code>.
+Tool names and descriptions are fully environment-driven.</p>
+<pre class="mermaid"><code>flowchart LR
+    LLM[LangChain / MAF / Copilot SDK Agent]
+    Tool1["search_docs tool&lt;br/&gt;(env description)"]
+    Tool2["search_runbooks tool&lt;br/&gt;(env description)"]
+    Core["search_knowledge_chunks()&lt;br/&gt;SDK-independent core"]
+    UC["SearchKnowledge&lt;br/&gt;(concierge.knowledge use case)"]
+    Store[(pgvector / future backends)]
+
+    LLM --&gt; Tool1
+    LLM --&gt; Tool2
+    Tool1 --&gt; Core
+    Tool2 --&gt; Core
+    Core --&gt; UC
+    UC --&gt; Store</code></pre>
+<h3 id="environment-schema-agents_knowledge__">Environment schema (<code>AGENTS_KNOWLEDGE__*</code>)<a class="headerlink" href="#environment-schema-agents_knowledge__" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>AGENTS_KNOWLEDGE__TOOLS</code></td>
+<td>Yes (to enable)</td>
+<td>Comma-separated tool names (<code>snake_case</code>, no duplicates). Empty/unset = no-op (backward compatible).</td>
+</tr>
+<tr>
+<td><code>AGENTS_KNOWLEDGE__TARGET</code></td>
+<td>No</td>
+<td>PostgreSQL backend shared by every knowledge tool: <code>docker</code> (<code>POSTGRES_*</code> / local pgvector, default) or <code>azure</code> (<code>AZURE_*</code> / Azure Database for PostgreSQL). Applies to all surfaces (realtime voice, text, agents).</td>
+</tr>
+<tr>
+<td><code>AGENTS_KNOWLEDGE__&lt;NAME&gt;__COLLECTION</code></td>
+<td>Yes</td>
+<td>Logical knowledge collection for that tool.</td>
+</tr>
+<tr>
+<td><code>AGENTS_KNOWLEDGE__&lt;NAME&gt;__DESCRIPTION</code></td>
+<td>No</td>
+<td>Tool description shown to the LLM.</td>
+</tr>
+<tr>
+<td><code>AGENTS_KNOWLEDGE__&lt;NAME&gt;__TOP_K</code></td>
+<td>No</td>
+<td>Default result count when the model omits <code>k</code> (default <code>4</code>, max <code>20</code>).</td>
+</tr>
+<tr>
+<td><code>AGENTS_KNOWLEDGE__&lt;NAME&gt;__MAX_CHARS</code></td>
+<td>No</td>
+<td>Per-hit content cap (<code>len()</code>-based, default <code>1200</code>).</td>
+</tr>
+</tbody>
+</table>
+<p>Minimal <code>.env</code> sample:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nv">AGENTS_KNOWLEDGE__TOOLS</span><span class="o">=</span>search_docs,search_runbooks
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="nv">AGENTS_KNOWLEDGE__SEARCH_DOCS__COLLECTION</span><span class="o">=</span>knowledge_default
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="nv">AGENTS_KNOWLEDGE__SEARCH_DOCS__DESCRIPTION</span><span class="o">=</span>Search<span class="w"> </span>the<span class="w"> </span>product<span class="w"> </span>docs.
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="nv">AGENTS_KNOWLEDGE__SEARCH_RUNBOOKS__COLLECTION</span><span class="o">=</span>runbooks
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="nv">AGENTS_KNOWLEDGE__SEARCH_RUNBOOKS__DESCRIPTION</span><span class="o">=</span>Search<span class="w"> </span>operational<span class="w"> </span>runbooks.
+</code></pre></div>
+<p>Tool output is a compact JSON envelope string:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span><span class="nt">&quot;collection&quot;</span><span class="p">:</span><span class="s2">&quot;knowledge_default&quot;</span><span class="p">,</span><span class="nt">&quot;hits&quot;</span><span class="p">:[{</span><span class="nt">&quot;source&quot;</span><span class="p">:</span><span class="s2">&quot;docs/index.md&quot;</span><span class="p">,</span><span class="nt">&quot;chunk_index&quot;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span><span class="nt">&quot;score&quot;</span><span class="p">:</span><span class="mf">0.83</span><span class="p">,</span><span class="nt">&quot;content&quot;</span><span class="p">:</span><span class="s2">&quot;...&quot;</span><span class="p">}],</span><span class="nt">&quot;truncated&quot;</span><span class="p">:</span><span class="kc">false</span><span class="p">}</span>
+</code></pre></div>
+<p>No-match output includes <code>hits: []</code> and a message; failures return
+<code>{"error":"knowledge search failed: ...","collection":"..."}</code> so the agent does
+not crash.</p>
+<blockquote>
+<p>Tracing note: LangChain path is covered by LangChain/MLflow autologging.
+Microsoft Agent Framework and GitHub Copilot SDK paths are best-effort and
+depend on SDK OpenTelemetry span emission.</p>
+</blockquote>
+<h3 id="minimum-end-to-end-procedure-docs--langgraph-agent">Minimum end-to-end procedure (docs/ → LangGraph agent)<a class="headerlink" href="#minimum-end-to-end-procedure-docs--langgraph-agent" title="Permanent link">&para;</a></h3>
+<p>The following is the smallest path to confirm the env-driven knowledge tool
+actually flows from <code>LLM → search_docs tool → SearchKnowledge use case →
+pgvector</code>. It indexes the repository's own <code>docs/</code> directory into the default
+collection and lets the <code>langgraph</code> agent retrieve it.</p>
+<blockquote>
+<p>The agent runtime resolves the knowledge backend via
+<a href="../../concierge/knowledge/__init__.py"><code>get_search_knowledge_use_case</code></a>,
+switched by <code>AGENTS_KNOWLEDGE__TARGET</code> (default <code>docker</code> = the <code>POSTGRES_*</code>
+block, or <code>azure</code> = the <code>AZURE_*</code> block). Ingest with the same target the
+agent will read from. The steps below use the local Docker Compose postgres
+(<code>docker</code> target); see "Pointing at Azure Database for PostgreSQL" at the end
+of this section to target the cloud instead.</p>
+</blockquote>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># 1. Start the local pgvector instance (same target as the agent runtime).</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>postgres
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># 2. Sign in for Entra ID-backed Foundry calls (embeddings + chat model).</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>az<span class="w"> </span>login
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AZURE_AI_PROJECT_ENDPOINT</span><span class="o">=</span><span class="s2">&quot;https://&lt;resource&gt;.services.ai.azure.com/api/projects/&lt;project&gt;&quot;</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="c1"># 3. Index docs/ into the default collection.</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>uv<span class="w"> </span>run<span class="w"> </span>knowledge-cli<span class="w"> </span>ingest<span class="w"> </span>run<span class="w"> </span>--collection<span class="w"> </span>knowledge_default<span class="w"> </span>docs
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>uv<span class="w"> </span>run<span class="w"> </span>knowledge-cli<span class="w"> </span>ingest<span class="w"> </span>stats<span class="w"> </span>--collection<span class="w"> </span>knowledge_default
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="c1"># expected: {&quot;collection&quot;: &quot;knowledge_default&quot;, &quot;records&quot;: &lt;N &gt; 0&gt;}</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="c1"># 4. Register the tool with the agent runtime (in .env).</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="c1">#    AGENTS_KNOWLEDGE__TOOLS=search_docs</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="c1">#    AGENTS_KNOWLEDGE__SEARCH_DOCS__COLLECTION=knowledge_default</span>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="c1">#    AGENTS_KNOWLEDGE__SEARCH_DOCS__DESCRIPTION=Search the concierge docs.</span>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="c1"># 5. Confirm the tool is wired into the agent registry.</span>
+<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>knowledge<span class="w"> </span>list
+<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="c1"># [{&quot;name&quot;:&quot;search_docs&quot;,&quot;collection&quot;:&quot;knowledge_default&quot;, ...}]</span>
+<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a>
+<a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="c1"># 6. Drive the LangGraph agent so the LLM calls search_docs.</span>
+<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>invoke<span class="w"> </span>--agent-type<span class="w"> </span>langgraph<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a><span class="w">  </span>--message<span class="w"> </span><span class="s2">&quot;Use the search_docs tool to look up &#39;agents registry&#39; and summarise the hits in 3 bullets.&quot;</span>
+<a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a><span class="c1"># Inspect the JSON response: tool_calls should include search_docs, and the</span>
+<a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a><span class="c1"># final message should reference content from docs/.</span>
+</code></pre></div>
+<p>Caveats observed during smoke-testing:</p>
+<ul>
+<li>The <code>text-embedding-3-small</code> deployment on AIServices S0 may return HTTP 429
+  during a full <code>docs/</code> ingest. <code>IngestMarkdown</code> is all-or-nothing, so a 429
+  mid-run leaves the collection at 0 records. Retry after ~60 s, or split
+  the ingest path-by-path (e.g. <code>docs/agents</code>, <code>docs/chat</code>, ...).</li>
+<li>Ingest (<code>knowledge-cli --target azure</code>) and agent search
+  (<code>AGENTS_KNOWLEDGE__TARGET=azure</code>) must point at the <strong>same</strong> Azure Postgres.
+  A target mismatch leaves the table missing, so <code>search_docs</code> returns
+  "no matches". See the next section for the full procedure.</li>
+</ul>
+<h3 id="pointing-at-azure-database-for-postgresql">Pointing at Azure Database for PostgreSQL<a class="headerlink" href="#pointing-at-azure-database-for-postgresql" title="Permanent link">&para;</a></h3>
+<p>Switch the knowledge backend for the realtime voice assistant and the
+LangGraph / MAF / Copilot SDK agents from local Docker Compose to an Azure
+Database for PostgreSQL Flexible Server. Every surface shares
+<code>search_knowledge_chunks()</code>, so setting <code>AGENTS_KNOWLEDGE__TARGET=azure</code> once
+points realtime, text, and agents at Azure.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># 1. Allowlist pgvector on the Flexible Server (without it, CREATE EXTENSION</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="c1">#    vector fails and ingest/search break).</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>az<span class="w"> </span>postgres<span class="w"> </span>flexible-server<span class="w"> </span>parameter<span class="w"> </span><span class="nb">set</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">  </span>-g<span class="w"> </span>&lt;resource-group&gt;<span class="w"> </span>-s<span class="w"> </span>&lt;server-name&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">  </span>--name<span class="w"> </span>azure.extensions<span class="w"> </span>--value<span class="w"> </span>vector
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1"># 2. With Entra auth (AZURE_USE_ENTRA_AUTH=true), register the connecting</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="c1">#    principal as the server&#39;s Microsoft Entra administrator.</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>az<span class="w"> </span>postgres<span class="w"> </span>flexible-server<span class="w"> </span>microsoft-entra-admin<span class="w"> </span>create<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="w">  </span>-g<span class="w"> </span>&lt;resource-group&gt;<span class="w"> </span>-s<span class="w"> </span>&lt;server-name&gt;<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="w">  </span>--object-id<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>az<span class="w"> </span>ad<span class="w"> </span>signed-in-user<span class="w"> </span>show<span class="w"> </span>--query<span class="w"> </span>id<span class="w"> </span>-o<span class="w"> </span>tsv<span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a><span class="w">  </span>--display-name<span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>az<span class="w"> </span>ad<span class="w"> </span>signed-in-user<span class="w"> </span>show<span class="w"> </span>--query<span class="w"> </span>userPrincipalName<span class="w"> </span>-o<span class="w"> </span>tsv<span class="k">)</span><span class="s2">&quot;</span>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="c1"># 3. Point .env at Azure (AZURE_* block + AGENTS_KNOWLEDGE__TARGET).</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="c1">#    AZURE_DBHOST=&lt;server-name&gt;.postgres.database.azure.com</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="c1">#    AZURE_DBNAME=&lt;database&gt;</span>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="c1">#    AZURE_DBUSER=&lt;entra-principal&gt;   # e.g. admin@contoso.onmicrosoft.com</span>
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="c1">#    AZURE_USE_ENTRA_AUTH=true        # or false + AZURE_DBPASSWORD for password auth</span>
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="c1">#    AGENTS_KNOWLEDGE__TARGET=azure</span>
+<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a>
+<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a><span class="c1"># 4. Ingest docs/ with the same target the agent reads from.</span>
+<a id="__codelineno-7-22" name="__codelineno-7-22" href="#__codelineno-7-22"></a>uv<span class="w"> </span>run<span class="w"> </span>knowledge-cli<span class="w"> </span>ingest<span class="w"> </span>run<span class="w">   </span>--collection<span class="w"> </span>knowledge_default<span class="w"> </span>--target<span class="w"> </span>azure<span class="w"> </span>docs
+<a id="__codelineno-7-23" name="__codelineno-7-23" href="#__codelineno-7-23"></a>uv<span class="w"> </span>run<span class="w"> </span>knowledge-cli<span class="w"> </span>ingest<span class="w"> </span>stats<span class="w"> </span>--collection<span class="w"> </span>knowledge_default<span class="w"> </span>--target<span class="w"> </span>azure
+<a id="__codelineno-7-24" name="__codelineno-7-24" href="#__codelineno-7-24"></a>uv<span class="w"> </span>run<span class="w"> </span>knowledge-cli<span class="w"> </span>search<span class="w"> </span>run<span class="w">   </span>--collection<span class="w"> </span>knowledge_default<span class="w"> </span>--target<span class="w"> </span>azure<span class="w"> </span><span class="s2">&quot;MLflow&quot;</span><span class="w"> </span>-k<span class="w"> </span><span class="m">4</span>
+<a id="__codelineno-7-25" name="__codelineno-7-25" href="#__codelineno-7-25"></a>
+<a id="__codelineno-7-26" name="__codelineno-7-26" href="#__codelineno-7-26"></a><span class="c1"># 5. Restart long-running servers (chat-web, ...) since they cache .env.</span>
+</code></pre></div>
+<div class="admonition warning">
+<p class="admonition-title">Match the embedding provider across ingest and search</p>
+<p><code>KNOWLEDGE_EMBEDDING_PROVIDER</code> fixes the vectors at ingest time. Use
+<code>foundry</code> for semantic search and re-ingest (drop first) any collection
+built with <code>fake</code>. See
+<a href="../knowledge/#troubleshooting">Knowledge Indexer troubleshooting</a>.</p>
+</div>
+<h3 id="verifying-the-search_docs-tool-and-recognising-common-failures">Verifying the search_docs tool (and recognising common failures)<a class="headerlink" href="#verifying-the-search_docs-tool-and-recognising-common-failures" title="Permanent link">&para;</a></h3>
+<p>After the minimum end-to-end procedure, inspect the JSON returned by
+<code>agents-cli invoke</code>. A working configuration looks like this:</p>
+<ul>
+<li><code>status</code> is <code>"succeeded"</code>,</li>
+<li><code>result.tool_calls</code> contains at least one entry with <code>name: "search_docs"</code>,</li>
+<li><code>result.reply</code> references content actually present in the indexed docs.</li>
+</ul>
+<p>Strip the verbose tracing noise so the response is the only thing printed to
+stdout:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>-m<span class="w"> </span>invoke<span class="w"> </span>--agent-type<span class="w"> </span>langgraph<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--message<span class="w"> </span><span class="s2">&quot;Use the search_docs tool to look up &#39;agents registry&#39; and summarise the hits in 3 bullets.&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span><span class="m">2</span>&gt;/dev/null
+</code></pre></div>
+<p>Expected (abridged) shape:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="p">{</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;succeeded&quot;</span><span class="p">,</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span><span class="nt">&quot;result&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="w">    </span><span class="nt">&quot;tool_calls&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;search_docs&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;args&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">&quot;query&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;agents registry&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;k&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">}}],</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="w">    </span><span class="nt">&quot;reply&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;... docs/agents/index.md ... AgentRegistry ...&quot;</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="w">  </span><span class="p">},</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">  </span><span class="nt">&quot;error&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="p">}</span>
+</code></pre></div>
+<p>If <code>result.reply</code> mentions <code>OperationalError</code> or <code>ValueError</code>, the LLM <strong>is</strong>
+calling <code>search_docs</code> correctly — the tool internally caught the failure and
+returned <code>{"error":"knowledge search failed: &lt;ExceptionClass&gt;","collection":"..."}</code>,
+which the LLM then paraphrased. The two common cases:</p>
+<table>
+<thead>
+<tr>
+<th>Symptom in <code>result.reply</code></th>
+<th>Root cause</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>... OperationalError ...</code></td>
+<td>Local pgvector (or Azure Postgres) is unreachable.</td>
+<td>Start the local container: <code>docker compose up -d postgres</code>, then confirm with <code>docker exec concierge-postgres pg_isready -U concierge -d concierge</code>.</td>
+</tr>
+<tr>
+<td><code>... ValueError ...</code></td>
+<td>The pgvector table for the configured collection has not been created yet (no successful ingest).</td>
+<td><code>uv run knowledge-cli ingest run --collection &lt;name&gt; docs/agents</code>, then verify with <code>uv run knowledge-cli ingest stats --collection &lt;name&gt;</code> (<code>records</code> must be <code>&gt; 0</code>).</td>
+</tr>
+</tbody>
+</table>
+<p>To isolate whether the failure is in the agent wiring or in the knowledge
+backend, bypass the LLM and call the same <code>SearchKnowledge</code> use case the tool
+uses:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>uv<span class="w"> </span>run<span class="w"> </span>knowledge-cli<span class="w"> </span>search<span class="w"> </span>run<span class="w"> </span>--collection<span class="w"> </span>knowledge_default<span class="w"> </span>--k<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="s2">&quot;agents registry&quot;</span>
+</code></pre></div>
+<p>If this command succeeds, the agent path (<code>langgraph</code> / <code>microsoft-agent-framework</code>
+/ <code>github-copilot-sdk</code>) will also succeed — the only thing left is for the LLM
+to choose <code>search_docs</code>. If this command fails, the agent path will see the
+same error.</p>
+<h2 id="using-from-cloud_agent-worker">Using from cloud_agent worker<a class="headerlink" href="#using-from-cloud_agent-worker" title="Permanent link">&para;</a></h2>
+<p>The <code>cloud_agent</code> CLI dispatches tasks to the shared registry:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>uv<span class="w"> </span>run<span class="w"> </span>cloud-agent-cli<span class="w"> </span>task<span class="w"> </span>dispatch<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span>--agent-type<span class="w"> </span>langgraph<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span>--payload<span class="w"> </span><span class="s1">&#39;{&quot;message&quot;: &quot;Hello LangGraph&quot;}&#39;</span>
+</code></pre></div>
+<h2 id="using-from-chat">Using from chat<a class="headerlink" href="#using-from-chat" title="Permanent link">&para;</a></h2>
+<h2 id="using-from-chat_1">Using from chat<a class="headerlink" href="#using-from-chat_1" title="Permanent link">&para;</a></h2>
+<p>Set <code>CHAT_BOT_AGENT_TYPE</code> to a registered agent type to route chat replies
+through the shared agent runtime (the default <code>foundry</code> value bypasses the
+registry and uses the streaming Foundry responder):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">CHAT_BOT_AGENT_TYPE</span><span class="o">=</span><span class="nb">echo</span><span class="w">   </span><span class="c1"># LLM-free smoke test</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-web
+</code></pre></div>
+<p>You can also route chat replies through <code>github-copilot-sdk</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">CHAT_BOT_AGENT_TYPE</span><span class="o">=</span>github-copilot-sdk
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-web
+</code></pre></div>
+<p>Or <code>microsoft-agent-framework</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">CHAT_BOT_AGENT_TYPE</span><span class="o">=</span>microsoft-agent-framework
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>uv<span class="w"> </span>run<span class="w"> </span>chat-web
+</code></pre></div>
+<p><code>github-copilot-sdk</code> is not a LangChain/LangGraph agent, so MLflow LangChain
+autologging does not capture its internal SDK spans automatically.
+<code>microsoft-agent-framework</code> is built on Microsoft Agent Framework
+(<code>agent_framework.Agent</code> + <code>agent_framework.foundry.FoundryChatClient</code>) rather
+than LangChain/LangGraph, so the same caveat applies: enable Microsoft Agent
+Framework's own OTLP / Foundry tracing if you need internal spans for that
+agent.</p>
+<p>Verify with:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># 1. Create a conversation</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8000/conversations<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;Content-Type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;title&quot;: &quot;test&quot;}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="c1"># 2. Post a user message</span>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8000/conversations/&lt;id&gt;/messages<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;Content-Type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;content&quot;: &quot;hello&quot;}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a>
+<a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a><span class="c1"># 3. Request an agent reply</span>
+<a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a>curl<span class="w"> </span>-s<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8000/conversations/&lt;id&gt;/agent-replies<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">&#39;Content-Type: application/json&#39;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">&#39;{}&#39;</span><span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span>.
+</code></pre></div>
+<h2 id="minimum-verification-steps-per-agent">Minimum verification steps per agent<a class="headerlink" href="#minimum-verification-steps-per-agent" title="Permanent link">&para;</a></h2>
+<p>The following commands exercise each registered agent against the standalone
+<code>agents-cli</code>. They are the smallest "smoke tests" that confirm the agent is
+correctly wired into the registry and that the surrounding settings (model,
+endpoint, credentials) are usable.</p>
+<p>Prerequisites for every LLM-backed agent:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># 1. Load .env (uv reads it automatically) and sign in for Entra ID auth.</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>az<span class="w"> </span>login
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="c1"># 2. Required for all Foundry-backed agents.</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AZURE_AI_PROJECT_ENDPOINT</span><span class="o">=</span><span class="s2">&quot;https://&lt;resource&gt;.services.ai.azure.com/api/projects/&lt;project&gt;&quot;</span>
+</code></pre></div>
+<h3 id="echo-no-llm-required"><code>echo</code> (no LLM required)<a class="headerlink" href="#echo-no-llm-required" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>invoke<span class="w"> </span>--agent-type<span class="w"> </span><span class="nb">echo</span><span class="w"> </span>--message<span class="w"> </span><span class="s2">&quot;hello&quot;</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="c1"># expected: {&quot;status&quot;: &quot;succeeded&quot;, &quot;result&quot;: {&quot;message&quot;: &quot;hello&quot;, &quot;reply&quot;: &quot;hello&quot;}, &quot;error&quot;: null}</span>
+</code></pre></div>
+<h3 id="langgraph"><code>langgraph</code><a class="headerlink" href="#langgraph" title="Permanent link">&para;</a></h3>
+<p>Requires <code>AZURE_AI_PROJECT_ENDPOINT</code> plus <code>az login</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>info<span class="w"> </span>--agent-type<span class="w"> </span>langgraph<span class="w">             </span><span class="c1"># confirms wired settings (no LLM call)</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>invoke<span class="w"> </span>--agent-type<span class="w"> </span>langgraph<span class="w"> </span>--message<span class="w"> </span><span class="s2">&quot;Say hi&quot;</span>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="c1"># Image-generation path (requires AGENTS_IMAGE_MODEL deployed; see note below):</span>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>invoke<span class="w"> </span>--agent-type<span class="w"> </span>langgraph<span class="w"> </span>--message<span class="w"> </span><span class="s2">&quot;Draw a red fox in watercolor style&quot;</span>
+</code></pre></div>
+<h3 id="github-copilot-sdk"><code>github-copilot-sdk</code><a class="headerlink" href="#github-copilot-sdk" title="Permanent link">&para;</a></h3>
+<p>Requires the <a href="https://github.com/github/copilot-cli">GitHub Copilot CLI</a> to
+be installed and authenticated; no Foundry endpoint is needed for the
+default echo path.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>info<span class="w"> </span>--agent-type<span class="w"> </span>github-copilot-sdk
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>invoke<span class="w"> </span>--agent-type<span class="w"> </span>github-copilot-sdk<span class="w"> </span>--message<span class="w"> </span><span class="s2">&quot;Say hi&quot;</span>
+</code></pre></div>
+<h3 id="microsoft-agent-framework"><code>microsoft-agent-framework</code><a class="headerlink" href="#microsoft-agent-framework" title="Permanent link">&para;</a></h3>
+<p>Requires <code>AZURE_AI_PROJECT_ENDPOINT</code> plus <code>az login</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>info<span class="w"> </span>--agent-type<span class="w"> </span>microsoft-agent-framework
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>invoke<span class="w"> </span>--agent-type<span class="w"> </span>microsoft-agent-framework<span class="w"> </span>--message<span class="w"> </span><span class="s2">&quot;Say hi&quot;</span>
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="c1"># Image-generation path:</span>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>invoke<span class="w"> </span>--agent-type<span class="w"> </span>microsoft-agent-framework<span class="w"> </span>--message<span class="w"> </span><span class="s2">&quot;Draw a red fox in watercolor style&quot;</span>
+</code></pre></div>
+<h3 id="foundry-agent-service"><code>foundry-agent-service</code><a class="headerlink" href="#foundry-agent-service" title="Permanent link">&para;</a></h3>
+<p>Requires <code>AZURE_AI_PROJECT_ENDPOINT</code> plus <code>az login</code>. The signed-in
+principal must hold the <strong>Azure AI Developer</strong> role on the Foundry
+project (the agent calls <code>project.agents.create_version()</code> on first
+invocation).</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>info<span class="w"> </span>--agent-type<span class="w"> </span>foundry-agent-service
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>invoke<span class="w"> </span>--agent-type<span class="w"> </span>foundry-agent-service<span class="w"> </span>--message<span class="w"> </span><span class="s2">&quot;What is the size of France in square miles?&quot;</span>
+</code></pre></div>
+<p>A successful response surfaces the Foundry agent reply along with the
+model and agent name actually used on the Foundry side:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="p">{</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;succeeded&quot;</span><span class="p">,</span>
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">  </span><span class="nt">&quot;result&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">    </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;What is the size of France in square miles?&quot;</span><span class="p">,</span>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="w">    </span><span class="nt">&quot;reply&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;France is approximately 248,573 square miles.&quot;</span><span class="p">,</span>
+<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="w">    </span><span class="nt">&quot;model&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gpt-5&quot;</span><span class="p">,</span>
+<a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="w">    </span><span class="nt">&quot;agent_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;concierge-foundry-agent&quot;</span>
+<a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a><span class="w">  </span><span class="p">},</span>
+<a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a><span class="w">  </span><span class="nt">&quot;error&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a><span class="p">}</span>
+</code></pre></div>
+<p>The first invocation incurs a <code>create_version</code> round-trip; subsequent
+calls within the same process reuse the agent (cached behind an internal
+lock). To exercise the same code path without the agents CLI, use the
+dedicated probe script:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>uv<span class="w"> </span>run<span class="w"> </span>python<span class="w"> </span>-m<span class="w"> </span>scripts.microsoft_foundry.prompt_agent<span class="w"> </span>invoke<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="w">  </span>--message<span class="w"> </span><span class="s2">&quot;What is the size of France in square miles?&quot;</span>
+</code></pre></div>
+<h3 id="image-generate-direct-no-llm-mediation"><code>image generate</code> (direct, no LLM mediation)<a class="headerlink" href="#image-generate-direct-no-llm-mediation" title="Permanent link">&para;</a></h3>
+<p><code>gpt-image-2</code> is currently only GA in a limited set of Foundry regions, so
+if <code>AZURE_AI_PROJECT_ENDPOINT</code> points at a different region, also set
+<code>AZURE_AI_PROJECT_ENDPOINT_IMAGE</code> to a Foundry project that hosts the
+<code>gpt-image-2</code> deployment.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">AZURE_AI_PROJECT_ENDPOINT_IMAGE</span><span class="o">=</span><span class="s2">&quot;https://&lt;image-resource&gt;.services.ai.azure.com/api/projects/&lt;project&gt;&quot;</span>
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>./tmp_out
+<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>uv<span class="w"> </span>run<span class="w"> </span>agents-cli<span class="w"> </span>image<span class="w"> </span>generate<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="w">  </span>--prompt<span class="w"> </span><span class="s2">&quot;A photo of a Shibuya crossing at night&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="w">  </span>--output-dir<span class="w"> </span>./tmp_out
+<a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>ls<span class="w"> </span>./tmp_out/*.png
+</code></pre></div>
+<h2 id="dependency-direction">Dependency Direction<a class="headerlink" href="#dependency-direction" title="Permanent link">&para;</a></h2>
+<pre class="mermaid"><code>flowchart LR
+    chat --&gt; agents
+    cloud_agent --&gt; agents
+    agents --&gt; observability[concierge.observability]
+    agents --&gt; settings_agents[concierge.settings.agents]</code></pre>
+<p><code>concierge.agents</code> does <strong>not</strong> import from <code>concierge.chat</code>, <code>concierge.cloud_agent</code>,
+or <code>concierge.todo</code>. This constraint is enforced by the <code>agents-no-service-coupling</code>
+import-linter contract in <code>pyproject.toml</code>.</p>
+
+
+
+
+
+
+
+  
+  
+
+
+
+  
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.linkedin.com/in/ks6088ts/" target="_blank" rel="noopener" title="www.linkedin.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3M135.4 416H69V202.2h66.5V416zM102.2 96a38.5 38.5 0 1 1 0 77 38.5 38.5 0 1 1 0-77m282.1 320h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/ks6088ts" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://x.com/ks6088ts" target="_blank" rel="noopener" title="x.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M357.2 48h70.6L273.6 224.2 455 464H313L201.7 318.6 74.5 464H3.8l164.9-188.5L-5.2 48h145.6l100.5 132.9zm-24.8 373.8h39.1L119.1 88h-42z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": [], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

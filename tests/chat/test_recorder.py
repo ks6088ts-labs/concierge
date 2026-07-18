@@ -23,7 +23,7 @@ async def test_chat_web_serves_recorder() -> None:
         assert 'id="btn-record"' in page.text
         assert 'id="btn-stop"' in page.text
         assert 'id="recordings-list"' in page.text
-        assert 'MediaRecorder' in page.text
+        assert "MediaRecorder" in page.text
 
         config = await client.get("/recorder/config")
         assert config.status_code == 200

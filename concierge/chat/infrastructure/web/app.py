@@ -10,8 +10,8 @@ from fastapi.staticfiles import StaticFiles
 
 from concierge.chat.infrastructure.ai.factory import ChatbotNotConfiguredError, create_realtime_responder
 from concierge.chat.infrastructure.web.exception_handlers import register_exception_handlers
-from concierge.chat.infrastructure.web.routes import router
 from concierge.chat.infrastructure.web.recorder import create_recorder_app
+from concierge.chat.infrastructure.web.routes import router
 from concierge.chat.infrastructure.web.tts_playground import create_tts_playground_app
 from concierge.loggers import get_logger
 from concierge.observability import bootstrap_from_env
